@@ -15,6 +15,7 @@ interface Widget {
 }
 
 const Dashboard = () => {
+  const [showGridLines, setShowGridLines] = useState(false)
   const [widgets, setWidgets] = useState<Widget[]>([
     {
       id: 'reminder-1',
@@ -181,20 +182,33 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="w-full">
-      <div className="mb-4 flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Your Dashboard</h2>
-        <AddWidgetButton onAddWidget={addWidget} />
+    <div className="h-full w-full flex flex-col">
+      <div className="px-4 py-3 flex justify-between items-center border-b bg-card shrink-0">
+        <h2 className="text-lg font-semibold">Your Dashboard</h2>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowGridLines(!showGridLines)}
+            className={`px-3 py-1 text-sm rounded transition-colors ${
+              showGridLines 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}
+          >
+            {showGridLines ? 'Hide Grid' : 'Show Grid'}
+          </button>
+          <AddWidgetButton onAddWidget={addWidget} />
+        </div>
       </div>
       
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={{ lg: Object.values(layouts) }}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-        rowHeight={80}
-        margin={[16, 16]}
-        containerPadding={[0, 0]}
+      <div className="flex-1 overflow-hidden">
+        <ResponsiveGridLayout
+          className={`layout h-full ${showGridLines ? 'show-grid-lines' : ''}`}
+          layouts={{ lg: Object.values(layouts) }}
+          breakpoints={{ lg: 0 }}
+          cols={{ lg: 12 }}
+          rowHeight={60}
+          margin={[8, 8]}
+          containerPadding={[8, 8]}
         isDraggable={true}
         isResizable={true}
         preventCollision={false}
@@ -209,6 +223,7 @@ const Dashboard = () => {
           </div>
         ))}
       </ResponsiveGridLayout>
+      </div>
     </div>
   )
 }

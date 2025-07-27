@@ -51,6 +51,18 @@
   border-color: hsl(var(--border));
 }
 
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
 body {
   color: hsl(var(--foreground));
   background: hsl(var(--background));
@@ -65,6 +77,16 @@ body {
 .react-grid-layout {
   position: relative;
   background: transparent;
+  height: 100%;
+  width: 100%;
+}
+
+/* Grid lines background - only show when toggled on */
+.react-grid-layout.show-grid-lines {
+  background-image: 
+    linear-gradient(to right, hsl(var(--border) / 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.4) 1px, transparent 1px);
+  background-size: calc(100% / 12) 60px; /* 12 columns, 60px row height */
 }
 
 .react-grid-item {
