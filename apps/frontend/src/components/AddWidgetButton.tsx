@@ -1,16 +1,54 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
+import { getAllWidgets, getImplementedWidgets, WidgetConfig } from '../config/widgets'
 
 interface AddWidgetButtonProps {
-  onAddWidget: (type: 'reminder' | 'summary') => void
+  onAddWidget: (widgetId: string) => void
+  canAddWidget?: boolean
 }
 
-const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
+const AddWidgetButton = ({ onAddWidget, canAddWidget = true }: AddWidgetButtonProps) => {
   const [isOpen, setIsOpen] = useState(false)
+  
+  // Get all widgets - implemented ones will be functional, others will show description
+  const allWidgets = getAllWidgets()
+  const implementedWidgets = getImplementedWidgets()
+  
+  const isImplemented = (widgetId: string) => 
+    implementedWidgets.some(widget => widget.id === widgetId)
 
-  const handleAddWidget = (type: 'reminder' | 'summary') => {
-    onAddWidget(type)
+  const handleAddWidget = (widgetId: string) => {
+    onAddWidget(widgetId)
     setIsOpen(false)
+  }
+
+  const renderWidget = (widget: WidgetConfig) => {
+    const implemented = isImplemented(widget.id)
+    
+    return (
+      <button
+        key={widget.id}
+        onClick={() => handleAddWidget(widget.id)}
+        className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+          implemented 
+            ? 'hover:bg-accent hover:text-accent-foreground cursor-pointer' 
+            : 'hover:bg-muted/50 cursor-pointer opacity-75'
+        }`}
+        title={implemented ? `Add ${widget.title}` : `Add ${widget.title} (Coming soon)`}
+      >
+        <div className="flex items-start gap-2">
+          <span className="text-base">{widget.icon}</span>
+          <div className="flex-1">
+            <div className="font-medium">{widget.title}</div>
+            {!implemented && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Coming soon - {widget.description}
+              </div>
+            )}
+          </div>
+        </div>
+      </button>
+    )
   }
 
   return (
@@ -24,20 +62,9 @@ const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 bg-card border rounded-md shadow-lg min-w-[160px] z-10">
+        <div className="absolute right-0 top-full mt-2 bg-card border rounded-md shadow-lg min-w-[200px] max-h-[400px] overflow-y-auto z-10">
           <div className="py-1">
-            <button
-              onClick={() => handleAddWidget('reminder')}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-            >
-              📝 Reminder Widget
-            </button>
-            <button
-              onClick={() => handleAddWidget('summary')}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-            >
-              🔍 Web Summary Widget
-            </button>
+            {allWidgets.map(widget => renderWidget(widget))}
           </div>
         </div>
       )}
