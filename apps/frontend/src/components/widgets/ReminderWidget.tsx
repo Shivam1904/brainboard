@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Check, Clock } from 'lucide-react'
+import { Plus, Check, Clock, Trash2 } from 'lucide-react'
+import BaseWidget from './BaseWidget'
 
 interface Reminder {
   id: string
@@ -10,11 +11,10 @@ interface Reminder {
 }
 
 interface ReminderWidgetProps {
-  id: string
   onRemove: () => void
 }
 
-const ReminderWidget = ({ id, onRemove }: ReminderWidgetProps) => {
+const ReminderWidget = ({ onRemove }: ReminderWidgetProps) => {
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [newReminderText, setNewReminderText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -90,102 +90,104 @@ const ReminderWidget = ({ id, onRemove }: ReminderWidgetProps) => {
   }
 
   const deleteReminder = async (id: string) => {
-    try {
-      // TODO: API call to delete reminder
-      setReminders(prev => prev.filter(reminder => reminder.id !== id))
-    } catch (error) {
-      console.error('Failed to delete reminder:', error)
+    const reminder = reminders.find(r => r.id === id)
+    if (reminder && confirm(`Delete reminder: "${reminder.text}"?`)) {
+      try {
+        // TODO: API call to delete reminder
+        setReminders(prev => prev.filter(reminder => reminder.id !== id))
+      } catch (error) {
+        console.error('Failed to delete reminder:', error)
+      }
     }
   }
 
   return (
-    <div className="h-full bg-card border rounded-lg p-4 flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">📝 Reminders</h3>
-        <button
-          onClick={onRemove}
-          className="text-muted-foreground hover:text-destructive transition-colors"
-        >
-          <Trash2 size={16} />
-        </button>
-      </div>
+    <BaseWidget
+      title="Reminders"
+      icon="📝"
+      onRemove={onRemove}
+    >
+      <div className="h-full flex flex-col">
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={newReminderText}
+            onChange={(e) => setNewReminderText(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addReminder()}
+            placeholder="Add a reminder..."
+            className="flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <button
+            onClick={addReminder}
+            className="px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
 
-      <div className="flex gap-2 mb-4">
-        <input
-          type="text"
-          value={newReminderText}
-          onChange={(e) => setNewReminderText(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && addReminder()}
-          placeholder="Add a reminder..."
-          className="flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-        <button
-          onClick={addReminder}
-          className="px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={16} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto space-y-2">
-        {isLoading ? (
-          <div className="text-center text-muted-foreground py-4">
-            Loading reminders...
-          </div>
-        ) : reminders.length === 0 ? (
-          <div className="text-center text-muted-foreground py-4">
-            No reminders yet. Add one above!
-          </div>
-        ) : (
-          reminders.map((reminder) => (
-            <div
-              key={reminder.id}
-              className={`flex items-center gap-3 p-2 border rounded-md ${
-                reminder.completed ? 'bg-muted' : 'bg-background'
-              }`}
-            >
-              <button
-                onClick={() => toggleReminder(reminder.id)}
-                className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${
-                  reminder.completed
-                    ? 'bg-primary border-primary text-primary-foreground'
-                    : 'border-muted-foreground hover:border-primary'
+        <div className="flex-1 overflow-y-auto space-y-2">
+          {isLoading ? (
+            <div className="text-center text-muted-foreground py-4">
+              Loading reminders...
+            </div>
+          ) : reminders.length === 0 ? (
+            <div className="text-center text-muted-foreground py-4">
+              No reminders yet. Add one above!
+            </div>
+          ) : (
+            reminders.map((reminder) => (
+              <div
+                key={reminder.id}
+                className={`flex items-center gap-3 p-2 border rounded-md ${
+                  reminder.completed ? 'bg-muted' : 'bg-background'
                 }`}
               >
-                {reminder.completed && <Check size={12} />}
-              </button>
-              
-              <div className="flex-1 min-w-0">
-                <p
-                  className={`text-sm ${
+                <button
+                  onClick={() => toggleReminder(reminder.id)}
+                  className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${
                     reminder.completed
-                      ? 'line-through text-muted-foreground'
-                      : 'text-foreground'
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : 'border-muted-foreground hover:border-primary'
                   }`}
                 >
-                  {reminder.text}
-                </p>
-                {reminder.dueDate && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Clock size={12} className="text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">
-                      Due {new Date(reminder.dueDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
+                  {reminder.completed && <Check size={12} />}
+                </button>
+                
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={`text-sm ${
+                      reminder.completed
+                        ? 'line-through text-muted-foreground'
+                        : 'text-foreground'
+                    }`}
+                  >
+                    {reminder.text}
+                  </p>
+                  {reminder.dueDate && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Clock size={12} className="text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        Due {new Date(reminder.dueDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                                <button
+                  onClick={() => {
+                    deleteReminder(reminder.id)
+                  }}
+                  className="flex-shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1 rounded hover:bg-destructive/10"
+                  title="Delete reminder"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
-              
-              <button
-                onClick={() => deleteReminder(reminder.id)}
-                className="flex-shrink-0 text-muted-foreground hover:text-destructive transition-colors"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </BaseWidget>
   )
 }
 
