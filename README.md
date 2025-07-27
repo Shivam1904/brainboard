@@ -22,22 +22,18 @@ An AI-powered modular productivity dashboard with smart widgets for managing tas
    # Using conda (recommended)
    conda create -n brainboard python=3.10
    
-   # Activate the environment (you'll need to do this each time)
+   # The environment will activate automatically when you enter the brainboard directory
+   # For manual activation:
    conda activate brainboard
-   # OR if conda activate doesn't work:
-   source /opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh && conda activate brainboard
    ```
 
 4. **Install dependencies:**
    ```bash
-   # Install root dependencies (needed for concurrently)
+   # Install frontend dependencies
    npm install
    
-   # Install frontend dependencies
-   cd apps/frontend && npm install && cd ../..
-   
-   # Install backend dependencies (ensure conda environment is activated)
-   cd apps/backend && conda env update -f environment.yml && cd ../..
+   # Install backend dependencies
+   ./setup_backend.sh
    ```
 
 5. **Set up environment:**
@@ -57,33 +53,62 @@ An AI-powered modular productivity dashboard with smart widgets for managing tas
    ```
 
 6. **Start development servers:**
+
+   **Option 1: Using the development script (Recommended):**
    ```bash
-   # Ensure conda environment is activated first
-   conda activate brainboard
-   # OR: source /opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh && conda activate brainboard
+   # Set up everything
+   ./dev.sh setup
    
+   # Start frontend
+   ./dev.sh frontend
+   
+   # Start backend (in another terminal)
+   ./dev.sh backend
+   ```
+
+   **Option 2: Manual commands:**
+   
+   **Frontend:**
+   ```bash
    npm run dev
    ```
-   This starts both frontend and backend concurrently:
-   - Frontend: http://localhost:5173 (or next available port like 5174)
-   - Backend: http://localhost:8000
+   This starts the frontend at: http://localhost:5173 (or next available port like 5174)
+   
+   **Backend:**
+   ```bash
+   # The conda environment should activate automatically when you enter the brainboard directory
+   # If not, activate manually:
+   conda activate brainboard
+   
+   # Option 1: Using Python script
+   python run_backend.py
+   
+   # Option 2: Using shell script
+   ./run_backend.sh
+   ```
+   This starts the backend at: http://localhost:8000
 
 ## ⚠️ Local Development Notes
 
 - **AWS Credentials**: Not required for local development. The backend will run in local mode without DynamoDB
 - **PostCSS**: Uses `.cjs` extension for compatibility with ES modules
 - **Port Conflicts**: If port 5173 is in use, Vite will automatically use the next available port
-- **Conda Environment**: Always ensure your conda environment is activated before running backend commands
+- **Conda Environment**: Automatically activates when you enter the brainboard directory. If you open a new terminal, the environment will activate automatically.
 
 ## 📁 Project Structure
 
 ```
 brainboard/
+├── src/                   # React + Vite frontend source
 ├── apps/
-│   ├── frontend/          # React + Vite frontend
 │   └── backend/           # FastAPI backend
 ├── infra/                 # AWS CDK infrastructure
-└── ideas/                 # Project documentation
+├── ideas/                 # Project documentation
+├── run_backend.py         # Python script to run backend
+├── run_backend.sh         # Shell script to run backend
+├── setup_backend.sh       # Script to set up backend environment
+├── dev.sh                 # Development script for easy commands
+└── package.json           # Frontend dependencies
 ```
 
 ## 🛠️ Development
