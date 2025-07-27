@@ -1,0 +1,19 @@
+{
+  "name": "brainboard-backend",
+  "version": "1.0.0",
+  "description": "FastAPI backend for Brainboard",
+  "scripts": {
+    "dev": "uvicorn main:app --reload --port 8000",
+    "start": "uvicorn main:app --host 0.0.0.0 --port 8000",
+    "test": "pytest",
+    "lint": "flake8 . && black --check .",
+    "format": "black .",
+    "build": "echo 'Building Python package...'"
+  },
+  "keywords": [
+    "fastapi",
+    "api",
+    "backend",
+    "python"
+  ]
+}
