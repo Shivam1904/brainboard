@@ -2,122 +2,71 @@
 
 An AI-powered modular productivity dashboard with smart widgets for managing tasks, summaries, and automation.
 
-## 🚀 Quick Start
+## 🚀 Features
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd brainboard
-   ```
+### ✅ **Implemented Widgets**
+- **Web Search Widget** - Individual search widgets with unique queries and results
+- **Task List Widget** - Daily task management with progress tracking and mission creation
+- **Calendar Widget** - Monthly calendar with events, milestones, and navigation
+- **All Schedules Widget** - Comprehensive schedule management for all widgets
 
-2. **Set up Node.js environment:**
-   ```bash
-   # Using nvm (recommended)
-   nvm use 18
-   # Or install Node.js 18+ if you don't have nvm
-   ```
+### 🏗️ **Architecture**
+- **Dashboard API** - Dynamic widget loading from server configuration
+- **Two-Tier API System** - Dashboard-level configuration + Widget-level data fetching
+- **TypeScript** - Full type safety with comprehensive interfaces
+- **Responsive Design** - Grid-based layout with drag-and-drop functionality
 
-3. **Set up Python environment:**
-   ```bash
-   # Using conda (recommended)
-   conda create -n brainboard python=3.10
-   
-   # The environment will activate automatically when you enter the brainboard directory
-   # For manual activation:
-   conda activate brainboard
-   ```
+### 📱 **Widget Management**
+- **Dynamic Loading** - Widgets loaded based on server configuration
+- **Individual Data Fetching** - Each widget fetches its own data
+- **Schedule Management** - Complete CRUD operations for widget schedules
+- **Type-Specific Forms** - Different forms for different widget types
 
-4. **Install dependencies:**
-   ```bash
-   # Install frontend dependencies
-   npm install
-   
-   # Install backend dependencies
-   ./setup_backend.sh
-   ```
+## 🛠️ Tech Stack
 
-5. **Set up environment:**
-   ```bash
-   # Copy environment template
-   cp .env.example .env
-   ```
-   
-   Edit `.env` with your API keys:
-   ```bash
-   # Required for AI features
-   OPENAI_API_KEY=your-openai-api-key
-   SERPER_API_KEY=your-serper-api-key
-   
-   # Optional: AWS credentials for DynamoDB (can use local development without)
-   AWS_REGION=us-east-1
-   ```
+- **Frontend**: React + TypeScript + Vite
+- **Styling**: Tailwind CSS
+- **Grid System**: React Grid Layout
+- **Icons**: Lucide React
+- **State Management**: React Hooks
 
-6. **Start development servers:**
+## 📦 Installation
 
-   **Option 1: Using the development script (Recommended):**
-   ```bash
-   # Set up everything
-   ./dev.sh setup
-   
-   # Start frontend
-   ./dev.sh frontend
-   
-   # Start backend (in another terminal)
-   ./dev.sh backend
-   ```
+```bash
+# Clone the repository
+git clone <repository-url>
+cd brainboard
 
-   **Option 2: Manual commands:**
-   
-   **Frontend:**
-   ```bash
-   npm run dev
-   ```
-   This starts the frontend at: http://localhost:5173 (or next available port like 5174)
-   
-   **Backend:**
-   ```bash
-   # The conda environment should activate automatically when you enter the brainboard directory
-   # If not, activate manually:
-   conda activate brainboard
-   
-   # Option 1: Using Python script
-   python run_backend.py
-   
-   # Option 2: Using shell script
-   ./run_backend.sh
-   ```
-   This starts the backend at: http://localhost:8000
+# Install dependencies
+npm install
 
-7. **Database Management (Optional):**
-   ```bash
-   # Install DB Browser for SQLite for visual database management
-   brew install --cask db-browser-for-sqlite
-   ```
-   Then open the app and load `apps/backend/brainboard.db` to view/edit your data visually.
+# Start development server
+npm run dev
 
-## ⚠️ Local Development Notes
+# Build for production
+npm run build
+```
 
-- **Database**: Uses SQLite for local development stored in `apps/backend/brainboard.db`
-- **Database GUI**: Install [DB Browser for SQLite](https://sqlitebrowser.org/) with `brew install --cask db-browser-for-sqlite` for visual database management
-- **AWS Credentials**: Not required for local development. The backend will run in local mode without DynamoDB
-- **PostCSS**: Uses `.cjs` extension for compatibility with ES modules
-- **Port Conflicts**: If port 5173 is in use, Vite will automatically use the next available port
-- **Conda Environment**: Automatically activates when you enter the brainboard directory. If you open a new terminal, the environment will activate automatically.
-
-## 📁 Project Structure
+## 🏗️ Project Structure
 
 ```
-brainboard/
-├── src/                   # React + Vite frontend source
-├── apps/
-│   └── backend/           # FastAPI backend
-├── infra/                 # AWS CDK infrastructure
-├── ideas/                 # Project documentation
-├── run_backend.py         # Python script to run backend
-├── run_backend.sh         # Shell script to run backend
-├── setup_backend.sh       # Script to set up backend environment
-├── dev.sh                 # Development script for easy commands
-└── package.json           # Frontend dependencies
+src/
+├── components/
+│   ├── widgets/
+│   │   ├── WebSearchWidget.tsx      # Web search functionality
+│   │   ├── AllSchedulesWidget.tsx   # Schedule management
+│   │   └── BaseWidget.tsx           # Base widget component
+│   ├── Dashboard.tsx                # Main dashboard
+│   └── AddWidgetButton.tsx          # Widget addition UI
+├── config/
+│   ├── api.ts                       # API configuration
+│   ├── widgets.ts                   # Widget definitions
+│   └── grid.ts                      # Grid layout configuration
+├── types/
+│   └── dashboard.ts                 # TypeScript interfaces
+├── data/
+│   └── dashboardDummyData.ts        # Dummy data for development
+└── App.tsx                          # Main application
 ```
 
 ## 🛠️ Development
