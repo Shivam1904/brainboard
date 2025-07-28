@@ -191,7 +191,7 @@ class ComprehensiveTester:
         widget_data = {
             "query": "FastAPI tutorial guide"
         }
-        result = self.request("POST", f"{self.base_url}/api/widget/web-summary/create", widget_data)
+        result = self.request("POST", f"{self.base_url}/api/v1/widgets/web-summary/create", widget_data)
         widget_id = None
         if not result.get("error"):
             self.validate(result, ["widget_id", "summary"], "Create Web Summary Widget")
@@ -204,25 +204,25 @@ class ComprehensiveTester:
             summary_data = {
                 "query": "Advanced FastAPI features"
             }
-            result = self.request("POST", f"{self.base_url}/api/widget/web-summary/{widget_id}/generate", summary_data)
+            result = self.request("POST", f"{self.base_url}/api/v1/widgets/web-summary/{widget_id}/generate", summary_data)
             if not result.get("error"):
                 self.validate(result, ["id", "summary"], "Generate New Summary")
         
         # 3. Get latest summary
         if widget_id:
-            result = self.request("GET", f"{self.base_url}/api/widget/web-summary/{widget_id}/latest")
+            result = self.request("GET", f"{self.base_url}/api/v1/widgets/web-summary/{widget_id}/latest")
             if not result.get("error"):
                 self.validate(result, ["id", "summary"], "Get Latest Summary")
         
         # 4. Get widget info  
         if widget_id:
-            result = self.request("GET", f"{self.base_url}/api/widget/web-summary/{widget_id}")
+            result = self.request("GET", f"{self.base_url}/api/v1/widgets/web-summary/{widget_id}")
             if not result.get("error"):
                 self.validate(result, ["widget_id", "current_query"], "Get Widget Info")
         
         # 5. Delete widget
         if widget_id:
-            result = self.request("DELETE", f"{self.base_url}/api/widget/web-summary/{widget_id}")
+            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/web-summary/{widget_id}")
             if not result.get("error"):
                 self.log(f"Deleted widget {widget_id}", "SUCCESS")
 
@@ -298,7 +298,7 @@ class ComprehensiveTester:
         
         created_task_ids = []
         for task_data in task_data_list:
-            result = self.request("POST", f"{self.base_url}/api/widgets/todo/tasks", task_data)
+            result = self.request("POST", f"{self.base_url}/api/v1/widgets/todo/tasks", task_data)
             if not result.get("error"):
                 self.validate(result, ["id", "content", "frequency"], f"Create {task_data['frequency']} task")
                 created_task_ids.append(result["id"])
@@ -306,7 +306,7 @@ class ComprehensiveTester:
         self.log(f"Created {len(created_task_ids)} tasks", "SUCCESS")
         
         # 3. Get today's tasks (smart frequency filtering)
-        result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/today?widget_id={todo_widget_id}")
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/todo/tasks/today?widget_id={todo_widget_id}")
         if not result.get("error"):
             self.validate(result, ["widget_id", "tasks", "stats"], "Get Today's Tasks")
             tasks = result.get("tasks", [])
@@ -314,7 +314,7 @@ class ComprehensiveTester:
             self.log(f"Today's tasks: {len(tasks)} tasks, {stats.get('completion_rate', 0):.1f}% complete", "SUCCESS")
         
         # 4. Get all tasks with filtering
-        result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/all?widget_id={todo_widget_id}&include_completed=true")
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/todo/tasks/all?widget_id={todo_widget_id}&include_completed=true")
         if isinstance(result, list):
             all_tasks = result
             self.log(f"All tasks: {len(all_tasks)} total tasks", "SUCCESS")
@@ -325,7 +325,7 @@ class ComprehensiveTester:
         # 5. Update a task (mark as complete)
         if created_task_ids:
             task_id = created_task_ids[0]
-            result = self.request("PUT", f"{self.base_url}/api/widgets/todo/tasks/{task_id}/status?is_done=true")
+            result = self.request("PUT", f"{self.base_url}/api/v1/widgets/todo/tasks/{task_id}/status?is_done=true")
             if not result.get("error"):
                 self.validate(result, ["id", "is_done"], "Mark Task Complete")
                 
@@ -337,19 +337,19 @@ class ComprehensiveTester:
                 "priority": 5,
                 "category": "updated"
             }
-            result = self.request("PUT", f"{self.base_url}/api/widgets/todo/tasks/{task_id}", update_data)
+            result = self.request("PUT", f"{self.base_url}/api/v1/widgets/todo/tasks/{task_id}", update_data)
             if not result.get("error"):
                 self.validate(result, ["id", "content"], "Update Task")
         
         # 7. Get specific task
         if created_task_ids:
             task_id = created_task_ids[0]
-            result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/{task_id}")
+            result = self.request("GET", f"{self.base_url}/api/v1/widgets/todo/tasks/{task_id}")
             if not result.get("error"):
                 self.validate(result, ["id", "content", "frequency"], "Get Specific Task")
         
         # 8. Test category filtering
-        result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/all?widget_id={todo_widget_id}&category=work")
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/todo/tasks/all?widget_id={todo_widget_id}&category=work")
         if isinstance(result, list):
             work_tasks = result
             self.log(f"Work category tasks: {len(work_tasks)}", "SUCCESS")
@@ -358,7 +358,7 @@ class ComprehensiveTester:
             self.log(f"Work category tasks: {len(work_tasks)}", "SUCCESS")
         
         # 9. Test priority filtering
-        result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/all?widget_id={todo_widget_id}&priority=5")
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/todo/tasks/all?widget_id={todo_widget_id}&priority=5")
         if isinstance(result, list):
             high_priority_tasks = result
             self.log(f"High priority tasks: {len(high_priority_tasks)}", "SUCCESS")
@@ -369,7 +369,7 @@ class ComprehensiveTester:
         # 10. Delete a task
         if created_task_ids:
             task_id = created_task_ids[-1]  # Delete the last created task
-            result = self.request("DELETE", f"{self.base_url}/api/widgets/todo/tasks/{task_id}")
+            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/todo/tasks/{task_id}")
             if not result.get("error"):
                 self.log(f"Deleted task {task_id}", "SUCCESS")
 
@@ -417,7 +417,7 @@ class ComprehensiveTester:
             "value_type": "decimal"
         }
         
-        result = self.request("POST", f"{self.base_url}/api/widgets/single-item-tracker/create", tracker_data)
+        result = self.request("POST", f"{self.base_url}/api/v1/widgets/single-item-tracker/create", tracker_data)
         tracker_id = None
         if not result.get("error"):
             self.validate(result, ["id", "item_name", "value_type"], "Create Single Item Tracker")
@@ -435,19 +435,19 @@ class ComprehensiveTester:
         ]
         
         for i, update_data in enumerate(value_updates):
-            result = self.request("PUT", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}/update-value", update_data)
+            result = self.request("PUT", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}/update-value", update_data)
             if not result.get("error"):
                 self.validate(result, ["id", "current_value"], f"Update Value #{i+1}")
         
         # 4. Get tracker with logs
-        result = self.request("GET", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}?limit=5")
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}?limit=5")
         if not result.get("error"):
             self.validate(result, ["id", "item_name", "recent_logs"], "Get Tracker with Logs")
             logs = result.get("recent_logs", [])
             self.log(f"Tracker has {len(logs)} log entries", "SUCCESS")
         
         # 5. Get widget data for dashboard
-        result = self.request("GET", f"{self.base_url}/api/widgets/single-item-tracker/widget/{tracker_widget_id}/data")
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/single-item-tracker/widget/{tracker_widget_id}/data")
         if not result.get("error"):
             self.validate(result, ["widget_id", "tracker", "stats"], "Get Widget Data")
             stats = result.get("stats", {})
@@ -461,18 +461,18 @@ class ComprehensiveTester:
             "item_name": "Body Weight",
             "target_value": "68.0"
         }
-        result = self.request("PUT", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}", settings_update)
+        result = self.request("PUT", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}", settings_update)
         if not result.get("error"):
             self.validate(result, ["id", "item_name"], "Update Tracker Settings")
         
         # 7. Get tracker logs with pagination
-        result = self.request("GET", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}/logs?limit=10&offset=0")
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}/logs?limit=10&offset=0")
         if isinstance(result, list):
             logs = result
             self.log(f"Retrieved {len(logs)} log entries", "SUCCESS")
         
         # 8. Delete tracker (cleanup)
-        result = self.request("DELETE", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}")
+        result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}")
         if not result.get("error"):
             self.log(f"Deleted tracker {tracker_id}", "SUCCESS")
 

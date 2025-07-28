@@ -29,17 +29,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(widget_web_summary.router, prefix="/api/widget/web-summary", tags=["web-summary"])
+# Include routers - All using consistent /api/v1 prefix for main endpoints
+app.include_router(widget_web_summary.router, prefix="/api/v1/widgets/web-summary", tags=["web-summary"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
-app.include_router(todo.router)  # Todo router already has correct prefix
-app.include_router(single_item_tracker.router)  # Single item tracker router has correct prefix
-app.include_router(alarm.router)  # Alarm router has correct prefix
-app.include_router(
-    health.router, 
-    prefix="/api", 
-    tags=["health"]
-)
+app.include_router(health.router, prefix="/api", tags=["health"])  # Health uses /api for simplicity
+app.include_router(todo.router)  # Todo router has its own prefix: /api/v1/widgets/todo
+app.include_router(single_item_tracker.router)  # Single item tracker has its own prefix: /api/v1/widgets/single-item-tracker
+app.include_router(alarm.router)  # Alarm router has its own prefix: /api/v1/widgets/alarm
 
 @app.on_event("startup")
 async def startup_event():

@@ -1,16 +1,11 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 from typing import Dict, Any
 import logging
 from services.summary_service import SummaryService
-from factories.service_factory import ServiceFactory
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-def get_summary_service() -> SummaryService:
-    """Get summary service for health checks"""
-    return ServiceFactory.create_summary_service()
 
 @router.get(
     "/health",
@@ -32,16 +27,15 @@ async def health_check() -> Dict[str, Any]:
     summary="Detailed Health Check",
     description="Detailed health check including external service status"
 )
-async def detailed_health_check(
-    summary_service: SummaryService = Depends(get_summary_service)
-) -> Dict[str, Any]:
+async def detailed_health_check() -> Dict[str, Any]:
     """
     Detailed health check that tests external services
     """
     try:
         logger.info("Running detailed health check")
         
-        # Test external services
+        # Test external services using a simple service instance
+        summary_service = SummaryService()
         service_tests = await summary_service.test_services()
         
         overall_status = "healthy" if service_tests["overall"] else "degraded"

@@ -29,7 +29,7 @@ from models.schemas import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/widgets/todo", tags=["todo"])
+router = APIRouter(prefix="/api/v1/widgets/todo", tags=["todo"])
 
 def _should_show_task_today(task: TodoTask, target_date: date = None) -> bool:
     """
