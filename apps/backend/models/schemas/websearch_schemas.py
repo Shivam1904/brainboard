@@ -11,6 +11,23 @@ class CreateWebSearchQueryRequest(BaseModel):
     dashboard_widget_id: str
     search_term: str = Field(..., min_length=1, max_length=200)
 
+class CreateWebSearchWidgetRequest(BaseModel):
+    """Request schema for creating a websearch widget with search term"""
+    title: str = Field(..., min_length=1, max_length=100)
+    search_term: str = Field(..., min_length=1, max_length=200)
+    frequency: str = Field(default="daily", description="Widget update frequency")
+    category: Optional[str] = Field(default="search", max_length=50)
+    importance: Optional[int] = Field(default=3, ge=1, le=5)
+
+class CreateWebSearchWidgetResponse(BaseModel):
+    """Response schema for created websearch widget"""
+    widget_id: str
+    search_query_id: str
+    title: str
+    search_term: str
+    widget_type: str
+    created_at: datetime
+
 class WebSearchQueryResponse(BaseModel):
     """Response schema for web search query"""
     id: str
@@ -67,6 +84,12 @@ class UpdateWidgetSettingsRequest(BaseModel):
 class GenerateSummaryRequest(BaseModel):
     """Request schema for generating an AI summary"""
     query: str = Field(..., min_length=1, max_length=500, description="Search query for summary generation")
+
+class GenerateSummaryResponse(BaseModel):
+    """Simple response schema for summary generation"""
+    success: bool = Field(..., description="Whether summary generation was successful")
+    message: str = Field(..., description="Status message")
+    widget_id: str = Field(..., description="Widget ID that summary was generated for")
 
 class SummaryResponse(BaseModel):
     """Response schema for AI-generated summary"""

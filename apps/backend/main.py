@@ -33,7 +33,7 @@ app.add_middleware(
 app.include_router(websearch.router, prefix="/api/v1/widgets/websearch", tags=["websearch"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
 app.include_router(health.router, prefix="/api", tags=["health"])  # Health uses /api for simplicity
-app.include_router(todo.router, prefix="/api/v1/widgets/todo", tags=["todo"])
+app.include_router(todo.router, prefix="/api/v1/widgets/todo", tags=["todo"])  # Clean todo API - 4 endpoints only
 app.include_router(single_item_tracker.router, prefix="/api/v1/widgets/single-item-tracker", tags=["single-item-tracker"])
 app.include_router(alarm.router, prefix="/api/v1/widgets/alarm", tags=["alarm"])
 

@@ -33,7 +33,7 @@ def init_db():
         from models.database_models import (
             Widget, Summary,  # Legacy models
             User, DashboardWidget,  # Core new models
-            TodoTask, WebSearchQuery, Alarm, Habit, HabitLog  # Widget-specific models
+            TodoItem, TodoTask, WebSearchQuery, Alarm, Habit, HabitLog  # Widget-specific models
         )
         
         # Create all tables
