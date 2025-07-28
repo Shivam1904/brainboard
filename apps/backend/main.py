@@ -1,53 +1,65 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import os
+import logging
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-from routers import reminders, summaries, auth
+from routers import widget_web_summary, health
 from core.config import settings
 from core.database import init_db
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="Brainboard API",
-    description="AI-Powered Dashboard Backend",
+    description="AI-Powered Dashboard Backend with Web Summary Widgets",
     version="1.0.0"
 )
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Add your frontend URLs
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Security
-security = HTTPBearer()
-
 # Include routers
-app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
-app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"])
-app.include_router(summaries.router, prefix="/api/summaries", tags=["summaries"])
+app.include_router(
+    widget_web_summary.router, 
+    prefix="/api/widget/web-summary", 
+    tags=["web-summary-widget"]
+)
+app.include_router(
+    health.router, 
+    prefix="/api", 
+    tags=["health"]
+)
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on startup"""
-    init_db()
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        raise
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
-    return {"message": "Brainboard API is running", "version": "1.0.0"}
-
-@app.get("/api/health")
-async def health_check():
-    """Health check endpoint for monitoring"""
-    return {"status": "healthy", "service": "brainboard-api"}
+    """Root endpoint with API information"""
+    return {
+        "message": "Brainboard API is running",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/api/health"
+    }
 
 if __name__ == "__main__":
     import uvicorn
