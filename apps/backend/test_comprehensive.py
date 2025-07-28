@@ -6,9 +6,12 @@ Tests ALL endpoints with REAL data in ALL database tables
 Coverage:
 ✅ All Dashboard Endpoints (GET/POST/PUT/DELETE)  
 ✅ All Web Summary Endpoints
+✅ All Todo Widget Endpoints (frequency-based task management)
 ✅ Health Check Endpoints
 ✅ Real data population in all 8 database tables
 ✅ Schema validation for all responses
+✅ Smart frequency filtering for todo tasks
+✅ Priority and category-based task organization
 """
 
 import requests
@@ -215,6 +218,153 @@ class ComprehensiveTester:
             if not result.get("error"):
                 self.log(f"Deleted widget {widget_id}", "SUCCESS")
 
+    def test_todo_widget(self):
+        """Test todo widget endpoints with frequency-based task management"""
+        self.log("📝 Testing Todo Widget Endpoints", "INFO")
+        
+        # 1. Create a Todo widget first (should already exist from dashboard test)
+        todo_widget_id = None
+        for widget_id in self.created_widgets:
+            # Get widget info to find a todo widget
+            result = self.request("GET", f"{self.base_url}/api/v1/dashboard/widgets")
+            if isinstance(result, list):
+                widgets = result
+                for widget in widgets:
+                    if widget.get("widget_type") == "todo":
+                        todo_widget_id = widget["id"]
+                        break
+                if todo_widget_id:
+                    break
+        
+        if not todo_widget_id:
+            # Create a new todo widget if none found
+            widget_data = {
+                "title": "Test Todo Widget",
+                "widget_type": "todo",
+                "frequency": "daily",
+                "category": "testing",
+                "importance": 5
+            }
+            result = self.request("POST", f"{self.base_url}/api/v1/dashboard/widget", widget_data)
+            if not result.get("error"):
+                todo_widget_id = result["id"]
+                self.created_widgets.append(todo_widget_id)
+        
+        if not todo_widget_id:
+            self.log("Failed to get todo widget for testing", "ERROR")
+            return
+        
+        self.log(f"Using todo widget: {todo_widget_id}", "INFO")
+        
+        # 2. Create tasks with different frequencies
+        task_data_list = [
+            {
+                "dashboard_widget_id": todo_widget_id,
+                "content": "Daily task - Check emails",
+                "frequency": "daily",
+                "priority": 4,
+                "category": "work"
+            },
+            {
+                "dashboard_widget_id": todo_widget_id,
+                "content": "Weekly task - Team meeting",
+                "frequency": "weekly",
+                "priority": 5,
+                "category": "work"
+            },
+            {
+                "dashboard_widget_id": todo_widget_id,
+                "content": "Monthly task - Budget review",
+                "frequency": "monthly",
+                "priority": 3,
+                "category": "finance"
+            },
+            {
+                "dashboard_widget_id": todo_widget_id,
+                "content": "One-time task - Project setup",
+                "frequency": "once",
+                "priority": 2,
+                "category": "project"
+            }
+        ]
+        
+        created_task_ids = []
+        for task_data in task_data_list:
+            result = self.request("POST", f"{self.base_url}/api/widgets/todo/tasks", task_data)
+            if not result.get("error"):
+                self.validate(result, ["id", "content", "frequency"], f"Create {task_data['frequency']} task")
+                created_task_ids.append(result["id"])
+        
+        self.log(f"Created {len(created_task_ids)} tasks", "SUCCESS")
+        
+        # 3. Get today's tasks (smart frequency filtering)
+        result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/today?widget_id={todo_widget_id}")
+        if not result.get("error"):
+            self.validate(result, ["widget_id", "tasks", "stats"], "Get Today's Tasks")
+            tasks = result.get("tasks", [])
+            stats = result.get("stats", {})
+            self.log(f"Today's tasks: {len(tasks)} tasks, {stats.get('completion_rate', 0):.1f}% complete", "SUCCESS")
+        
+        # 4. Get all tasks with filtering
+        result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/all?widget_id={todo_widget_id}&include_completed=true")
+        if isinstance(result, list):
+            all_tasks = result
+            self.log(f"All tasks: {len(all_tasks)} total tasks", "SUCCESS")
+        elif not result.get("error"):
+            all_tasks = result
+            self.log(f"All tasks: {len(all_tasks)} total tasks", "SUCCESS")
+        
+        # 5. Update a task (mark as complete)
+        if created_task_ids:
+            task_id = created_task_ids[0]
+            result = self.request("PUT", f"{self.base_url}/api/widgets/todo/tasks/{task_id}/status?is_done=true")
+            if not result.get("error"):
+                self.validate(result, ["id", "is_done"], "Mark Task Complete")
+                
+        # 6. Update a task (full update)
+        if created_task_ids:
+            task_id = created_task_ids[1] if len(created_task_ids) > 1 else created_task_ids[0]
+            update_data = {
+                "content": "Updated task content",
+                "priority": 5,
+                "category": "updated"
+            }
+            result = self.request("PUT", f"{self.base_url}/api/widgets/todo/tasks/{task_id}", update_data)
+            if not result.get("error"):
+                self.validate(result, ["id", "content"], "Update Task")
+        
+        # 7. Get specific task
+        if created_task_ids:
+            task_id = created_task_ids[0]
+            result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/{task_id}")
+            if not result.get("error"):
+                self.validate(result, ["id", "content", "frequency"], "Get Specific Task")
+        
+        # 8. Test category filtering
+        result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/all?widget_id={todo_widget_id}&category=work")
+        if isinstance(result, list):
+            work_tasks = result
+            self.log(f"Work category tasks: {len(work_tasks)}", "SUCCESS")
+        elif not result.get("error"):
+            work_tasks = result
+            self.log(f"Work category tasks: {len(work_tasks)}", "SUCCESS")
+        
+        # 9. Test priority filtering
+        result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/all?widget_id={todo_widget_id}&priority=5")
+        if isinstance(result, list):
+            high_priority_tasks = result
+            self.log(f"High priority tasks: {len(high_priority_tasks)}", "SUCCESS")
+        elif not result.get("error"):
+            high_priority_tasks = result
+            self.log(f"High priority tasks: {len(high_priority_tasks)}", "SUCCESS")
+        
+        # 10. Delete a task
+        if created_task_ids:
+            task_id = created_task_ids[-1]  # Delete the last created task
+            result = self.request("DELETE", f"{self.base_url}/api/widgets/todo/tasks/{task_id}")
+            if not result.get("error"):
+                self.log(f"Deleted task {task_id}", "SUCCESS")
+
     def run_all_tests(self):
         """Execute complete test suite"""
         self.log("🚀 Starting Complete AI Dashboard Test Suite", "INFO")
@@ -225,6 +375,7 @@ class ComprehensiveTester:
             self.test_health()
             self.test_dashboard()
             self.test_web_summary()
+            self.test_todo_widget()  # New Todo widget specific tests
             
             # Results
             duration = time.time() - start_time

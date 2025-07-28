@@ -69,15 +69,21 @@ class Widget(Base):
 # ============================================================================
 
 class TodoTask(Base):
-    """Todo Task database model"""
+    """Todo Task database model - Enhanced with frequency support"""
     __tablename__ = "todo_tasks"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     dashboard_widget_id = Column(String, ForeignKey("dashboard_widgets.id"), nullable=False)
     content = Column(String, nullable=False)
     due_date = Column(Date, nullable=True)
+    frequency = Column(String, nullable=False, default="daily")  # 'daily', 'weekly', 'monthly', 'once'
+    priority = Column(Integer, nullable=True, default=3)  # 1-5 scale (1=low, 5=high)
+    category = Column(String, nullable=True)  # 'work', 'personal', 'health', etc.
     is_done = Column(Boolean, default=False)
+    is_recurring = Column(Boolean, default=True)  # Whether task repeats
+    last_completed_date = Column(Date, nullable=True)  # Track completion for recurring tasks
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     dashboard_widget = relationship("DashboardWidget", back_populates="todo_tasks")
