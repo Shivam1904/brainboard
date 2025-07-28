@@ -1,283 +1,115 @@
-import { TodayWidgetsResponse, ScheduledItem, DashboardWidgetConfig } from '../types/dashboard';
-import { findEmptyPosition, GRID_CONFIG } from '../config/grid';
-import { getWidgetConfig } from '../config/widgets';
+import { TodayWidgetsResponse } from '../types';
 
-// Dummy scheduled items data (what the API would return)
-export const DUMMY_SCHEDULED_ITEMS: ScheduledItem[] = [
-  {
-    id: '1',
-    title: 'India Shopping',
-    type: 'userTask',
-    frequency: 'daily',
-    category: 'health',
-    importance: 'High'
-  },
-  {
-    id: '2',
-    title: 'FootballQuery',
-    type: 'webSearch',
-    frequency: 'daily',
-    category: 'self-imp',
-    searchQuery: 'latest football news and scores'
-  },
-  {
-    id: '3',
-    title: 'MySearchQuery',
-    type: 'webSearch',
-    frequency: 'daily',
-    category: 'self-imp',
-    searchQuery: 'artificial intelligence developments today'
-  },
-  {
-    id: '4',
-    title: 'StockQuery',
-    type: 'webSearch',
-    frequency: 'daily',
-    category: 'self-imp',
-    searchQuery: 'stock market trends and analysis'
-  },
-  {
-    id: '5',
-    title: 'Stock Chart',
-    type: 'aiWebChart',
-    frequency: 'alternate',
-    category: 'finance'
-  },
-  {
-    id: '6',
-    title: 'Weather',
-    type: 'weatherWig',
-    frequency: 'daily',
-    category: 'awareness'
-  },
-  {
-    id: '7',
-    title: 'Calendar',
-    type: 'calendar',
-    frequency: 'daily'
-  },
-  {
-    id: '8',
-    title: 'Gym',
-    type: 'userHabit',
-    frequency: 'weekly-2',
-    category: 'health',
-    importance: 'Low',
-    alarm: '[7am]'
-  },
-  {
-    id: '9',
-    title: 'Smoking',
-    type: 'itemTracker',
-    frequency: 'daily',
-    category: 'health'
-  },
-  {
-    id: '10',
-    title: 'Weight',
-    type: 'itemTracker',
-    frequency: 'onGym',
-    category: 'health'
-  },
-  {
-    id: '11',
-    title: 'Yogi Bday',
-    type: 'alarm',
-    frequency: 'Jun 20',
-    alarm: '[9am]'
-  },
-  {
-    id: '12',
-    title: 'Sit Straight',
-    type: 'alarm',
-    frequency: 'daily-5',
-    alarm: '[list of times]'
-  },
-  {
-    id: '13',
-    title: 'Hourly Stats',
-    type: 'statsWidget',
-    frequency: 'hourly',
-    category: 'awareness'
-  },
-  {
-    id: '14',
-    title: 'How was AI Helpful',
-    type: 'statsWidget',
-    frequency: 'daily',
-    category: 'awareness'
-  },
-  {
-    id: '15',
-    title: 'News',
-    type: 'newsWidget',
-    frequency: 'daily'
-  },
-  {
-    id: '16',
-    title: 'Drink Water',
-    type: 'userHabit',
-    frequency: 'daily-8',
-    category: 'health',
-    importance: 'High',
-    alarm: '[every 2 hr]'
-  }
-];
-
-// Helper function to convert scheduled items to widget configurations
-export const convertScheduledItemsToWidgets = (items: ScheduledItem[]): TodayWidgetsResponse => {
-  const widgets: DashboardWidgetConfig[] = [];
-
-  // Group items by type
-  const webSearches = items.filter(item => item.type === 'webSearch');
-  const userTasks = items.filter(item => item.type === 'userTask');
-  const userHabits = items.filter(item => item.type === 'userHabit');
-  const itemTrackers = items.filter(item => item.type === 'itemTracker');
-  const otherWidgets = items.filter(item => 
-    !['webSearch', 'userTask', 'userHabit', 'itemTracker'].includes(item.type)
-  );
-
-  // Helper to add a widget using the shared findEmptyPosition
-  function addWidgetWithAutoPosition(
-    widgetType: string,
-    widgetConfig: Omit<DashboardWidgetConfig, 'layout'> & { layout?: Partial<DashboardWidgetConfig['layout']> }
-  ) {
-    const position = findEmptyPosition({
-      widgetId: widgetType,
-      widgets,
-      getWidgetConfig,
-      gridCols: GRID_CONFIG.cols.lg, // match previous maxCols
-      maxRows: 100,
-    });
-    if (!position) return; // skip if no space
-    
-    // Get layout details from widget config
-    const config = getWidgetConfig(widgetType);
-    if (!config) return; // skip if config not found
-    
-    widgets.push({
-      ...widgetConfig,
-      layout: {
-        x: position.x,
-        y: position.y,
-        w: config.defaultSize.w,
-        h: config.defaultSize.h,
-        minW: config.minSize.w,
-        minH: config.minSize.h,
-        maxW: config.maxSize.w,
-        maxH: config.maxSize.h,
-        ...widgetConfig.layout, // allow override of specific layout properties if needed
-      },
-    });
-  }
-
-  // Create widgets for each webSearch item
-  webSearches.forEach((item, index) => {
-    const widgetId = `webSearch-${item.id}`;
-    addWidgetWithAutoPosition('webSearch', {
-      id: widgetId,
-      type: 'webSearch',
-      config: {
-        searchQuery: item.searchQuery,
-        title: item.title,
-        maxResults: 5,
-        showImages: true
-      },
-      priority: 3 + index,
-      enabled: true,
-      scheduledItem: item
-    });
-  });
-
-  // Add Task List widget (always show for demo)
-  addWidgetWithAutoPosition('everydayTaskList', {
-    id: 'everydayTaskList-1',
-    type: 'everydayTaskList',
-    config: { showCompleted: true, sortBy: 'priority' },
-    priority: 1,
-    enabled: true,
-    scheduledItem: { id: 'everydayTaskList', title: 'Every Day Task List', type: 'everydayTaskList', frequency: 'daily' }
-  });
-
-  // Add calendar widget
-  const calendarItem = otherWidgets.find(item => item.type === 'calendar');
-  if (calendarItem) {
-    addWidgetWithAutoPosition('calendar', {
-      id: 'monthlyCalendar-1',
-      type: 'calendar',
-      config: {
-        showMilestones: true,
-        highlightToday: true
-      },
-      priority: 2,
-      enabled: true,
-      scheduledItem: calendarItem
-    });
-  }
-
-
-  // Add All Schedules widget
-  addWidgetWithAutoPosition('allSchedules', {
-    id: 'allSchedules-1',
-    type: 'allSchedules',
-    config: {
-      showCompleted: false
-    },
-    priority: 1,
-    enabled: true
-  });
-
-  // Add item trackers as small widgets
-  itemTrackers.forEach((item, index) => {
-    const widgetId = `itemTracker-${item.id}`;
-    addWidgetWithAutoPosition('singleItemTracker', {
-      id: widgetId,
-      type: 'singleItemTracker',
-      config: {
-        title: item.title,
-        category: item.category
-      },
-      priority: 4 + index,
-      enabled: true,
-      scheduledItem: item
-    });
-  });
-
-  // Calculate gridRows for layout
-  let maxY = 0;
-  let maxH = 0;
-  widgets.forEach(w => {
-    if (w.layout.y + w.layout.h > maxY + maxH) {
-      maxY = w.layout.y;
-      maxH = w.layout.h;
-    }
-  });
-
+// Dummy data that matches the new API response structure
+export const getDummyTodayWidgets = (): TodayWidgetsResponse => {
   return {
     date: new Date().toISOString().split('T')[0],
-    widgets,
-    layout: {
-      gridCols: GRID_CONFIG.cols.lg,
-      gridRows: Math.max(16, maxY + maxH)
+    widgets: [
+      {
+        id: "18f2f446-6cb1-465c-b92c-52b3e758c3bf",
+        type: "todo",
+        title: "Test Todo Widget",
+        size: "medium",
+        category: "testing",
+        importance: 5,
+        frequency: "daily",
+        settings: {},
+        data: {
+          tasks: [
+            {
+              id: "230a0dd7-4532-42bd-8f30-7c0c7aac67cd",
+              content: "Monthly task - Budget review",
+              due_date: null,
+              is_done: false,
+              created_at: "2025-07-28T08:07:09.285093"
+            },
+            {
+              id: "9c369ab9-2a63-4203-a6e0-b402771651ff",
+              content: "Updated task content",
+              due_date: null,
+              is_done: false,
+              created_at: "2025-07-28T08:07:09.282820"
+            },
+            {
+              id: "a5755376-9480-4658-9b8e-ea2c46e74670",
+              content: "Daily task - Check emails",
+              due_date: null,
+              is_done: true,
+              created_at: "2025-07-28T08:07:09.280270"
+            }
+          ],
+          stats: {
+            total_tasks: 3,
+            completed_tasks: 1,
+            pending_tasks: 2,
+            completion_rate: 33.33333333333333
+          }
+        }
+      },
+      {
+        id: "68c2ab14-23e0-41f9-8d98-50b04d01961d",
+        type: "habittracker",
+        title: "Daily Habits",
+        size: "medium",
+        category: "health",
+        importance: 5,
+        frequency: "daily",
+        settings: {
+          streak_goal: 30,
+          reminder_time: "09:00"
+        },
+        data: {
+          habits: [],
+          total_habits: 0
+        }
+      },
+      {
+        id: "08db6466-e5a4-4c6c-9341-0cd2366360a4",
+        type: "websearch",
+        title: "FastAPI Research Widget",
+        size: "medium",
+        category: null,
+        importance: null,
+        frequency: "daily",
+        settings: {},
+        data: {
+          message: "No search queries configured",
+          searches: []
+        }
+      },
+      {
+        id: "b2df57d5-d5a5-4eb0-8c27-fe5edc67dcde",
+        type: "todo",
+        title: "Updated Widget Title",
+        size: "medium",
+        category: "productivity",
+        importance: 3,
+        frequency: "daily",
+        settings: {
+          max_tasks: 10,
+          show_completed: true
+        },
+        data: {
+          tasks: [],
+          stats: {
+            total_tasks: 0,
+            completed_tasks: 0,
+            pending_tasks: 0,
+            completion_rate: 0
+          }
+        }
+      }
+    ],
+    stats: {
+      total_widgets: 4,
+      daily_count: 4,
+      weekly_count: 0,
+      monthly_count: 0
     }
   };
 };
 
-// Dummy data for today's dashboard widget configuration
-export const DUMMY_TODAY_WIDGETS: TodayWidgetsResponse = convertScheduledItemsToWidgets(DUMMY_SCHEDULED_ITEMS);
-
-// Helper function to get dummy data with a specific date
-export const getDummyTodayWidgets = (date?: string): TodayWidgetsResponse => {
-  return {
-    ...DUMMY_TODAY_WIDGETS,
-    date: date || new Date().toISOString().split('T')[0]
-  };
-};
-
-// Helper function to filter enabled widgets
+// Helper function to filter enabled widgets (not needed with new structure)
 export const getEnabledWidgets = (widgets: TodayWidgetsResponse): TodayWidgetsResponse => {
-  return {
-    ...widgets,
-    widgets: widgets.widgets.filter(widget => widget.enabled !== false)
-  };
+  return widgets; // All widgets are enabled by default in new structure
 }; 
