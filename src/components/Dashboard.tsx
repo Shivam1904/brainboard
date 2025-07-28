@@ -5,34 +5,29 @@ import WebSummaryWidget from './widgets/WebSummaryWidget'
 import WebSearchWidget from './widgets/WebSearchWidget';
 import TaskListWidget from './widgets/TaskListWidget'
 import CalendarWidget from './widgets/CalendarWidget'
-import AllSchedulesWidget from './widgets/AllSchedulesWidget';
+
 import BaseWidget from './widgets/BaseWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
-// import { buildApiUrl, apiCall } from '../config/api' // Uncomment when API is ready
-// import { TodayWidgetsResponse } from '../types/dashboard' // Uncomment when API is ready
+import { dashboardService } from '../services/api'
+import { 
+  TodayWidgetsResponse, 
+  BaseWidget as WidgetData, 
+  WidgetType
+} from '../types'
 import { getDummyTodayWidgets } from '../data/dashboardDummyData'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
 interface Widget {
   id: string
-  type: string
+  type: WidgetType
   layout: Layout
   config?: Record<string, any>
   priority?: number
   enabled?: boolean
-  scheduledItem?: {
-    id: string;
-    title: string;
-    type: string;
-    frequency: string;
-    category?: string;
-    importance?: 'High' | 'Medium' | 'Low';
-    alarm?: string;
-    searchQuery?: string;
-  };
+  widgetData: WidgetData
 }
 
 const Dashboard = () => {
@@ -61,36 +56,80 @@ const Dashboard = () => {
       setDashboardLoading(true)
       setDashboardError(null)
       
-      // In development, use dummy data
-      // const url = buildApiUrl(API_CONFIG.dashboard.getTodayWidgets, {
-      //   date: new Date().toISOString().split('T')[0]
-      // });
-      // const data = await apiCall<TodayWidgetsResponse>(url);
+      // Try to fetch from API first
+      let data: TodayWidgetsResponse;
       
-      // For now, use dummy data
-      const data = getDummyTodayWidgets()
+      try {
+        data = await dashboardService.getTodayWidgets();
+        console.log('Successfully fetched today\'s widgets from API:', data);
+      } catch (apiError) {
+        console.warn('API call failed, falling back to dummy data:', apiError);
+        // Fallback to dummy data if API is not available
+        data = getDummyTodayWidgets();
+        
+        // Show a subtle notification that we're using fallback data
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using fallback data - API server may not be running');
+        }
+      }
       
-      // Convert dashboard widget config to internal widget format
-      const newWidgets: Widget[] = data.widgets
-        .filter(widget => widget.enabled !== false)
-        .map(dashboardWidget => ({
-          id: dashboardWidget.id,
-          type: dashboardWidget.type,
-          layout: {
-            i: dashboardWidget.id,
-            x: dashboardWidget.layout.x,
-            y: dashboardWidget.layout.y,
-            w: dashboardWidget.layout.w,
-            h: dashboardWidget.layout.h,
-            minW: dashboardWidget.layout.minW || getWidgetConfig(dashboardWidget.type)?.minSize.w || 1,
-            minH: dashboardWidget.layout.minH || getWidgetConfig(dashboardWidget.type)?.minSize.h || 1,
-            maxW: dashboardWidget.layout.maxW || getWidgetConfig(dashboardWidget.type)?.maxSize.w || 12,
-            maxH: dashboardWidget.layout.maxH || getWidgetConfig(dashboardWidget.type)?.maxSize.h || 10
-          },
-          config: dashboardWidget.config,
-          priority: dashboardWidget.priority,
-          enabled: dashboardWidget.enabled
-        }))
+      // Convert API widget data to internal widget format
+      const newWidgets: Widget[] = [];
+      
+      for (const widgetData of data.widgets) {
+        // Map API widget types to config widget IDs
+        const getConfigWidgetId = (apiType: string): string => {
+          const typeMapping: Record<string, string> = {
+            'todo': 'everydayTaskList',
+            'habittracker': 'habitListTracker',
+            'websearch': 'webSearch',
+            'websummary': 'webSearch', // Map to webSearch for now
+            'calendar': 'calendar',
+            'reminder': 'reminders'
+          };
+          return typeMapping[apiType] || apiType;
+        };
+
+        const configWidgetId = getConfigWidgetId(widgetData.type);
+        const defaultConfig = getWidgetConfig(configWidgetId);
+        
+        if (!defaultConfig) {
+          console.warn(`No widget config found for type: ${widgetData.type} (mapped to: ${configWidgetId})`);
+          continue; // Skip widgets without config
+        }
+
+        // Find empty position for this widget (considering already placed widgets)
+        const position = findEmptyPosition(configWidgetId, newWidgets);
+        
+        if (!position) {
+          console.warn(`No space available for widget: ${widgetData.title} (${widgetData.type})`);
+          continue; // Skip widgets that can't be placed
+        }
+
+        console.log(`Placing widget ${widgetData.title} at position (${position.x}, ${position.y}) with size (${defaultConfig.defaultSize.w}, ${defaultConfig.defaultSize.h})`);
+
+        const layout: Layout = {
+          i: widgetData.id,
+          x: position.x,
+          y: position.y,
+          w: defaultConfig.defaultSize.w,
+          h: defaultConfig.defaultSize.h,
+          minW: defaultConfig.minSize.w,
+          minH: defaultConfig.minSize.h,
+          maxW: defaultConfig.maxSize.w,
+          maxH: defaultConfig.maxSize.h
+        };
+
+        newWidgets.push({
+          id: widgetData.id,
+          type: widgetData.type,
+          layout,
+          config: widgetData.settings,
+          priority: widgetData.importance || undefined,
+          enabled: true, // All widgets from API are enabled by default
+          widgetData
+        });
+      }
       
       setWidgets(newWidgets)
     } catch (err) {
@@ -99,17 +138,39 @@ const Dashboard = () => {
       // Fallback to default widgets
       setWidgets([
         {
-          id: 'everydayTaskList-1',
-          type: 'everydayTaskList',
+          id: 'todo-1',
+          type: 'todo',
           layout: { 
-            i: 'everydayTaskList-1', 
+            i: 'todo-1', 
             x: 0, y: 0, 
-            w: getWidgetConfig('everydayTaskList')?.defaultSize.w || 10, 
-            h: getWidgetConfig('everydayTaskList')?.defaultSize.h || 8,
-            minW: getWidgetConfig('everydayTaskList')?.minSize.w || 8,
-            minH: getWidgetConfig('everydayTaskList')?.minSize.h || 8,
-            maxW: getWidgetConfig('everydayTaskList')?.maxSize.w || 12,
-            maxH: getWidgetConfig('everydayTaskList')?.maxSize.h || 10
+            w: getWidgetConfig('todo')?.defaultSize.w || 6, 
+            h: getWidgetConfig('todo')?.defaultSize.h || 4,
+            minW: getWidgetConfig('todo')?.minSize.w || 1,
+            minH: getWidgetConfig('todo')?.minSize.h || 1,
+            maxW: getWidgetConfig('todo')?.maxSize.w || 12,
+            maxH: getWidgetConfig('todo')?.maxSize.h || 10
+          },
+          config: {},
+          priority: undefined,
+          enabled: true,
+          widgetData: {
+            id: 'todo-1',
+            type: 'todo',
+            title: 'Default Todo Widget',
+            size: 'medium',
+            category: 'productivity',
+            importance: 3,
+            frequency: 'daily',
+            settings: {},
+            data: {
+              tasks: [],
+              stats: {
+                total_tasks: 0,
+                completed_tasks: 0,
+                pending_tasks: 0,
+                completion_rate: 0
+              }
+            }
           }
         }
       ])
@@ -147,7 +208,7 @@ const Dashboard = () => {
   }, {} as Record<string, Layout>)
 
   // Find empty space for new widget
-  const findEmptyPosition = (widgetId: string): { x: number; y: number } | null => {
+  const findEmptyPosition = (widgetId: string, existingWidgets: Widget[] = widgets): { x: number; y: number } | null => {
     const config = getWidgetConfig(widgetId)
     if (!config) return null
     
@@ -162,13 +223,15 @@ const Dashboard = () => {
     
     // Create a grid to track occupied spaces
     const occupiedSpaces = new Set<string>()
-    widgets.forEach((widget: Widget) => {
+    existingWidgets.forEach((widget: Widget) => {
       for (let x = widget.layout.x; x < widget.layout.x + widget.layout.w; x++) {
         for (let y = widget.layout.y; y < widget.layout.y + widget.layout.h; y++) {
           occupiedSpaces.add(`${x},${y}`)
         }
       }
     })
+
+    console.log(`Finding position for widget ${widgetId} (${widgetWidth}x${widgetHeight}), existing widgets: ${existingWidgets.length}, occupied spaces: ${occupiedSpaces.size}`);
 
     // Try to find an empty space within boundaries
     for (let y = 0; y < Math.min(GRID_CONFIG.maxSearchDepth, maxRows - widgetHeight); y++) {
@@ -235,6 +298,40 @@ const Dashboard = () => {
     )
   }
 
+  // Save dashboard layout to API
+  const saveDashboardLayout = async (widgets: Widget[]) => {
+    try {
+      const dashboardLayout = {
+        widgets: widgets.map(widget => ({
+          id: widget.id,
+          type: widget.type,
+          layout: {
+            x: widget.layout.x,
+            y: widget.layout.y,
+            w: widget.layout.w,
+            h: widget.layout.h,
+            minW: widget.layout.minW,
+            minH: widget.layout.minH,
+            maxW: widget.layout.maxW,
+            maxH: widget.layout.maxH
+          },
+          config: widget.config,
+          priority: widget.priority,
+          enabled: widget.enabled
+        })),
+        layout_version: '1.0',
+        last_updated: new Date().toISOString()
+      };
+
+      // Note: saveDashboardLayout method doesn't exist in the new API service
+      // For now, just log the layout data
+      console.log('Dashboard layout to save:', dashboardLayout);
+    } catch (error) {
+      console.error('Failed to save dashboard layout:', error);
+      // Don't show error to user for layout saves, just log it
+    }
+  }
+
   const onDragStop = (layout: Layout[]) => {
     // Apply constraints when the user finishes dragging
     applyConstraints(layout)
@@ -274,12 +371,15 @@ const Dashboard = () => {
              original.h !== constrained.h
     })
     
-    setWidgets((prev: Widget[]) => 
-      prev.map((widget: Widget) => {
-        const newLayout = constrainedLayout.find(l => l.i === widget.id)
-        return newLayout ? { ...widget, layout: newLayout } : widget
-      })
-    )
+    const updatedWidgets = widgets.map((widget: Widget) => {
+      const newLayout = constrainedLayout.find(l => l.i === widget.id)
+      return newLayout ? { ...widget, layout: newLayout } : widget
+    });
+    
+    setWidgets(updatedWidgets)
+    
+    // Save layout to API after constraints are applied
+    saveDashboardLayout(updatedWidgets)
     
     // Add visual feedback if any widget was constrained
     if (wasConstrained) {
@@ -294,6 +394,18 @@ const Dashboard = () => {
   }
 
   const addWidget = (widgetId: string) => {
+    // Map config widget IDs to API widget types for new widgets
+    const getApiWidgetType = (configId: string): WidgetType => {
+      const reverseMapping: Record<string, WidgetType> = {
+        'everydayTaskList': 'todo',
+        'habitListTracker': 'habittracker',
+        'webSearch': 'websearch',
+        'calendar': 'calendar',
+        'reminders': 'reminder'
+      };
+      return reverseMapping[configId] || 'todo';
+    };
+
     const config = getWidgetConfig(widgetId)
     
     if (!config) {
@@ -323,12 +435,40 @@ const Dashboard = () => {
     // Apply constraints to the new widget layout
     const constrainedLayout = constrainLayout(newLayout)
 
+    // Create default widget data based on type
+    const apiWidgetType = getApiWidgetType(widgetId);
+    const defaultWidgetData: WidgetData = {
+      id: `${widgetId}-${Date.now()}`,
+      type: apiWidgetType,
+      title: config.title || widgetId,
+      size: 'medium',
+      category: 'productivity',
+      importance: 3,
+      frequency: 'daily',
+      settings: {},
+      data: {
+        tasks: [],
+        stats: {
+          total_tasks: 0,
+          completed_tasks: 0,
+          pending_tasks: 0,
+          completion_rate: 0
+        }
+      }
+    }
+
     const newWidget: Widget = {
       id: `${widgetId}-${Date.now()}`,
-      type: widgetId,
-      layout: constrainedLayout
+      type: apiWidgetType,
+      layout: constrainedLayout,
+      config: {},
+      priority: undefined,
+      enabled: true,
+      widgetData: defaultWidgetData
     }
-    setWidgets((prev: Widget[]) => [...prev, newWidget])
+    const updatedWidgets = [...widgets, newWidget];
+    setWidgets(updatedWidgets)
+    saveDashboardLayout(updatedWidgets)
   }
 
   const removeWidget = (id: string) => {
@@ -336,12 +476,28 @@ const Dashboard = () => {
     const widgetType = widget?.type || 'widget'
     
     if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
-      setWidgets((prev: Widget[]) => prev.filter((widget: Widget) => widget.id !== id))
+      const updatedWidgets = widgets.filter((widget: Widget) => widget.id !== id);
+      setWidgets(updatedWidgets)
+      saveDashboardLayout(updatedWidgets)
     }
   }
 
   const renderWidget = (widget: Widget) => {
-    const config = getWidgetConfig(widget.type)
+    // Map API widget types to config widget IDs
+    const getConfigWidgetId = (apiType: string): string => {
+      const typeMapping: Record<string, string> = {
+        'todo': 'everydayTaskList',
+        'habittracker': 'habitListTracker',
+        'websearch': 'webSearch',
+        'websummary': 'webSearch', // Map to webSearch for now
+        'calendar': 'calendar',
+        'reminder': 'reminders'
+      };
+      return typeMapping[apiType] || apiType;
+    };
+
+    const configWidgetId = getConfigWidgetId(widget.type);
+    const config = getWidgetConfig(configWidgetId)
     
     switch (widget.type) {
       case 'reminder':
@@ -350,27 +506,24 @@ const Dashboard = () => {
             onRemove={() => removeWidget(widget.id)}
           />
         )
-      case 'webSummary':
-      case 'summary': // Keep backward compatibility
+      case 'websummary':
         return (
           <WebSummaryWidget
             onRemove={() => removeWidget(widget.id)}
           />
         )
-      case 'webSearch':
+      case 'websearch':
         return (
           <WebSearchWidget
             onRemove={() => removeWidget(widget.id)}
             config={widget.config}
-            scheduledItem={widget.scheduledItem}
           />
         );
-      case 'everydayTaskList':
+      case 'todo':
         return (
           <TaskListWidget
             onRemove={() => removeWidget(widget.id)}
             config={widget.config}
-            scheduledItem={widget.scheduledItem}
           />
         );
       case 'calendar':
@@ -378,15 +531,26 @@ const Dashboard = () => {
           <CalendarWidget
             onRemove={() => removeWidget(widget.id)}
             config={widget.config}
-            scheduledItem={widget.scheduledItem}
           />
         );
-      case 'allSchedules':
+      case 'habittracker':
         return (
-          <AllSchedulesWidget
+          <BaseWidget
+            title={config?.title || "Habit Tracker"}
+            icon={config?.icon || "📊"}
             onRemove={() => removeWidget(widget.id)}
-            config={widget.config}
-          />
+          >
+            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+              <div className="text-4xl mb-2">{config?.icon || '📊'}</div>
+              <h3 className="font-medium mb-2">{config?.title || 'Habit Tracker'}</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {config?.description || 'Track your daily habits and build streaks'}
+              </p>
+              <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                Coming Soon
+              </div>
+            </div>
+          </BaseWidget>
         );
       default:
         // For unimplemented widgets, show BaseWidget with placeholder content
