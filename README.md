@@ -199,6 +199,23 @@ conda activate brainboard
 2. Open "DB Browser for SQLite" app
 3. Click "Open Database" → Navigate to `apps/backend/brainboard.db`
 4. Use "Browse Data" tab to view/edit your widgets and summaries
+### **Calendar Widget**
+- **Purpose**: Monthly calendar with events and milestones
+- **Features**: Month navigation, event display, upcoming events, event details
+- **Size**: Large (16x12)
+
+### **All Schedules Widget**
+- **Purpose**: Manage all widget schedules and configurations
+- **Features**: CRUD operations, type-specific forms, category management
+- **Size**: Large (16x12)
+
+### **Planned Widgets**
+- Habit Tracker Widget
+- Reminders Widget
+- Item Tracker Widget
+- Weather Widget
+- Stats Widget
+- News Widget
 
 **Database Features**:
 - ✅ View all widgets and AI summaries

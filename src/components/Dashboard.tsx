@@ -5,7 +5,6 @@ import WebSummaryWidget from './widgets/WebSummaryWidget'
 import WebSearchWidget from './widgets/WebSearchWidget';
 import TaskListWidget from './widgets/TaskListWidget'
 import CalendarWidget from './widgets/CalendarWidget'
-
 import BaseWidget from './widgets/BaseWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { getWidgetConfig } from '../config/widgets'
@@ -518,6 +517,13 @@ const Dashboard = () => {
       case 'websearch':
         return (
           <WebSearchWidget
+            onRemove={() => removeWidget(widget.id)}
+            config={widget.config}
+          />
+        );
+      case 'calendar':
+        return (
+          <CalendarWidget
             onRemove={() => removeWidget(widget.id)}
             config={widget.config}
           />
