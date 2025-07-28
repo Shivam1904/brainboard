@@ -5,6 +5,7 @@ import TaskListWidget from './widgets/TaskListWidget'
 import SingleItemTrackerWidget from './widgets/SingleItemTrackerWidget'
 import AlarmWidget from './widgets/AlarmWidget'
 import BaseWidget from './widgets/BaseWidget'
+import CalendarWidget from './widgets/CalendarWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties, findEmptyPosition } from '../config/grid'
@@ -375,6 +376,13 @@ const Dashboard = () => {
       case 'singleitemtracker':
         return (
           <SingleItemTrackerWidget
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+        );
+      case 'calendar':
+        return (
+          <CalendarWidget
             widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
