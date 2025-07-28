@@ -17,6 +17,7 @@ import {
   WidgetType
 } from '../types'
 import { getDummyTodayWidgets } from '../data/dashboardDummyData'
+import AllSchedulesWidget from './widgets/AllSchedulesWidget';
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -401,7 +402,8 @@ const Dashboard = () => {
         'habitListTracker': 'habittracker',
         'webSearch': 'websearch',
         'calendar': 'calendar',
-        'reminders': 'reminder'
+        'reminders': 'reminder',
+        'allSchedules': 'allSchedules'
       };
       return reverseMapping[configId] || 'todo';
     };
@@ -491,7 +493,8 @@ const Dashboard = () => {
         'websearch': 'webSearch',
         'websummary': 'webSearch', // Map to webSearch for now
         'calendar': 'calendar',
-        'reminder': 'reminders'
+        'reminder': 'reminders',
+        'allSchedules': 'allSchedules'
       };
       return typeMapping[apiType] || apiType;
     };
@@ -515,6 +518,13 @@ const Dashboard = () => {
       case 'websearch':
         return (
           <WebSearchWidget
+            onRemove={() => removeWidget(widget.id)}
+            config={widget.config}
+          />
+        );
+      case 'allSchedules':
+        return (
+          <AllSchedulesWidget
             onRemove={() => removeWidget(widget.id)}
             config={widget.config}
           />

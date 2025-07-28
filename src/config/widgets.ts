@@ -56,7 +56,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'AllSchedulesWidget',
     minSize: { w: 12, h: 10 },
     maxSize: { w: 30, h: 36 },
-    defaultSize: { w: 26, h: 22 },
+    defaultSize: { w: 15, h: 15 },
     deletable: true,
     resizable: true,
     category: 'productivity',
