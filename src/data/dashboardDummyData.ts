@@ -175,40 +175,22 @@ export const convertScheduledItemsToWidgets = (items: ScheduledItem[]): TodayWid
     }
   });
 
-  // Add other widget types
-  if (userTasks.length > 0 || userHabits.length > 0) {
-    widgets.push({
-      id: 'everydayTaskList-1',
-      type: 'everydayTaskList',
-      layout: {
-        x: x,
-        y: y,
-        w: widgetWidth,
-        h: widgetHeight,
-        minW: 8,
-        minH: 8,
-        maxW: 12,
-        maxH: 10
-      },
-      config: {
-        showCompleted: true,
-        sortBy: 'priority'
-      },
-      priority: 1,
-      enabled: true,
-      scheduledItem: {
-        id: 'taskList',
-        title: 'Task List',
-        type: 'everydayTaskList',
-        frequency: 'daily'
-      }
-    });
+  // Add Task List widget (always show for demo)
+  widgets.push({
+    id: 'taskList-1',
+    type: 'taskList',
+    layout: { x: x, y: y, w: 12, h: 10, minW: 8, minH: 8, maxW: 16, maxH: 12 },
+    config: { showCompleted: true, sortBy: 'priority' },
+    priority: 1,
+    enabled: true,
+    scheduledItem: { id: 'taskList', title: 'Today\'s Tasks', type: 'taskList', frequency: 'daily' }
+  });
 
-    x += widgetWidth;
-    if (x + widgetWidth > maxCols) {
-      x = 0;
-      y += widgetHeight;
-    }
+  // Move to next position
+  x += 12;
+  if (x + 12 > maxCols) {
+    x = 0;
+    y += 10;
   }
 
   // Add calendar widget
@@ -242,6 +224,27 @@ export const convertScheduledItemsToWidgets = (items: ScheduledItem[]): TodayWid
       y += widgetHeight;
     }
   }
+
+  // Add All Schedules widget
+  widgets.push({
+    id: 'allSchedules-1',
+    type: 'allSchedules',
+    layout: {
+      x: x,
+      y: y,
+      w: 16,
+      h: 12,
+      minW: 12,
+      minH: 10,
+      maxW: 20,
+      maxH: 16
+    },
+    config: {
+      showCompleted: false
+    },
+    priority: 1,
+    enabled: true
+  });
 
   // Add item trackers as small widgets
   itemTrackers.forEach((item, index) => {

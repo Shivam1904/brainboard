@@ -1,65 +1,39 @@
 // API Configuration for Brainboard widgets
 export const API_CONFIG = {
   baseUrl: 'http://localhost:8000', // Backend server URL
-  
-  // Dashboard endpoints
   dashboard: {
     getTodayWidgets: '/api/dashboard/today', // Get today's widget configuration
   },
-  
-  // Everyday Web Search endpoints
-  everydayWebSearch: {
-    getScheduledSearches: '/api/web-search/scheduled', // Get scheduled searches for today
-    getSearchResult: '/api/web-search/result', // Get search result for specific search
+  webSearch: {
+    getScheduledSearches: '/api/web-search/scheduled',
+    getSearchResult: '/api/web-search/result',
   },
-  
-  // Task List endpoints
-  taskList: {
-    getTodayTasks: '/api/tasks/today',
-    addMission: '/api/tasks/mission',
-    updateTask: '/api/tasks/update',
-    getMonthlySchedule: '/api/tasks/schedule',
+  tasks: {
+    getTodayTasks: '/api/tasks/today', // Get today's tasks
+    updateTask: '/api/tasks/update', // Update task status
+    addMission: '/api/tasks/mission', // Add new mission
   },
-  
-  // Calendar endpoints
-  calendar: {
-    getMonthlyData: '/api/calendar/monthly',
-  },
-  
-  // Habit Tracker endpoints
-  habitTracker: {
-    getHabits: '/api/habits',
-    updateHabit: '/api/habits/update',
-  },
-  
-  // Reminders endpoints
   reminders: {
     getReminders: '/api/reminders',
     createReminder: '/api/reminders/create',
-    updateReminder: '/api/reminders/update',
   },
-  
-  // Single Item Tracker endpoints
-  singleItemTracker: {
-    getItems: '/api/tracker/items',
-    updateItem: '/api/tracker/update',
+  calendar: {
+    getMonthlyCalendar: '/api/calendar/monthly',
   },
-  
-  // Notifications endpoints
-  notifications: {
-    getNotifications: '/api/notifications',
-    dismissNotification: '/api/notifications/dismiss',
+  schedules: {
+    getAllSchedules: '/api/schedules',
+    createSchedule: '/api/schedules',
+    updateSchedule: '/api/schedules/{id}',
+    deleteSchedule: '/api/schedules/{id}',
   },
-  
-  // AI Task History endpoints
-  aiTaskHistory: {
-    getTodayActions: '/api/ai/actions/today',
+  weather: {
+    getWeather: '/api/weather/current',
   },
-  
-  // Web Search Chart endpoints
-  webSearchChart: {
-    getChartData: '/api/web-search/chart',
-    getTrendAnalysis: '/api/web-search/trends',
+  news: {
+    getNews: '/api/news/feed',
+  },
+  stats: {
+    getStats: '/api/stats/daily',
   },
 };
 

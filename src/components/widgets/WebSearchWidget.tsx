@@ -88,35 +88,35 @@ const getDummyWebSearchResult = (searchQuery: string): WebSearchResult => {
   }
 };
 
-const DUMMY_SEARCH_RESULTS: Record<string, WebSearchResult> = {
-  '1': {
-    id: '1',
-    searchTerm: 'Latest AI developments',
-    heading: 'AI Breakthrough: New Language Model Achieves Human-Level Understanding',
-    subheading: 'Revolutionary advances in natural language processing',
-    text: 'Researchers have developed a new AI model that demonstrates unprecedented understanding of human language. The model, called GPT-5, shows remarkable capabilities in reasoning, creativity, and problem-solving tasks that were previously thought to be beyond the reach of artificial intelligence.',
-    images: ['https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=AI+Breakthrough'],
-    scheduleDate: '2024-01-15'
-  },
-  '2': {
-    id: '2',
-    searchTerm: 'Stock market trends',
-    heading: 'Market Analysis: Tech Stocks Lead Recovery',
-    subheading: 'S&P 500 reaches new heights as technology sector surges',
-    text: 'Technology stocks have led a broad market rally, with the S&P 500 reaching new record levels. Major tech companies including Apple, Microsoft, and Google parent Alphabet have all posted strong quarterly results, driving investor confidence.',
-    images: ['https://via.placeholder.com/300x200/10B981/FFFFFF?text=Market+Trends'],
-    scheduleDate: '2024-01-15'
-  },
-  '3': {
-    id: '3',
-    searchTerm: 'Weather forecast',
-    heading: 'Weather Update: Sunny Skies Expected',
-    subheading: 'Perfect conditions for outdoor activities this weekend',
-    text: 'The weather forecast shows clear skies and mild temperatures throughout the weekend. Highs will reach 75°F with light winds, making it ideal for outdoor activities. No precipitation is expected for the next 7 days.',
-    images: ['https://via.placeholder.com/300x200/F59E0B/FFFFFF?text=Weather+Forecast'],
-    scheduleDate: '2024-01-15'
-  }
-};
+// const DUMMY_SEARCH_RESULTS: Record<string, WebSearchResult> = {
+//   '1': {
+//     id: '1',
+//     searchTerm: 'Latest AI developments',
+//     heading: 'AI Breakthrough: New Language Model Achieves Human-Level Understanding',
+//     subheading: 'Revolutionary advances in natural language processing',
+//     text: 'Researchers have developed a new AI model that demonstrates unprecedented understanding of human language. The model, called GPT-5, shows remarkable capabilities in reasoning, creativity, and problem-solving tasks that were previously thought to be beyond the reach of artificial intelligence.',
+//     images: ['https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=AI+Breakthrough'],
+//     scheduleDate: '2024-01-15'
+//   },
+//   '2': {
+//     id: '2',
+//     searchTerm: 'Stock market trends',
+//     heading: 'Market Analysis: Tech Stocks Lead Recovery',
+//     subheading: 'S&P 500 reaches new heights as technology sector surges',
+//     text: 'Technology stocks have led a broad market rally, with the S&P 500 reaching new record levels. Major tech companies including Apple, Microsoft, and Google parent Alphabet have all posted strong quarterly results, driving investor confidence.',
+//     images: ['https://via.placeholder.com/300x200/10B981/FFFFFF?text=Market+Trends'],
+//     scheduleDate: '2024-01-15'
+//   },
+//   '3': {
+//     id: '3',
+//     searchTerm: 'Weather forecast',
+//     heading: 'Weather Update: Sunny Skies Expected',
+//     subheading: 'Perfect conditions for outdoor activities this weekend',
+//     text: 'The weather forecast shows clear skies and mild temperatures throughout the weekend. Highs will reach 75°F with light winds, making it ideal for outdoor activities. No precipitation is expected for the next 7 days.',
+//     images: ['https://via.placeholder.com/300x200/F59E0B/FFFFFF?text=Weather+Forecast'],
+//     scheduleDate: '2024-01-15'
+//   }
+// };
 
 interface EverydayWebSearchWidgetProps {
   onRemove: () => void;

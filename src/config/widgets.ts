@@ -36,6 +36,32 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     category: 'information',
     icon: '🔍'
   },
+  taskList: {
+    id: 'taskList',
+    title: 'Today\'s Tasks',
+    description: 'Daily task management and mission tracking',
+    component: 'TaskListWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 16, h: 12 },
+    defaultSize: { w: 12, h: 10 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '📋'
+  },
+  allSchedules: {
+    id: 'allSchedules',
+    title: 'All Schedules',
+    description: 'Manage all widget schedules and configurations',
+    component: 'AllSchedulesWidget',
+    minSize: { w: 12, h: 10 },
+    maxSize: { w: 20, h: 16 },
+    defaultSize: { w: 16, h: 12 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '⚙️'
+  },
 
   everydayTaskList: {
     id: 'everydayTaskList',
@@ -196,6 +222,8 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
   // Currently implemented widgets
   return [
     WIDGET_CONFIGS.webSearch,
+    WIDGET_CONFIGS.taskList,
+    WIDGET_CONFIGS.allSchedules,
   ];
 };
 
