@@ -109,15 +109,30 @@ class DashboardAI:
         Returns:
             List of selected widgets
         """
-        # For now, include all eligible widgets
-        # Future enhancement: Consider importance, user bandwidth, smart selection
+        # Deduplicate todo and habit widgets - only keep one of each type
+        deduplicated_widgets = []
+        seen_types = set()
         
         # Sort by importance (if available) and creation date
-        selected = sorted(
+        sorted_widgets = sorted(
             eligible_widgets,
             key=lambda w: (w.importance or 3, w.created_at),  # Default importance = 3
             reverse=True  # Higher importance first
         )
+        
+        for widget in sorted_widgets:
+            # For todo and habit widgets, only include the first one (highest importance)
+            if widget.widget_type in ["todo", "habittracker"]:
+                if widget.widget_type not in seen_types:
+                    deduplicated_widgets.append(widget)
+                    seen_types.add(widget.widget_type)
+            else:
+                # For other widget types, include all (multiple websearch, alarm, etc. are allowed)
+                deduplicated_widgets.append(widget)
+        
+        selected = deduplicated_widgets
+        
+        logger.info(f"Selected {len(selected)} widgets after deduplication (todo/habit widgets consolidated)")
         
         # Limit to reasonable number of widgets (max 8 for now)
         max_widgets = 8

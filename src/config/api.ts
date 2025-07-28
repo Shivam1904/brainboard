@@ -1,6 +1,6 @@
 // API Configuration for Brainboard widgets
 export const API_CONFIG = {
-  baseUrl: 'https://2b5a496edfef.ngrok-free.app', // Backend server URL
+  baseUrl: 'http://localhost:8000', // Backend server URL
   dashboard: {
     getTodayWidgets: '/api/v1/dashboard/today', // Get today's widget configuration
   },
