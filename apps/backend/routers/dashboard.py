@@ -15,7 +15,6 @@ from models.schemas import (
     CreateDashboardWidgetRequest,
     UpdateDashboardWidgetRequest
 )
-from factories.service_factory import ServiceFactory
 from models.database_models import User
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ router = APIRouter()
 # Dependency to get dashboard service
 def get_dashboard_service(db: Session = Depends(get_db)) -> DashboardService:
     """Create dashboard service with database session"""
-    return ServiceFactory.create_dashboard_service(db)
+    return DashboardService(db)
 
 def get_default_user_id(db: Session = Depends(get_db)) -> str:
     """Get default user ID for development"""

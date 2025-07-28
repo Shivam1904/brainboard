@@ -21,7 +21,7 @@ from models.schemas import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/widgets/alarm", tags=["alarm"])
+router = APIRouter(tags=["alarm"])
 
 def _parse_time_string(time_str: str) -> time:
     """Parse time string in HH:MM format"""

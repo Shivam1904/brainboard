@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from routers import widget_web_summary, health, dashboard, todo, single_item_tracker, alarm
+from routers import websearch, health, dashboard, todo, single_item_tracker, alarm
 from core.config import settings
 from core.database import init_db
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Brainboard API",
-    description="AI-Powered Dashboard Backend with Web Summary Widgets",
+    description="AI-Powered Dashboard Backend with WebSearch Widgets",
     version="1.0.0"
 )
 
@@ -29,13 +29,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers - All using consistent /api/v1 prefix for main endpoints
-app.include_router(widget_web_summary.router, prefix="/api/v1/widgets/web-summary", tags=["web-summary"])
+# Include routers - ALL prefixes defined here for consistency
+app.include_router(websearch.router, prefix="/api/v1/widgets/websearch", tags=["websearch"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
 app.include_router(health.router, prefix="/api", tags=["health"])  # Health uses /api for simplicity
-app.include_router(todo.router)  # Todo router has its own prefix: /api/v1/widgets/todo
-app.include_router(single_item_tracker.router)  # Single item tracker has its own prefix: /api/v1/widgets/single-item-tracker
-app.include_router(alarm.router)  # Alarm router has its own prefix: /api/v1/widgets/alarm
+app.include_router(todo.router, prefix="/api/v1/widgets/todo", tags=["todo"])
+app.include_router(single_item_tracker.router, prefix="/api/v1/widgets/single-item-tracker", tags=["single-item-tracker"])
+app.include_router(alarm.router, prefix="/api/v1/widgets/alarm", tags=["alarm"])
 
 @app.on_event("startup")
 async def startup_event():

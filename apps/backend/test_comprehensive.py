@@ -5,7 +5,7 @@ Tests ALL endpoints with REAL data in ALL database tables
 
 Coverage:
 ✅ All Dashboard Endpoints (GET/POST/PUT/DELETE)  
-✅ All Web Summary Endpoints
+✅ All WebSearch Endpoints (modern search + AI summary)
 ✅ All Todo Widget Endpoints (frequency-based task management)
 ✅ Health Check Endpoints
 ✅ Real data population in all 8 database tables
@@ -69,8 +69,15 @@ class ComprehensiveTester:
             self.log(f"{method} {url} -> Failed: {e}", "ERROR")
             return {"error": True, "message": str(e)}
     
-    def validate(self, data, fields, name):
+    def validate(self, data, fields, name, is_list=False):
         """Validate response has required fields"""
+        if is_list:
+            if not isinstance(data, list):
+                self.log(f"{name}: Expected list but got {type(data)}", "ERROR")
+                return False
+            self.log(f"{name}: Schema valid", "SUCCESS")
+            return True
+        
         missing = [f for f in fields if f not in data]
         if missing:
             self.log(f"{name}: Missing {missing}", "ERROR")
@@ -184,47 +191,67 @@ class ComprehensiveTester:
                 self.log(f"Deleted widget {widget_id}", "SUCCESS")
 
     def test_web_summary(self):
-        """Test web summary endpoints"""
-        self.log("🌐 Testing Web Summary Endpoints", "INFO")
+        """Test websearch endpoints (modern replacement for web-summary)"""
+        self.log("🌐 Testing WebSearch Endpoints", "INFO")
         
-        # 1. Create widget (populates widgets table)
+        # First, create a websearch widget using dashboard endpoint
         widget_data = {
-            "query": "FastAPI tutorial guide"
+            "title": "FastAPI Research Widget",
+            "widget_type": "websearch",
+            "frequency": "daily"
         }
-        result = self.request("POST", f"{self.base_url}/api/v1/widgets/web-summary/create", widget_data)
+        result = self.request("POST", f"{self.base_url}/api/v1/dashboard/widget", widget_data)
         widget_id = None
+        search_id = None
         if not result.get("error"):
-            self.validate(result, ["widget_id", "summary"], "Create Web Summary Widget")
-            widget_id = result.get("widget_id")
+            self.validate(result, ["id", "widget_type"], "Create WebSearch Widget")
+            widget_id = result.get("id")  # Dashboard API uses 'id', not 'widget_id'
             if widget_id:
-                self.created_summaries.append(widget_id)
+                self.created_widgets.append(widget_id)
         
-        # 2. Generate new summary (populates summaries table)
+        # 1. Create search query
         if widget_id:
-            summary_data = {
-                "query": "Advanced FastAPI features"
+            search_data = {
+                "dashboard_widget_id": widget_id,
+                "search_term": "FastAPI tutorial guide"
             }
-            result = self.request("POST", f"{self.base_url}/api/v1/widgets/web-summary/{widget_id}/generate", summary_data)
+            result = self.request("POST", f"{self.base_url}/api/v1/widgets/websearch/search", search_data)
             if not result.get("error"):
-                self.validate(result, ["id", "summary"], "Generate New Summary")
+                self.validate(result, ["id", "search_term"], "Create Search Query")
+                search_id = result.get("id")
         
-        # 3. Get latest summary
-        if widget_id:
-            result = self.request("GET", f"{self.base_url}/api/v1/widgets/web-summary/{widget_id}/latest")
+        # 2. Generate AI summary for search
+        if search_id:
+            summary_data = {
+                "query": "Advanced FastAPI features and best practices"
+            }
+            result = self.request("POST", f"{self.base_url}/api/v1/widgets/websearch/search/{search_id}/summarize", summary_data)
             if not result.get("error"):
-                self.validate(result, ["id", "summary"], "Get Latest Summary")
+                self.validate(result, ["id", "summary"], "Generate AI Summary")
         
-        # 4. Get widget info  
+        # 3. Get widget searches
         if widget_id:
-            result = self.request("GET", f"{self.base_url}/api/v1/widgets/web-summary/{widget_id}")
-            if not result.get("error"):
-                self.validate(result, ["widget_id", "current_query"], "Get Widget Info")
+            result = self.request("GET", f"{self.base_url}/api/v1/widgets/websearch/widget/{widget_id}/searches")
+            if not (isinstance(result, dict) and result.get("error")):
+                self.validate(result, [], "Get Widget Searches", is_list=True)
         
-        # 5. Delete widget
+        # 4. Get widget summaries
         if widget_id:
-            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/web-summary/{widget_id}")
+            result = self.request("GET", f"{self.base_url}/api/v1/widgets/websearch/widget/{widget_id}/summaries")
+            if not (isinstance(result, dict) and result.get("error")):
+                self.validate(result, [], "Get Widget Summaries", is_list=True)
+        
+        # 5. Get complete widget data
+        if widget_id:
+            result = self.request("GET", f"{self.base_url}/api/v1/widgets/websearch/widget/{widget_id}/data")
+            if not (isinstance(result, dict) and result.get("error")):
+                self.validate(result, ["widget_id", "stats"], "Get Widget Data")
+        
+        # 6. Delete search query
+        if search_id:
+            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/websearch/search/{search_id}")
             if not result.get("error"):
-                self.log(f"Deleted widget {widget_id}", "SUCCESS")
+                self.log(f"Deleted search query {search_id}", "SUCCESS")
 
     def test_todo_widget(self):
         """Test todo widget endpoints with frequency-based task management"""

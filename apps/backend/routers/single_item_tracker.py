@@ -22,7 +22,7 @@ from models.schemas import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/widgets/single-item-tracker", tags=["single-item-tracker"])
+router = APIRouter(tags=["single-item-tracker"])
 
 def _calculate_progress_percentage(current: str, target: str, value_type: str) -> Optional[float]:
     """Calculate progress percentage if both values are numeric"""

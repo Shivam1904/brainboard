@@ -1,7 +1,8 @@
 from fastapi import APIRouter, status
 from typing import Dict, Any
 import logging
-from services.summary_service import SummaryService
+from services.ai_summarization_service import AISummarizationService
+from services.web_search_service import WebSearchService
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,31 @@ async def detailed_health_check() -> Dict[str, Any]:
     try:
         logger.info("Running detailed health check")
         
-        # Test external services using a simple service instance
-        summary_service = SummaryService()
-        service_tests = await summary_service.test_services()
+        # Test external services directly
+        ai_service = AISummarizationService()
+        web_service = WebSearchService()
+        
+        # Test AI service
+        ai_working = False
+        try:
+            test_summary = await ai_service.summarize("Test content for health check", "test")
+            ai_working = len(test_summary) > 0
+        except Exception as e:
+            logger.error(f"AI service test failed: {e}")
+        
+        # Test web search service
+        web_working = False
+        try:
+            search_results = await web_service.search("test query")
+            web_working = True
+        except Exception as e:
+            logger.error(f"Web search service test failed: {e}")
+        
+        service_tests = {
+            "ai_summarization": ai_working,
+            "web_search": web_working,
+            "overall": ai_working and web_working
+        }
         
         overall_status = "healthy" if service_tests["overall"] else "degraded"
         

@@ -5,8 +5,6 @@ import logging
 
 from models.database_models import DashboardWidget, User, TodoTask, WebSearchQuery, Alarm, Habit, Summary
 from services.dashboard_ai_service import DashboardAIService
-from services.widget_service import WidgetService
-from services.summary_service import SummaryService
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +14,6 @@ class DashboardService:
     def __init__(self, db: Session):
         self.db = db
         self.ai_service = DashboardAIService(db)
-        self.widget_service = WidgetService(db)
-        self.summary_service = SummaryService(db)
     
     async def get_today_dashboard(self, user_id: Optional[str] = None, target_date: Optional[date] = None) -> Dict[str, Any]:
         """
