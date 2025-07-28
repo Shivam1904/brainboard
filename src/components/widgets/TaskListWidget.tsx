@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { CheckCircle, Circle, Plus, X } from 'lucide-react';
+import FrequencySection from './FrequencySection';
 // import { buildApiUrl, apiCall } from '../../config/api'; // Uncomment when API is ready
 
 interface Task {
@@ -14,13 +15,15 @@ interface Task {
   createdAt: string;
 }
 
+import { FrequencySettings } from '../../types/frequency';
+
 interface MissionFormData {
   title: string;
   description: string;
   priority: 'High' | 'Medium' | 'Low';
   category: string;
   dueDate: string;
-  frequency: string;
+  frequency: FrequencySettings;
 }
 
 const getDummyTasks = (): Task[] => [
@@ -116,7 +119,14 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
     priority: 'Medium',
     category: 'personal',
     dueDate: new Date().toISOString().split('T')[0],
-    frequency: 'daily'
+    frequency: {
+      frequencySet: 'BALANCED',
+      frequencySetValue: 0.6,
+      frequency: 3,
+      frequencyUnit: 'TIMES',
+      frequencyPeriod: 'WEEKLY',
+      isDailyHabit: false
+    }
   });
 
   const fetchTasks = async () => {
@@ -187,7 +197,14 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
         priority: 'Medium',
         category: 'personal',
         dueDate: new Date().toISOString().split('T')[0],
-        frequency: 'daily'
+        frequency: {
+          frequencySet: 'BALANCED',
+          frequencySetValue: 0.6,
+          frequency: 3,
+          frequencyUnit: 'TIMES',
+          frequencyPeriod: 'WEEKLY',
+          isDailyHabit: false
+        }
       });
     } catch (err) {
       setError('Failed to add mission');
@@ -237,7 +254,7 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
 
   return (
     <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
-      <div className="p-4">
+      <div className="p-4 h-full overflow-y-auto">
         {/* Progress Bar */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
@@ -264,7 +281,7 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
         </div>
 
         {/* Tasks List */}
-        <div className="space-y-3 max-h-64 overflow-y-auto">
+        <div className="space-y-3 ">
           {tasks.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No tasks for today</p>
@@ -332,125 +349,155 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
 
       {/* Add Mission Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Add New Mission</h3>
-              <button
-                onClick={() => setShowAddForm(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-2xl font-bold">Create New Mission</h3>
+                  <p className="text-blue-100 mt-1">Set your goals and track your progress</p>
+                </div>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="text-white hover:text-blue-100 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter mission title"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter mission description"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Priority
+            {/* Form Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Mission Title Section */}
+                <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-4 border border-orange-200">
+                  <label className="block text-lg font-bold text-gray-800 mb-2">
+                    MISSION TITLE
                   </label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) => setFormData({...formData, priority: e.target.value as 'High' | 'Medium' | 'Low'})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    className="w-full px-4 py-3 bg-white/70 backdrop-blur-sm border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-lg"
+                    placeholder="What do you want to achieve?"
+                    required
+                  />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
+                {/* Description Section */}
+                <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border border-pink-200">
+                  <label className="block text-lg font-bold text-gray-800 mb-2">
+                    DESCRIPTION
                   </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="work">Work</option>
-                    <option value="health">Health</option>
-                    <option value="learning">Learning</option>
-                    <option value="personal">Personal</option>
-                  </select>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    className="w-full px-4 py-3 bg-white/70 backdrop-blur-sm border border-pink-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none"
+                    placeholder="Describe your mission in detail..."
+                    rows={3}
+                  />
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Due Date
+                
+                {/* Priority & Category Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Priority Section */}
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
+                    <label className="block text-lg font-bold text-gray-800 mb-3">
+                      PRIORITY LEVEL
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['Low', 'Medium', 'High'].map((priority) => (
+                        <button
+                          key={priority}
+                          type="button"
+                          onClick={() => setFormData({...formData, priority: priority as 'High' | 'Medium' | 'Low'})}
+                          className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                            formData.priority === priority
+                              ? 'bg-orange-500 text-white shadow-lg transform scale-105'
+                              : 'bg-white/70 text-gray-700 hover:bg-orange-100 hover:scale-102'
+                          }`}
+                        >
+                          {priority}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Category Section */}
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4 border border-green-200">
+                    <label className="block text-lg font-bold text-gray-800 mb-3">
+                      CATEGORY
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: 'work', label: 'Work', color: 'from-blue-500 to-blue-600' },
+                        { value: 'health', label: 'Health', color: 'from-green-500 to-green-600' },
+                        { value: 'learning', label: 'Learning', color: 'from-purple-500 to-purple-600' },
+                        { value: 'personal', label: 'Personal', color: 'from-pink-500 to-pink-600' }
+                      ].map((category) => (
+                        <button
+                          key={category.value}
+                          type="button"
+                          onClick={() => setFormData({...formData, category: category.value})}
+                          className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                            formData.category === category.value
+                              ? `bg-gradient-to-r ${category.color} text-white shadow-lg transform scale-105`
+                              : 'bg-white/70 text-gray-700 hover:bg-gray-100 hover:scale-102'
+                          }`}
+                        >
+                          {category.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Due Date Section */}
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-200">
+                  <label className="block text-lg font-bold text-gray-800 mb-2">
+                    DUE DATE
                   </label>
                   <input
                     type="date"
                     value={formData.dueDate}
                     onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-white/70 backdrop-blur-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Frequency
+                {/* Frequency Section */}
+                <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-200">
+                  <label className="block text-lg font-bold text-gray-800 mb-3">
+                    FREQUENCY
                   </label>
-                  <select
-                    value={formData.frequency}
-                    onChange={(e) => setFormData({...formData, frequency: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="once">Once</option>
-                  </select>
+                  <FrequencySection
+                    frequency={formData.frequency}
+                    onChange={(frequency) => setFormData({...formData, frequency})}
+                    pillarColor={getCategoryColor(formData.category)}
+                  />
                 </div>
-              </div>
-              
-              <div className="flex gap-3 pt-4">
+              </form>
+            </div>
+            
+            {/* Footer */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 border-t border-gray-200">
+              <div className="flex gap-4">
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                  className="flex-1 px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  onClick={handleSubmit}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all shadow-lg"
                 >
-                  Save Mission
+                  Create Mission
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
