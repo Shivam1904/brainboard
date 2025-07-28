@@ -1,4 +1,6 @@
-import { TodayWidgetsResponse, ScheduledItem } from '../types/dashboard';
+import { TodayWidgetsResponse, ScheduledItem, DashboardWidgetConfig } from '../types/dashboard';
+import { findEmptyPosition, GRID_CONFIG } from '../config/grid';
+import { getWidgetConfig } from '../config/widgets';
 
 // Dummy scheduled items data (what the API would return)
 export const DUMMY_SCHEDULED_ITEMS: ScheduledItem[] = [
@@ -124,12 +126,7 @@ export const DUMMY_SCHEDULED_ITEMS: ScheduledItem[] = [
 
 // Helper function to convert scheduled items to widget configurations
 export const convertScheduledItemsToWidgets = (items: ScheduledItem[]): TodayWidgetsResponse => {
-  const widgets = [];
-  let x = 0;
-  let y = 0;
-  const maxCols = 24;
-  const widgetWidth = 10;
-  const widgetHeight = 8;
+  const widgets: DashboardWidgetConfig[] = [];
 
   // Group items by type
   const webSearches = items.filter(item => item.type === 'webSearch');
@@ -140,22 +137,46 @@ export const convertScheduledItemsToWidgets = (items: ScheduledItem[]): TodayWid
     !['webSearch', 'userTask', 'userHabit', 'itemTracker'].includes(item.type)
   );
 
+  // Helper to add a widget using the shared findEmptyPosition
+  function addWidgetWithAutoPosition(
+    widgetType: string,
+    widgetConfig: Omit<DashboardWidgetConfig, 'layout'> & { layout?: Partial<DashboardWidgetConfig['layout']> }
+  ) {
+    const position = findEmptyPosition({
+      widgetId: widgetType,
+      widgets,
+      getWidgetConfig,
+      gridCols: GRID_CONFIG.cols.lg, // match previous maxCols
+      maxRows: 100,
+    });
+    if (!position) return; // skip if no space
+    
+    // Get layout details from widget config
+    const config = getWidgetConfig(widgetType);
+    if (!config) return; // skip if config not found
+    
+    widgets.push({
+      ...widgetConfig,
+      layout: {
+        x: position.x,
+        y: position.y,
+        w: config.defaultSize.w,
+        h: config.defaultSize.h,
+        minW: config.minSize.w,
+        minH: config.minSize.h,
+        maxW: config.maxSize.w,
+        maxH: config.maxSize.h,
+        ...widgetConfig.layout, // allow override of specific layout properties if needed
+      },
+    });
+  }
+
   // Create widgets for each webSearch item
   webSearches.forEach((item, index) => {
     const widgetId = `webSearch-${item.id}`;
-    widgets.push({
+    addWidgetWithAutoPosition('webSearch', {
       id: widgetId,
       type: 'webSearch',
-      layout: {
-        x: x,
-        y: y,
-        w: widgetWidth,
-        h: widgetHeight,
-        minW: 8,
-        minH: 8,
-        maxW: 12,
-        maxH: 10
-      },
       config: {
         searchQuery: item.searchQuery,
         title: item.title,
@@ -166,49 +187,24 @@ export const convertScheduledItemsToWidgets = (items: ScheduledItem[]): TodayWid
       enabled: true,
       scheduledItem: item
     });
-
-    // Move to next position
-    x += widgetWidth;
-    if (x + widgetWidth > maxCols) {
-      x = 0;
-      y += widgetHeight;
-    }
   });
 
   // Add Task List widget (always show for demo)
-  widgets.push({
-    id: 'taskList-1',
-    type: 'taskList',
-    layout: { x: x, y: y, w: 12, h: 10, minW: 8, minH: 8, maxW: 16, maxH: 12 },
+  addWidgetWithAutoPosition('everydayTaskList', {
+    id: 'everydayTaskList-1',
+    type: 'everydayTaskList',
     config: { showCompleted: true, sortBy: 'priority' },
     priority: 1,
     enabled: true,
-    scheduledItem: { id: 'taskList', title: 'Today\'s Tasks', type: 'taskList', frequency: 'daily' }
+    scheduledItem: { id: 'everydayTaskList', title: 'Every Day Task List', type: 'everydayTaskList', frequency: 'daily' }
   });
-
-  // Move to next position
-  x += 12;
-  if (x + 12 > maxCols) {
-    x = 0;
-    y += 10;
-  }
 
   // Add calendar widget
   const calendarItem = otherWidgets.find(item => item.type === 'calendar');
   if (calendarItem) {
-    widgets.push({
+    addWidgetWithAutoPosition('calendar', {
       id: 'monthlyCalendar-1',
-      type: 'monthlyCalendar',
-      layout: {
-        x: x,
-        y: y,
-        w: widgetWidth,
-        h: widgetHeight,
-        minW: 8,
-        minH: 8,
-        maxW: 12,
-        maxH: 10
-      },
+      type: 'calendar',
       config: {
         showMilestones: true,
         highlightToday: true
@@ -217,28 +213,13 @@ export const convertScheduledItemsToWidgets = (items: ScheduledItem[]): TodayWid
       enabled: true,
       scheduledItem: calendarItem
     });
-
-    x += widgetWidth;
-    if (x + widgetWidth > maxCols) {
-      x = 0;
-      y += widgetHeight;
-    }
   }
 
+
   // Add All Schedules widget
-  widgets.push({
+  addWidgetWithAutoPosition('allSchedules', {
     id: 'allSchedules-1',
     type: 'allSchedules',
-    layout: {
-      x: x,
-      y: y,
-      w: 16,
-      h: 12,
-      minW: 12,
-      minH: 10,
-      maxW: 20,
-      maxH: 16
-    },
     config: {
       showCompleted: false
     },
@@ -249,32 +230,26 @@ export const convertScheduledItemsToWidgets = (items: ScheduledItem[]): TodayWid
   // Add item trackers as small widgets
   itemTrackers.forEach((item, index) => {
     const widgetId = `itemTracker-${item.id}`;
-    widgets.push({
+    addWidgetWithAutoPosition('singleItemTracker', {
       id: widgetId,
-      type: 'itemTracker',
-      layout: {
-        x: x,
-        y: y,
-        w: 6,
-        h: 6,
-        minW: 6,
-        minH: 4,
-        maxW: 10,
-        maxH: 8
-      },
+      type: 'singleItemTracker',
       config: {
-        itemName: item.title,
+        title: item.title,
         category: item.category
       },
-      priority: 10 + index,
+      priority: 4 + index,
       enabled: true,
       scheduledItem: item
     });
+  });
 
-    x += 6;
-    if (x + 6 > maxCols) {
-      x = 0;
-      y += 6;
+  // Calculate gridRows for layout
+  let maxY = 0;
+  let maxH = 0;
+  widgets.forEach(w => {
+    if (w.layout.y + w.layout.h > maxY + maxH) {
+      maxY = w.layout.y;
+      maxH = w.layout.h;
     }
   });
 
@@ -282,8 +257,8 @@ export const convertScheduledItemsToWidgets = (items: ScheduledItem[]): TodayWid
     date: new Date().toISOString().split('T')[0],
     widgets,
     layout: {
-      gridCols: 24,
-      gridRows: Math.max(16, y + widgetHeight)
+      gridCols: GRID_CONFIG.cols.lg,
+      gridRows: Math.max(16, maxY + maxH)
     }
   };
 };

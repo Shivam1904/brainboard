@@ -4,6 +4,7 @@ import ReminderWidget from './widgets/ReminderWidget'
 import WebSummaryWidget from './widgets/WebSummaryWidget'
 import WebSearchWidget from './widgets/WebSearchWidget';
 import TaskListWidget from './widgets/TaskListWidget'
+import CalendarWidget from './widgets/CalendarWidget'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget';
 import BaseWidget from './widgets/BaseWidget'
 import AddWidgetButton from './AddWidgetButton'
@@ -364,9 +365,17 @@ const Dashboard = () => {
             scheduledItem={widget.scheduledItem}
           />
         );
-      case 'taskList':
+      case 'everydayTaskList':
         return (
           <TaskListWidget
+            onRemove={() => removeWidget(widget.id)}
+            config={widget.config}
+            scheduledItem={widget.scheduledItem}
+          />
+        );
+      case 'calendar':
+        return (
+          <CalendarWidget
             onRemove={() => removeWidget(widget.id)}
             config={widget.config}
             scheduledItem={widget.scheduledItem}

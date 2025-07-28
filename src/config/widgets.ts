@@ -29,25 +29,25 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     description: 'Daily web search functionality',
     component: 'WebSearchWidget',
     minSize: { w: 8, h: 8 },
-    maxSize: { w: 12, h: 10 },
-    defaultSize: { w: 10, h: 8 },
+    maxSize: { w: 16, h: 16 },
+    defaultSize: { w: 10, h: 12 },
     deletable: true,
     resizable: true,
     category: 'information',
     icon: '🔍'
   },
-  taskList: {
-    id: 'taskList',
-    title: 'Today\'s Tasks',
-    description: 'Daily task management and mission tracking',
-    component: 'TaskListWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 16, h: 12 },
-    defaultSize: { w: 12, h: 10 },
+  calendar: {
+    id: 'calendar',
+    title: 'Calendar',
+    description: 'Monthly calendar with events and milestones',
+    component: 'CalendarWidget',
+    minSize: { w: 12, h: 12 },
+    maxSize: { w: 20, h: 28 },
+    defaultSize: { w: 12, h: 16 },
     deletable: true,
     resizable: true,
     category: 'productivity',
-    icon: '📋'
+    icon: '📅'
   },
   allSchedules: {
     id: 'allSchedules',
@@ -55,8 +55,8 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     description: 'Manage all widget schedules and configurations',
     component: 'AllSchedulesWidget',
     minSize: { w: 12, h: 10 },
-    maxSize: { w: 20, h: 16 },
-    defaultSize: { w: 16, h: 12 },
+    maxSize: { w: 30, h: 36 },
+    defaultSize: { w: 26, h: 22 },
     deletable: true,
     resizable: true,
     category: 'productivity',
@@ -67,30 +67,15 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     id: 'everydayTaskList',
     title: 'Every Day Task List',
     description: 'Daily task management and tracking',
-    component: 'EverydayTaskListWidget',
+    component: 'TaskListWidget',
     minSize: { w: 8, h: 8 },
-    maxSize: { w: 12, h: 10 },
-    defaultSize: { w: 10, h: 8 },
+    maxSize: { w: 30, h: 36 },
+    defaultSize: { w: 15, h: 20 },
     deletable: true,
     resizable: true,
     category: 'productivity',
     icon: '📋'
   },
-
-  monthlyCalendar: {
-    id: 'monthlyCalendar',
-    title: 'Monthly Calendar',
-    description: 'Monthly calendar view and planning',
-    component: 'MonthlyCalendarWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 12, h: 10 },
-    defaultSize: { w: 10, h: 8 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '📅'
-  },
-
   habitListTracker: {
     id: 'habitListTracker',
     title: 'Habit List Tracker',
@@ -178,7 +163,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
 
   singleItemTracker: {
     id: 'singleItemTracker',
-    title: 'Single Item Tracker',
+    title: 'Item Tracker',
     description: 'Track single items like smoke/gym/weight',
     component: 'SingleItemTrackerWidget',
     minSize: { w: 6, h: 4 },
@@ -222,7 +207,8 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
   // Currently implemented widgets
   return [
     WIDGET_CONFIGS.webSearch,
-    WIDGET_CONFIGS.taskList,
+    WIDGET_CONFIGS.everydayTaskList,
+    WIDGET_CONFIGS.calendar,
     WIDGET_CONFIGS.allSchedules,
   ];
 };

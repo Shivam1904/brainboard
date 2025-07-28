@@ -117,6 +117,63 @@ The widget displays today's tasks with a progress bar and allows users to:
 - Track progress visually
 - Organize tasks by priority and category
 
+### Calendar Widget (`CalendarWidget.tsx`)
+
+**Status**: ✅ Fully implemented with monthly calendar functionality
+
+**Features**:
+- **Monthly Calendar View**: Full calendar grid with navigation
+- **Event Display**: Shows events, milestones, reminders, and tasks on calendar days
+- **Event Types**: Color-coded event types (event, milestone, reminder, task)
+- **Priority System**: Visual priority indicators with border colors
+- **Navigation**: Previous/next month navigation and "Today" button
+- **Event Details**: Click events to view detailed information
+- **Upcoming Events**: List of upcoming events below the calendar
+- **Responsive Design**: Large widget (16x12) with comprehensive calendar view
+
+**Calendar Features**:
+- **Month Navigation**: Navigate between months with arrow buttons
+- **Today Highlight**: Current day is highlighted in blue
+- **Event Indicators**: Events shown as colored blocks on calendar days
+- **Event Overflow**: Shows "+X more" for days with many events
+- **Today Button**: Quick navigation to current month
+
+**Event Properties**:
+- **Title** - Event name
+- **Date** - Event date
+- **Time** - Event time (optional)
+- **Location** - Event location (optional)
+- **Type** - Event, milestone, reminder, or task
+- **Priority** - High, Medium, or Low priority
+- **Description** - Detailed event description
+
+**Event Types**:
+- **Event** (Blue) - General events and meetings
+- **Milestone** (Purple) - Important project milestones
+- **Reminder** (Yellow) - Personal reminders and appointments
+- **Task** (Green) - Task-related calendar items
+
+**API Integration**:
+- **Get Monthly Calendar**: `GET /api/calendar/monthly?year={year}&month={month}`
+- Ready for backend integration
+- Currently uses dummy data with realistic calendar events
+- Prepared for real API calls (commented out)
+
+**Dummy Data**:
+- 6 sample events across different types and priorities
+- Events spread across the month for realistic display
+- Various event types (meetings, appointments, milestones, tasks)
+- Different locations and time slots
+
+**Usage**:
+The calendar widget provides comprehensive calendar functionality:
+- View monthly calendar with all events
+- Navigate between months
+- Click events to view detailed information
+- See upcoming events list
+- Track milestones and important dates
+- Manage appointments and meetings
+
 ## 📋 Planned Widgets
 
 ### Task List Widget
@@ -293,8 +350,8 @@ interface ScheduledItem {
 
 ## 📊 Widget Statistics
 
-- **Implemented**: 3 widgets
-- **Planned**: 7 widgets
+- **Implemented**: 4 widgets
+- **Planned**: 6 widgets
 - **Total**: 10 widget types
 - **Categories**: Productivity, Information, Entertainment, Utilities
 
