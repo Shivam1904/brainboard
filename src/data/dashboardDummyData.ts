@@ -79,7 +79,7 @@ export const getDummyTodayWidgets = (): TodayWidgetsResponse => {
       },
       {
         id: "b2df57d5-d5a5-4eb0-8c27-fe5edc67dcde",
-        type: "todo",
+        type: "allSchedules",
         title: "Updated Widget Title",
         size: "medium",
         category: "productivity",
