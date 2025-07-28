@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from routers import widget_web_summary, health
+from routers import widget_web_summary, health, dashboard
 from core.config import settings
 from core.database import init_db
 
@@ -30,6 +30,11 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(
+    dashboard.router, 
+    prefix="/api/v1/dashboard", 
+    tags=["dashboard"]
+)
 app.include_router(
     widget_web_summary.router, 
     prefix="/api/widget/web-summary", 

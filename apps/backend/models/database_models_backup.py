@@ -1,6 +1,61 @@
 from sqlalchemy import Column, String, DateTime, Text, ForeignKey, JSON, Boolean, Integer, Date
 from sqlalchemy.orm import relationship
 from core.database import Base
+from datetime import datetime, date
+import uuid
+
+# ============================================================================
+# USER MODEL
+# ============================================================================
+
+class User(Base):
+    """User database model"""
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship with dashboard widgets
+    dashboard_widgets = relationship("DashboardWidget", back_populates="user", cascade="all, delete-orphan")
+
+# ============================================================================
+# DASHBOARD WIDGET MODELS (Enhanced from existing Widget)
+# ============================================================================
+
+class DashboardWidget(Base):
+    """Dashboard Widget configuration model (enhanced from existing Widget)"""
+    __tablename__ = "dashboard_widgets"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    widget_type = Column(String, nullable=False)  # 'todo', 'websearch', 'alarm', 'calendar', 'habittracker'
+    frequency = Column(String, nullable=False)  # 'daily', 'weekly', 'monthly'
+    category = Column(String, nullable=True)
+    importance = Column(Integer, nullable=True)  # 1-5 scale
+    settings = Column(JSON, nullable=True)  # Widget-specific settings
+    is_active = Column(Boolean, default=True)
+    last_shown_date = Column(Date, nullable=True)  # Track when last shown for AI
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="dashboard_widgets")
+    todo_tasks = relationship("TodoTask", back_populates="dashboard_widget", cascade="all, delete-orphan")
+    websearch_queries = relationship("WebSearchQuery", back_populates="dashboard_widget", cascade="all, delete-orphan")
+    summaries = relationship("Summary", back_populates="dashboard_widget", cascade="all, delete-orphan")
+    alarms = relationship("Alarm", back_populates="dashboard_widget", cascade="all, delete-orphan")
+    habits = relationship("Habit", back_populates="dashboard_widget", cascade="all, delete-orphan")
+
+# ============================================================================
+# LEGACY MODEL (Keep for backward compatibility during migration)
+# ============================================================================
+
+from sqlalchemy import Column, String, DateTime, Text, ForeignKey, JSON, Boolean, Integer, Date
+from sqlalchemy.orm import relationship
+from core.database import Base
 from datetime import datetime
 import uuid
 
@@ -152,5 +207,7 @@ class Summary(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships (support both systems)
+    widget = relationship("Widget", foreign_keys=[widget_id])  # Legacy
+    dashboard_widget = relationship("DashboardWidget", back_populates="summaries")  # New
     widget = relationship("Widget", foreign_keys=[widget_id])  # Legacy
     dashboard_widget = relationship("DashboardWidget", back_populates="summaries")  # New

@@ -30,11 +30,62 @@ def init_db():
     """Initialize database tables"""
     try:
         # Import all models to ensure they are registered with Base
-        from models.database_models import Widget, Summary
+        from models.database_models import (
+            Widget, Summary,  # Legacy models
+            User, DashboardWidget,  # Core new models
+            TodoTask, WebSearchQuery, Alarm, Habit, HabitLog  # Widget-specific models
+        )
         
         # Create all tables
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
+        
+        # Create default user if not exists
+        from sqlalchemy.orm import sessionmaker
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        try:
+            # Check if default user exists
+            existing_user = session.query(User).filter_by(email="default@brainboard.com").first()
+            if not existing_user:
+                default_user = User(
+                    email="default@brainboard.com",
+                    name="Default User"
+                )
+                session.add(default_user)
+                session.commit()
+                logger.info("Default user created successfully")
+        except Exception as e:
+            logger.warning(f"Could not create default user: {e}")
+            session.rollback()
+        finally:
+            session.close()
+            
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise
+
+def _create_default_user():
+    """Create default user for development"""
+    try:
+        from models.database_models import User
+        
+        db = SessionLocal()
+        # Check if default user exists
+        existing_user = db.query(User).filter(User.email == "default@brainboard.com").first()
+        
+        if not existing_user:
+            default_user = User(
+                email="default@brainboard.com",
+                name="Default User"
+            )
+            db.add(default_user)
+            db.commit()
+            logger.info("Default user created successfully")
+        else:
+            logger.info("Default user already exists")
+            
+        db.close()
+    except Exception as e:
+        logger.error(f"Failed to create default user: {e}")

@@ -3,6 +3,8 @@ from services.web_search_service import WebSearchService
 from services.ai_summarization_service import AISummarizationService
 from services.summary_service import SummaryService
 from services.widget_service import WidgetService
+from services.dashboard_ai_service import DashboardAIService
+from services.dashboard_service import DashboardService
 
 class ServiceFactory:
     """Factory for creating service instances with proper dependencies"""
@@ -38,3 +40,13 @@ class ServiceFactory:
             db=db,
             summary_service=summary_service or ServiceFactory.create_summary_service()
         )
+    
+    @staticmethod
+    def create_dashboard_ai_service(db: Session) -> DashboardAIService:
+        """Create dashboard AI service with database session"""
+        return DashboardAIService(db)
+    
+    @staticmethod
+    def create_dashboard_service(db: Session) -> DashboardService:
+        """Create dashboard service with database session"""
+        return DashboardService(db)
