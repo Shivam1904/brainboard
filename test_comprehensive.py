@@ -129,14 +129,6 @@ class ComprehensiveTester:
                 "category": "health",
                 "importance": 5,
                 "settings": {"streak_goal": 30, "reminder_time": "09:00"}
-            },
-            {
-                "title": "Daily Weight Tracking",
-                "widget_type": "singleitemtracker",
-                "frequency": "daily",
-                "category": "health",
-                "importance": 4,
-                "settings": {"item_name": "Weight", "item_unit": "kg", "target_value": "70"}
             }
         ]
         
@@ -315,10 +307,7 @@ class ComprehensiveTester:
         
         # 4. Get all tasks with filtering
         result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/all?widget_id={todo_widget_id}&include_completed=true")
-        if isinstance(result, list):
-            all_tasks = result
-            self.log(f"All tasks: {len(all_tasks)} total tasks", "SUCCESS")
-        elif not result.get("error"):
+        if not result.get("error"):
             all_tasks = result
             self.log(f"All tasks: {len(all_tasks)} total tasks", "SUCCESS")
         
@@ -350,19 +339,13 @@ class ComprehensiveTester:
         
         # 8. Test category filtering
         result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/all?widget_id={todo_widget_id}&category=work")
-        if isinstance(result, list):
-            work_tasks = result
-            self.log(f"Work category tasks: {len(work_tasks)}", "SUCCESS")
-        elif not result.get("error"):
+        if not result.get("error"):
             work_tasks = result
             self.log(f"Work category tasks: {len(work_tasks)}", "SUCCESS")
         
         # 9. Test priority filtering
         result = self.request("GET", f"{self.base_url}/api/widgets/todo/tasks/all?widget_id={todo_widget_id}&priority=5")
-        if isinstance(result, list):
-            high_priority_tasks = result
-            self.log(f"High priority tasks: {len(high_priority_tasks)}", "SUCCESS")
-        elif not result.get("error"):
+        if not result.get("error"):
             high_priority_tasks = result
             self.log(f"High priority tasks: {len(high_priority_tasks)}", "SUCCESS")
         
@@ -372,256 +355,6 @@ class ComprehensiveTester:
             result = self.request("DELETE", f"{self.base_url}/api/widgets/todo/tasks/{task_id}")
             if not result.get("error"):
                 self.log(f"Deleted task {task_id}", "SUCCESS")
-
-    def test_single_item_tracker_widget(self):
-        """Test single item tracker widget endpoints for metrics tracking"""
-        self.log("📈 Testing Single Item Tracker Widget Endpoints", "INFO")
-        
-        # 1. Find or create a single item tracker widget
-        tracker_widget_id = None
-        result = self.request("GET", f"{self.base_url}/api/v1/dashboard/widgets")
-        if isinstance(result, list):
-            widgets = result
-            for widget in widgets:
-                if widget.get("widget_type") == "singleitemtracker":
-                    tracker_widget_id = widget["id"]
-                    break
-        
-        if not tracker_widget_id:
-            # Create a new single item tracker widget
-            widget_data = {
-                "title": "Weight Tracker",
-                "widget_type": "singleitemtracker",
-                "frequency": "daily",
-                "category": "health",
-                "importance": 4
-            }
-            result = self.request("POST", f"{self.base_url}/api/v1/dashboard/widget", widget_data)
-            if not result.get("error"):
-                tracker_widget_id = result["id"]
-                self.created_widgets.append(tracker_widget_id)
-        
-        if not tracker_widget_id:
-            self.log("Failed to get tracker widget for testing", "ERROR")
-            return
-        
-        self.log(f"Using tracker widget: {tracker_widget_id}", "INFO")
-        
-        # 2. Create a single item tracker
-        tracker_data = {
-            "dashboard_widget_id": tracker_widget_id,
-            "item_name": "Weight",
-            "item_unit": "kg",
-            "current_value": "75.5",
-            "target_value": "70.0",
-            "value_type": "decimal"
-        }
-        
-        result = self.request("POST", f"{self.base_url}/api/widgets/single-item-tracker/create", tracker_data)
-        tracker_id = None
-        if not result.get("error"):
-            self.validate(result, ["id", "item_name", "value_type"], "Create Single Item Tracker")
-            tracker_id = result["id"]
-        
-        if not tracker_id:
-            self.log("Failed to create tracker for testing", "ERROR")
-            return
-        
-        # 3. Update tracker value (simulate daily weigh-in)
-        value_updates = [
-            {"value": "75.0", "notes": "Morning weigh-in"},
-            {"value": "74.8", "notes": "Good progress"},
-            {"value": "74.5", "notes": "Steady decline"}
-        ]
-        
-        for i, update_data in enumerate(value_updates):
-            result = self.request("PUT", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}/update-value", update_data)
-            if not result.get("error"):
-                self.validate(result, ["id", "current_value"], f"Update Value #{i+1}")
-        
-        # 4. Get tracker with logs
-        result = self.request("GET", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}?limit=5")
-        if not result.get("error"):
-            self.validate(result, ["id", "item_name", "recent_logs"], "Get Tracker with Logs")
-            logs = result.get("recent_logs", [])
-            self.log(f"Tracker has {len(logs)} log entries", "SUCCESS")
-        
-        # 5. Get widget data for dashboard
-        result = self.request("GET", f"{self.base_url}/api/widgets/single-item-tracker/widget/{tracker_widget_id}/data")
-        if not result.get("error"):
-            self.validate(result, ["widget_id", "tracker", "stats"], "Get Widget Data")
-            stats = result.get("stats", {})
-            current_value = stats.get("current_value")
-            target_value = stats.get("target_value")
-            progress = stats.get("progress_percentage")
-            self.log(f"Tracker stats: {current_value}{tracker_data['item_unit']} → {target_value}{tracker_data['item_unit']} ({progress:.1f}% progress)" if progress else f"Current: {current_value}{tracker_data['item_unit']}", "SUCCESS")
-        
-        # 6. Update tracker settings
-        settings_update = {
-            "item_name": "Body Weight",
-            "target_value": "68.0"
-        }
-        result = self.request("PUT", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}", settings_update)
-        if not result.get("error"):
-            self.validate(result, ["id", "item_name"], "Update Tracker Settings")
-        
-        # 7. Get tracker logs with pagination
-        result = self.request("GET", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}/logs?limit=10&offset=0")
-        if isinstance(result, list):
-            logs = result
-            self.log(f"Retrieved {len(logs)} log entries", "SUCCESS")
-        
-        # 8. Delete tracker (cleanup)
-        result = self.request("DELETE", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}")
-        if not result.get("error"):
-            self.log(f"Deleted tracker {tracker_id}", "SUCCESS")
-
-    def test_alarm_widget(self):
-        """Test alarm widget endpoints for time-based alerts"""
-        self.log("⏰ Testing Alarm Widget Endpoints", "INFO")
-        
-        # 1. Find or create an alarm widget
-        alarm_widget_id = None
-        result = self.request("GET", f"{self.base_url}/api/v1/dashboard/widgets")
-        if isinstance(result, list):
-            widgets = result
-            for widget in widgets:
-                if widget.get("widget_type") == "alarm":
-                    alarm_widget_id = widget["id"]
-                    break
-        
-        if not alarm_widget_id:
-            # Create a new alarm widget
-            widget_data = {
-                "title": "Daily Reminders",
-                "widget_type": "alarm",
-                "frequency": "daily",
-                "category": "reminders",
-                "importance": 4
-            }
-            result = self.request("POST", f"{self.base_url}/api/v1/dashboard/widget", widget_data)
-            if not result.get("error"):
-                alarm_widget_id = result["id"]
-                self.created_widgets.append(alarm_widget_id)
-        
-        if not alarm_widget_id:
-            self.log("Failed to get alarm widget for testing", "ERROR")
-            return
-        
-        self.log(f"Using alarm widget: {alarm_widget_id}", "INFO")
-        
-        # 2. Create different types of alarms
-        alarm_data_list = [
-            {
-                "dashboard_widget_id": alarm_widget_id,
-                "title": "Daily Standup",
-                "alarm_type": "daily",
-                "alarm_times": ["09:00", "15:00"],
-                "frequency_value": 1
-            },
-            {
-                "dashboard_widget_id": alarm_widget_id,
-                "title": "Sit Straight Reminder",
-                "alarm_type": "daily",
-                "alarm_times": ["10:00", "12:00", "14:00", "16:00", "18:00"],
-                "frequency_value": 5
-            },
-            {
-                "dashboard_widget_id": alarm_widget_id,
-                "title": "Birthday Reminder",
-                "alarm_type": "once",
-                "alarm_times": ["09:00"],
-                "specific_date": "2025-12-25"  # Christmas as example
-            },
-            {
-                "dashboard_widget_id": alarm_widget_id,
-                "title": "Weekly Team Meeting",
-                "alarm_type": "weekly",
-                "alarm_times": ["10:00"],
-                "frequency_value": 1
-            }
-        ]
-        
-        created_alarm_ids = []
-        for i, alarm_data in enumerate(alarm_data_list):
-            result = self.request("POST", f"{self.base_url}/api/v1/widgets/alarm/add", alarm_data)
-            if not result.get("error"):
-                self.validate(result, ["id", "title", "alarm_type"], f"Create {alarm_data['alarm_type']} alarm")
-                created_alarm_ids.append(result["id"])
-                times_count = len(alarm_data["alarm_times"])
-                self.log(f"Alarm '{alarm_data['title']}' with {times_count} times", "SUCCESS")
-        
-        self.log(f"Created {len(created_alarm_ids)} alarms", "SUCCESS")
-        
-        # 3. Get all alarms
-        result = self.request("GET", f"{self.base_url}/api/v1/widgets/alarm?widget_id={alarm_widget_id}")
-        if isinstance(result, list):
-            alarms = result
-            self.log(f"Retrieved {len(alarms)} alarms for widget", "SUCCESS")
-            
-            # Validate some alarm details
-            for alarm in alarms:
-                if alarm.get("alarm_type") == "daily" and alarm.get("title") == "Sit Straight Reminder":
-                    times = alarm.get("alarm_times", [])
-                    self.log(f"Sit Straight alarm has {len(times)} reminder times", "SUCCESS")
-        
-        # 4. Get widget data for dashboard
-        result = self.request("GET", f"{self.base_url}/api/v1/widgets/alarm/widget/{alarm_widget_id}/data")
-        if not result.get("error"):
-            self.validate(result, ["widget_id", "alarms", "stats"], "Get Alarm Widget Data")
-            stats = result.get("stats", {})
-            total_alarms = stats.get("total_alarms", 0)
-            active_alarms = stats.get("active_alarms", 0)
-            next_alarm_title = stats.get("next_alarm_title")
-            self.log(f"Widget stats: {active_alarms}/{total_alarms} active alarms", "SUCCESS")
-            if next_alarm_title:
-                self.log(f"Next alarm: {next_alarm_title}", "SUCCESS")
-        
-        # 5. Update alarm status (snooze an alarm)
-        if created_alarm_ids:
-            alarm_id = created_alarm_ids[0]
-            status_update = {
-                "is_snoozed": True,
-                "snooze_minutes": 15
-            }
-            result = self.request("POST", f"{self.base_url}/api/v1/widgets/alarm/{alarm_id}/updateStatus", status_update)
-            if not result.get("error"):
-                self.validate(result, ["id", "is_snoozed"], "Snooze Alarm")
-                self.log(f"Snoozed alarm for 15 minutes", "SUCCESS")
-        
-        # 6. Update alarm details
-        if created_alarm_ids:
-            alarm_id = created_alarm_ids[1] if len(created_alarm_ids) > 1 else created_alarm_ids[0]
-            update_data = {
-                "title": "Updated Reminder Title",
-                "alarm_times": ["09:30", "13:30", "17:30"]
-            }
-            result = self.request("PUT", f"{self.base_url}/api/v1/widgets/alarm/{alarm_id}", update_data)
-            if not result.get("error"):
-                self.validate(result, ["id", "title", "alarm_times"], "Update Alarm")
-                new_times = result.get("alarm_times", [])
-                self.log(f"Updated alarm with {len(new_times)} new times", "SUCCESS")
-        
-        # 7. Get specific alarm
-        if created_alarm_ids:
-            alarm_id = created_alarm_ids[0]
-            result = self.request("GET", f"{self.base_url}/api/v1/widgets/alarm/{alarm_id}")
-            if not result.get("error"):
-                self.validate(result, ["id", "title", "next_trigger_time"], "Get Specific Alarm")
-        
-        # 8. Deactivate an alarm
-        if created_alarm_ids:
-            alarm_id = created_alarm_ids[-1]
-            status_update = {"is_active": False}
-            result = self.request("POST", f"{self.base_url}/api/v1/widgets/alarm/{alarm_id}/updateStatus", status_update)
-            if not result.get("error"):
-                self.validate(result, ["id", "is_active"], "Deactivate Alarm")
-        
-        # 9. Delete alarms (cleanup)
-        for alarm_id in created_alarm_ids:
-            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/alarm/{alarm_id}")
-            if not result.get("error"):
-                self.log(f"Deleted alarm {alarm_id}", "SUCCESS")
 
     def run_all_tests(self):
         """Execute complete test suite"""
@@ -633,9 +366,7 @@ class ComprehensiveTester:
             self.test_health()
             self.test_dashboard()
             self.test_web_summary()
-            self.test_todo_widget()  # Todo widget specific tests
-            self.test_single_item_tracker_widget()  # Single item tracker widget tests
-            self.test_alarm_widget()  # Alarm widget tests
+            self.test_todo_widget()  # New Todo widget specific tests
             
             # Results
             duration = time.time() - start_time

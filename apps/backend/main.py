@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from routers import widget_web_summary, health, dashboard, todo, single_item_tracker
+from routers import widget_web_summary, health, dashboard, todo, single_item_tracker, alarm
 from core.config import settings
 from core.database import init_db
 
@@ -34,6 +34,7 @@ app.include_router(widget_web_summary.router, prefix="/api/widget/web-summary", 
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
 app.include_router(todo.router)  # Todo router already has correct prefix
 app.include_router(single_item_tracker.router)  # Single item tracker router has correct prefix
+app.include_router(alarm.router)  # Alarm router has correct prefix
 app.include_router(
     health.router, 
     prefix="/api", 
