@@ -1,39 +1,39 @@
 // API Configuration for Brainboard widgets
 export const API_CONFIG = {
-  baseUrl: 'http://localhost:8000', // Backend server URL
+  baseUrl: 'https://2b5a496edfef.ngrok-free.app', // Backend server URL
   dashboard: {
-    getTodayWidgets: '/api/dashboard/today', // Get today's widget configuration
+    getTodayWidgets: '/api/v1/dashboard/today', // Get today's widget configuration
   },
   webSearch: {
-    getScheduledSearches: '/api/web-search/scheduled',
-    getSearchResult: '/api/web-search/result',
+    getScheduledSearches: '/api/v1/web-search/scheduled',
+    getSearchResult: '/api/v1/web-search/result',
   },
   tasks: {
-    getTodayTasks: '/api/tasks/today', // Get today's tasks
-    updateTask: '/api/tasks/update', // Update task status
-    addMission: '/api/tasks/mission', // Add new mission
+    getTodayTasks: '/api/v1/tasks/today', // Get today's tasks
+    updateTask: '/api/v1/tasks/update', // Update task status
+    addMission: '/api/v1/tasks/mission', // Add new mission
   },
   reminders: {
-    getReminders: '/api/reminders',
-    createReminder: '/api/reminders/create',
+    getReminders: '/api/v1/reminders',
+    createReminder: '/api/v1/reminders/create',
   },
   calendar: {
-    getMonthlyCalendar: '/api/calendar/monthly',
+    getMonthlyCalendar: '/api/v1/calendar/monthly',
   },
   schedules: {
-    getAllSchedules: '/api/schedules',
-    createSchedule: '/api/schedules',
-    updateSchedule: '/api/schedules/{id}',
-    deleteSchedule: '/api/schedules/{id}',
+    getAllSchedules: '/api/v1/schedules',
+    createSchedule: '/api/v1/schedules',
+    updateSchedule: '/api/v1/schedules/{id}',
+    deleteSchedule: '/api/v1/schedules/{id}',
   },
   weather: {
-    getWeather: '/api/weather/current',
+    getWeather: '/api/v1/weather/current',
   },
   news: {
-    getNews: '/api/news/feed',
+    getNews: '/api/v1/news/feed',
   },
   stats: {
-    getStats: '/api/stats/daily',
+    getStats: '/api/v1/stats/daily',
   },
 };
 

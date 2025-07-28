@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ScheduledItem } from '../../types/dashboard';
-import { DUMMY_SCHEDULED_ITEMS } from '../../data/dashboardDummyData';
 
 interface AllSchedulesWidgetProps {
   onRemove: () => void;
@@ -35,8 +34,8 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
         // const response = await fetch('/api/schedules');
         // const data = await response.json();
         
-        // For now, use dummy data
-        setScheduledItems(DUMMY_SCHEDULED_ITEMS);
+        // For now, use empty array since we removed the dummy data
+        setScheduledItems([]);
       } catch (err) {
         console.error('Failed to load scheduled items:', err);
         setError('Failed to load schedules');

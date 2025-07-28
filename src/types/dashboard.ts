@@ -1,20 +1,21 @@
 // Types for dashboard widget configuration
+import { BaseWidget, WidgetType, WidgetFrequency, WidgetImportance } from './widgets';
 
 export interface ScheduledItem {
   id: string;
   title: string;
-  type: string; // 'userTask', 'userHabit', 'itemTracker', 'webSearch', 'aiWebChart', 'weatherWig', 'calendar', 'alarm', 'statsWidget', 'newsWidget'
-  frequency: string; // 'daily', 'weekly-2', 'onGym', 'alternate', 'hourly', 'Jun 20', 'daily-5', etc.
-  category?: string; // 'health', 'self-imp', 'finance', 'awareness', etc.
-  importance?: 'High' | 'Medium' | 'Low';
-  alarm?: string; // '[7am]', '[every 2 hr]', '[list of times]', etc.
-  searchQuery?: string; // For aiWebSearch type
-  config?: Record<string, any>; // Additional configuration
+  type: WidgetType;
+  frequency: WidgetFrequency;
+  category?: string;
+  importance?: WidgetImportance;
+  alarm?: string;
+  searchQuery?: string;
+  config?: Record<string, any>;
 }
 
 export interface DashboardWidgetConfig {
   id: string;
-  type: string; // widget type (e.g., 'everydayWebSearch', 'everydayTaskList')
+  type: WidgetType;
   layout: {
     x: number;
     y: number;
@@ -25,53 +26,21 @@ export interface DashboardWidgetConfig {
     maxW?: number;
     maxH?: number;
   };
-  config?: Record<string, any>; // Additional widget-specific configuration
-  priority?: number; // Widget priority for positioning
-  enabled?: boolean; // Whether the widget should be shown
-  scheduledItem?: ScheduledItem; // Reference to the original scheduled item
+  config?: Record<string, any>;
+  priority?: number;
+  enabled?: boolean;
+  scheduledItem?: ScheduledItem;
 }
 
+// Legacy types for backward compatibility
 export interface TodayWidgetsResponse {
-  date: string; // ISO date string
-  widgets: DashboardWidgetConfig[];
+  date: string;
+  widgets: BaseWidget[];
   layout?: {
     gridCols: number;
     gridRows: number;
   };
 }
 
-// Widget-specific data types
-export interface WebSearchWidgetData {
-  scheduledSearches: Array<{
-    id: string;
-    searchTerm: string;
-    scheduledTime: string;
-  }>;
-}
-
-export interface TaskListWidgetData {
-  todayTasks: Array<{
-    id: string;
-    title: string;
-    completed: boolean;
-    priority: 'high' | 'medium' | 'low';
-    category: string;
-  }>;
-}
-
-export interface CalendarWidgetData {
-  monthData: Array<{
-    date: string;
-    completedTasks: number;
-    totalTasks: number;
-    top3Completed: boolean;
-    milestones: string[];
-  }>;
-}
-
-// Union type for all widget data
-export type WidgetData = 
-  | { type: 'everydayWebSearch'; data: WebSearchWidgetData }
-  | { type: 'everydayTaskList'; data: TaskListWidgetData }
-  | { type: 'monthlyCalendar'; data: CalendarWidgetData }
-  | { type: string; data: any }; 
+// Re-export widget types for convenience
+export type { BaseWidget, WidgetType, WidgetFrequency, WidgetImportance } from './widgets'; 
