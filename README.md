@@ -7,6 +7,7 @@ An AI-powered dashboard with smart widgets for productivity and personal develop
 ### ✅ **Implemented Widgets**
 - **Web Search Widget** - Individual search widgets with unique queries and results
 - **Task List Widget** - Daily task management with progress tracking and mission creation
+- **Calendar Widget** - Monthly calendar with events, milestones, and navigation
 - **All Schedules Widget** - Comprehensive schedule management for all widgets
 
 ### 🏗️ **Architecture**
@@ -80,13 +81,17 @@ src/
 - **Features**: Progress tracking, task completion, mission creation, priority system
 - **Size**: Medium-Large (12x10)
 
+### **Calendar Widget**
+- **Purpose**: Monthly calendar with events and milestones
+- **Features**: Month navigation, event display, upcoming events, event details
+- **Size**: Large (16x12)
+
 ### **All Schedules Widget**
 - **Purpose**: Manage all widget schedules and configurations
 - **Features**: CRUD operations, type-specific forms, category management
 - **Size**: Large (16x12)
 
 ### **Planned Widgets**
-- Calendar Widget
 - Habit Tracker Widget
 - Reminders Widget
 - Item Tracker Widget

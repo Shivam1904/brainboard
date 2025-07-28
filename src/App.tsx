@@ -3,8 +3,8 @@ import Dashboard from './components/Dashboard'
 
 function App() {
   return (
-    <div className="h-screen w-screen overflow-hidden bg-background flex flex-col">
-      <main className="flex-1 overflow-hidden">
+    <div className="h-auto w-screen bg-background flex flex-col">
+      <main className="flex-1">
         <Dashboard />
       </main>
     </div>

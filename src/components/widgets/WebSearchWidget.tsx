@@ -176,7 +176,7 @@ const WebSearchWidget = ({ onRemove, config, scheduledItem }: EverydayWebSearchW
       >
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <div className="animate-spin rounded-full h-8 w-8 mx-auto mb-2"></div>
             <p className="text-muted-foreground">Loading web searches...</p>
           </div>
         </div>
@@ -216,7 +216,7 @@ const WebSearchWidget = ({ onRemove, config, scheduledItem }: EverydayWebSearchW
           searchResults.map((result) => (
             <div 
               key={result.id} 
-              className="bg-card/50 border border-border rounded-lg p-4 space-y-3"
+              className="bg-card/50 rounded-lg p-2 space-y-3"
             >
               {/* Search Term */}
               <div className="flex items-center gap-2">
