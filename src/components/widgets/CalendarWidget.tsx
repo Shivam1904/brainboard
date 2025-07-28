@@ -162,7 +162,7 @@ interface CalendarWidgetProps {
   };
 }
 
-const CalendarWidget = ({ onRemove, config, scheduledItem }: CalendarWidgetProps) => {
+const CalendarWidget = ({ onRemove, config }: CalendarWidgetProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
