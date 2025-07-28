@@ -22,145 +22,160 @@ export interface WidgetConfig {
 }
 
 export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
-  reminder: {
-    id: 'reminder',
-    title: 'Reminders',
-    description: 'Manage your tasks and to-do items',
-    component: 'ReminderWidget',
-    minSize: { w: 2, h: 3 },
-    maxSize: { w: 6, h: 8 },
-    defaultSize: { w: 3, h: 4 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '📝'
-  },
-  
-  webSummary: {
-    id: 'webSummary',
-    title: 'Web Summary',
-    description: 'AI-powered web page summarization',
-    component: 'WebSummaryWidget',
-    minSize: { w: 3, h: 3 },
-    maxSize: { w: 8, h: 6 },
-    defaultSize: { w: 4, h: 4 },
+  // Medium sized widgets (10x8 or 8x10)
+  webSearch: {
+    id: 'webSearch',
+    title: 'Web Search',
+    description: 'Daily web search functionality',
+    component: 'WebSearchWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 12, h: 10 },
+    defaultSize: { w: 10, h: 8 },
     deletable: true,
     resizable: true,
     category: 'information',
-    icon: '🌐'
+    icon: '🔍'
   },
 
-  // Future widgets (not yet implemented)
-  calendar: {
-    id: 'calendar',
-    title: 'Calendar',
-    description: 'View and manage your schedule',
-    component: 'CalendarWidget',
-    minSize: { w: 3, h: 3 },
-    maxSize: { w: 6, h: 6 },
-    defaultSize: { w: 4, h: 4 },
+  everydayTaskList: {
+    id: 'everydayTaskList',
+    title: 'Every Day Task List',
+    description: 'Daily task management and tracking',
+    component: 'EverydayTaskListWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 12, h: 10 },
+    defaultSize: { w: 10, h: 8 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '📋'
+  },
+
+  monthlyCalendar: {
+    id: 'monthlyCalendar',
+    title: 'Monthly Calendar',
+    description: 'Monthly calendar view and planning',
+    component: 'MonthlyCalendarWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 12, h: 10 },
+    defaultSize: { w: 10, h: 8 },
     deletable: true,
     resizable: true,
     category: 'productivity',
     icon: '📅'
   },
 
-  notes: {
-    id: 'notes',
-    title: 'Quick Notes',
-    description: 'Jot down quick notes and ideas',
-    component: 'NotesWidget',
-    minSize: { w: 2, h: 2 },
-    maxSize: { w: 6, h: 8 },
-    defaultSize: { w: 3, h: 3 },
+  habitListTracker: {
+    id: 'habitListTracker',
+    title: 'Habit List Tracker',
+    description: 'Track and monitor daily habits',
+    component: 'HabitListTrackerWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 12, h: 10 },
+    defaultSize: { w: 10, h: 8 },
     deletable: true,
     resizable: true,
     category: 'productivity',
-    icon: '📄'
+    icon: '✅'
   },
 
-  weather: {
-    id: 'weather',
-    title: 'Weather',
-    description: 'Current weather and forecast',
-    component: 'WeatherWidget',
-    minSize: { w: 2, h: 2 },
-    maxSize: { w: 4, h: 4 },
-    defaultSize: { w: 2, h: 3 },
+  notes: {
+    id: 'notes',
+    title: 'Notes',
+    description: 'Quick notes and idea capture',
+    component: 'NotesWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 12, h: 10 },
+    defaultSize: { w: 10, h: 8 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '📝'
+  },
+
+  aiTaskHistory: {
+    id: 'aiTaskHistory',
+    title: 'AI Task History',
+    description: 'AI-powered task history and insights',
+    component: 'AiTaskHistoryWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 12, h: 10 },
+    defaultSize: { w: 10, h: 8 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '🤖'
+  },
+
+  webSearchChart: {
+    id: 'webSearchChart',
+    title: 'Web Search Chart',
+    description: 'Visualize web search patterns and trends',
+    component: 'WebSearchChartWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 12, h: 10 },
+    defaultSize: { w: 10, h: 8 },
     deletable: true,
     resizable: true,
     category: 'information',
-    icon: '🌤️'
+    icon: '📊'
   },
 
-  clock: {
-    id: 'clock',
-    title: 'World Clock',
-    description: 'Display time in different time zones',
-    component: 'ClockWidget',
-    minSize: { w: 2, h: 1 },
-    maxSize: { w: 4, h: 2 },
-    defaultSize: { w: 2, h: 1 },
+  notifications: {
+    id: 'notifications',
+    title: 'Notifications',
+    description: 'Centralized notification center',
+    component: 'NotificationsWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 12, h: 10 },
+    defaultSize: { w: 10, h: 8 },
     deletable: true,
     resizable: true,
     category: 'utilities',
-    icon: '🕐'
+    icon: '🔔'
   },
 
-  calculator: {
-    id: 'calculator',
-    title: 'Calculator',
-    description: 'Simple calculator for quick calculations',
-    component: 'CalculatorWidget',
-    minSize: { w: 2, h: 3 },
-    maxSize: { w: 3, h: 4 },
-    defaultSize: { w: 2, h: 3 },
-    deletable: true,
-    resizable: false, // Fixed size for calculator
-    category: 'utilities',
-    icon: '🧮'
-  },
-
-  rssReader: {
-    id: 'rssReader',
-    title: 'RSS Reader',
-    description: 'Read RSS feeds and news',
-    component: 'RssReaderWidget',
-    minSize: { w: 3, h: 4 },
-    maxSize: { w: 8, h: 8 },
-    defaultSize: { w: 4, h: 5 },
+  // Small sized widgets (8x6)
+  reminders: {
+    id: 'reminders',
+    title: 'Reminders',
+    description: 'Quick reminder management',
+    component: 'RemindersWidget',
+    minSize: { w: 6, h: 4 },
+    maxSize: { w: 10, h: 8 },
+    defaultSize: { w: 8, h: 6 },
     deletable: true,
     resizable: true,
-    category: 'information',
-    icon: '📰'
+    category: 'productivity',
+    icon: '⏰'
   },
 
-  spotify: {
-    id: 'spotify',
-    title: 'Music Player',
-    description: 'Control Spotify playback',
-    component: 'SpotifyWidget',
-    minSize: { w: 3, h: 2 },
-    maxSize: { w: 6, h: 3 },
-    defaultSize: { w: 4, h: 2 },
+  singleItemTracker: {
+    id: 'singleItemTracker',
+    title: 'Single Item Tracker',
+    description: 'Track single items like smoke/gym/weight',
+    component: 'SingleItemTrackerWidget',
+    minSize: { w: 6, h: 4 },
+    maxSize: { w: 10, h: 8 },
+    defaultSize: { w: 8, h: 6 },
     deletable: true,
     resizable: true,
-    category: 'entertainment',
-    icon: '🎵'
+    category: 'productivity',
+    icon: '📈'
   },
 
-  systemMonitor: {
-    id: 'systemMonitor',
-    title: 'System Monitor',
-    description: 'Monitor CPU, memory, and system stats',
-    component: 'SystemMonitorWidget',
-    minSize: { w: 2, h: 2 },
-    maxSize: { w: 4, h: 4 },
-    defaultSize: { w: 3, h: 3 },
+  thisHour: {
+    id: 'thisHour',
+    title: 'This Hour',
+    description: 'Hourly task and time tracking',
+    component: 'ThisHourWidget',
+    minSize: { w: 6, h: 4 },
+    maxSize: { w: 10, h: 8 },
+    defaultSize: { w: 8, h: 6 },
     deletable: true,
     resizable: true,
-    category: 'utilities',
-    icon: '💻'
+    category: 'productivity',
+    icon: '⏱️'
   }
 };
 
@@ -178,15 +193,26 @@ export const getAllWidgets = (): WidgetConfig[] => {
 };
 
 export const getImplementedWidgets = (): WidgetConfig[] => {
-  // Currently only reminder and webSummary are implemented
-  return Object.values(WIDGET_CONFIGS).filter(widget => 
-    ['reminder', 'webSummary'].includes(widget.id)
-  );
+  // Currently implemented widgets
+  return [
+    WIDGET_CONFIGS.webSearch,
+  ];
 };
 
 export const getPlannedWidgets = (): WidgetConfig[] => {
-  // All widgets except the implemented ones
+  // Widgets planned for implementation (excluding implemented ones)
+  const implementedIds = getImplementedWidgets().map(w => w.id);
+  return Object.values(WIDGET_CONFIGS).filter(widget => !implementedIds.includes(widget.id));
+};
+
+export const getMediumSizedWidgets = (): WidgetConfig[] => {
   return Object.values(WIDGET_CONFIGS).filter(widget => 
-    !['reminder', 'webSummary'].includes(widget.id)
+    widget.defaultSize.w >= 8 && widget.defaultSize.h >= 8
+  );
+};
+
+export const getSmallSizedWidgets = (): WidgetConfig[] => {
+  return Object.values(WIDGET_CONFIGS).filter(widget => 
+    widget.defaultSize.w < 8 || widget.defaultSize.h < 8
   );
 };

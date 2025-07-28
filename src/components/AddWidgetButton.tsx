@@ -7,7 +7,7 @@ interface AddWidgetButtonProps {
   canAddWidget?: boolean
 }
 
-const AddWidgetButton = ({ onAddWidget, canAddWidget = true }: AddWidgetButtonProps) => {
+const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
   const [isOpen, setIsOpen] = useState(false)
   
   // Get all widgets - implemented ones will be functional, others will show description

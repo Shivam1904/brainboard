@@ -23,6 +23,15 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 221.2 83.2% 53.3%;
   --radius: 0.5rem;
+  
+  /* Grid configuration - these will be dynamically set by JavaScript */
+  --grid-cols: 32;
+  --grid-row-height: 20px;
+  --grid-margin-vertical: 8px;
+  --grid-margin-horizontal: 8px;
+  --grid-container-padding-vertical: 8px;
+  --grid-container-padding-horizontal: 8px;
+  --grid-lines-opacity: 0.4;
 }
 
 .dark {
@@ -79,14 +88,15 @@ body {
   background: transparent;
   height: 100%;
   width: 100%;
+  border: 2px solid red; /* Highlight the grid container with red border */
 }
 
 /* Grid lines background - only show when toggled on */
 .react-grid-layout.show-grid-lines {
   background-image: 
-    linear-gradient(to right, hsl(var(--border) / 0.4) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--border) / 0.4) 1px, transparent 1px);
-  background-size: calc(100% / 12) 60px; /* 12 columns, 60px row height */
+    linear-gradient(to right, hsl(var(--border) / var(--grid-lines-opacity)) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / var(--grid-lines-opacity)) 1px, transparent 1px);
+  background-size: calc(100% / var(--grid-cols)) var(--grid-row-height); /* Dynamic grid based on config */
 }
 
 .react-grid-item {
@@ -143,6 +153,17 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* Visual feedback for constrained widgets */
+.widget-container.constrained {
+  border: 2px solid hsl(var(--destructive) / 0.3);
+  animation: constrained-pulse 0.5s ease-in-out;
+}
+
+@keyframes constrained-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 /* Dark mode adjustments */
