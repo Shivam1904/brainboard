@@ -100,6 +100,7 @@ class DashboardAIService:
         }
         
         # Fetch widget-specific data based on type
+        # Note: todo and habit widgets fetch ALL data for the user, not just data for this specific widget
         if widget.widget_type == "todo":
             data = await self._get_todo_widget_data(widget)
         elif widget.widget_type == "websearch":
@@ -118,10 +119,11 @@ class DashboardAIService:
         return base_widget_info
     
     async def _get_todo_widget_data(self, widget: DashboardWidget) -> Dict[str, Any]:
-        """Get data for todo widget"""
+        """Get data for todo widget - fetches ALL tasks for the user"""
         try:
-            tasks = self.db.query(TodoTask).filter(
-                TodoTask.dashboard_widget_id == widget.id
+            # For todo widgets, fetch ALL tasks for the user, not just tasks for this specific widget
+            tasks = self.db.query(TodoTask).join(DashboardWidget).filter(
+                DashboardWidget.user_id == widget.user_id
             ).order_by(TodoTask.created_at.desc()).all()
             
             completed_tasks = [t for t in tasks if t.is_done]
@@ -235,10 +237,11 @@ class DashboardAIService:
         }
     
     async def _get_habittracker_widget_data(self, widget: DashboardWidget) -> Dict[str, Any]:
-        """Get data for habit tracker widget"""
+        """Get data for habit tracker widget - fetches ALL habits for the user"""
         try:
-            habits = self.db.query(Habit).filter(
-                Habit.dashboard_widget_id == widget.id
+            # For habit widgets, fetch ALL habits for the user, not just habits for this specific widget
+            habits = self.db.query(Habit).join(DashboardWidget).filter(
+                DashboardWidget.user_id == widget.user_id
             ).all()
             
             habit_data = []

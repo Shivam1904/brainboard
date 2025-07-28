@@ -130,9 +130,8 @@ body {
 .react-grid-layout {
   position: relative;
   background: transparent;
-  height: 100%;
+  min-height: 100%;
   width: 100%;
-  border: 2px solid red; /* Highlight the grid container with red border */
 }
 
 /* Grid lines background - only show when toggled on */

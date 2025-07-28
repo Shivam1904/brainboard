@@ -35,11 +35,7 @@ const Dashboard = () => {
   const [dashboardLoading, setDashboardLoading] = useState(true)
   const [dashboardError, setDashboardError] = useState<string | null>(null)
   
-  // Helper function to get actual header height
-  const getHeaderHeight = (): number => {
-    const header = document.querySelector('header')
-    return header ? header.clientHeight : 80
-  }
+
 
   // Apply grid CSS properties on component mount
   // This ensures CSS grid lines and other grid-related styles use the same values as the TypeScript config
@@ -58,6 +54,8 @@ const Dashboard = () => {
       
       // Try to fetch from API first
       let data: TodayWidgetsResponse;
+      let dummyData: TodayWidgetsResponse;
+      dummyData = getDummyTodayWidgets();
       
       try {
         data = await dashboardService.getTodayWidgets();
@@ -65,7 +63,7 @@ const Dashboard = () => {
       } catch (apiError) {
         console.warn('API call failed, falling back to dummy data:', apiError);
         // Fallback to dummy data if API is not available
-        data = getDummyTodayWidgets();
+        data = dummyData;
         
         // Show a subtle notification that we're using fallback data
         if (process.env.NODE_ENV === 'development') {
@@ -75,6 +73,8 @@ const Dashboard = () => {
       
       // Convert API widget data to internal widget format
       const newWidgets: Widget[] = [];
+      // data.widgets = data.widgets.slice(0,2);
+      data.widgets.push( dummyData.widgets[3] );
       
       for (const widgetData of data.widgets) {
         // Map API widget types to config widget IDs
@@ -85,7 +85,8 @@ const Dashboard = () => {
             'websearch': 'webSearch',
             'websummary': 'webSearch', // Map to webSearch for now
             'calendar': 'calendar',
-            'reminder': 'reminders'
+            'reminder': 'reminders',
+            'allSchedules': 'allSchedules'
           };
           return typeMapping[apiType] || apiType;
         };
@@ -100,11 +101,6 @@ const Dashboard = () => {
 
         // Find empty position for this widget (considering already placed widgets)
         const position = findEmptyPosition(configWidgetId, newWidgets);
-        
-        if (!position) {
-          console.warn(`No space available for widget: ${widgetData.title} (${widgetData.type})`);
-          continue; // Skip widgets that can't be placed
-        }
 
         console.log(`Placing widget ${widgetData.title} at position (${position.x}, ${position.y}) with size (${defaultConfig.defaultSize.w}, ${defaultConfig.defaultSize.h})`);
 
@@ -130,7 +126,6 @@ const Dashboard = () => {
           widgetData
         });
       }
-      
       setWidgets(newWidgets)
     } catch (err) {
       console.error('Failed to fetch today\'s widgets:', err)
@@ -207,19 +202,14 @@ const Dashboard = () => {
     return acc
   }, {} as Record<string, Layout>)
 
-  // Find empty space for new widget
-  const findEmptyPosition = (widgetId: string, existingWidgets: Widget[] = widgets): { x: number; y: number } | null => {
+  // Find empty space for new widget - fills rows horizontally first, then moves to next row
+  const findEmptyPosition = (widgetId: string, existingWidgets: Widget[] = widgets): { x: number; y: number } => {
     const config = getWidgetConfig(widgetId)
-    if (!config) return null
+    if (!config) return { x: 0, y: 0 } // Fallback position
     
     const widgetWidth = config.defaultSize.w
     const widgetHeight = config.defaultSize.h
     const gridCols = GRID_CONFIG.cols.lg
-    const viewportHeight = window.innerHeight
-    const headerHeight = getHeaderHeight()
-    const padding = GRID_CONFIG.containerPadding[0] * 2
-    const availableHeight = viewportHeight - headerHeight - padding
-    const maxRows = Math.floor(availableHeight / GRID_CONFIG.rowHeight)
     
     // Create a grid to track occupied spaces
     const occupiedSpaces = new Set<string>()
@@ -233,50 +223,63 @@ const Dashboard = () => {
 
     console.log(`Finding position for widget ${widgetId} (${widgetWidth}x${widgetHeight}), existing widgets: ${existingWidgets.length}, occupied spaces: ${occupiedSpaces.size}`);
 
-    // Try to find an empty space within boundaries
-    for (let y = 0; y < Math.min(GRID_CONFIG.maxSearchDepth, maxRows - widgetHeight); y++) {
+    // Find the highest Y position of any existing widget
+    const maxExistingY = existingWidgets.length > 0 
+      ? Math.max(...existingWidgets.map(w => w.layout.y + w.layout.h))
+      : 0
+    
+    // Start from row 0 and work our way down systematically
+    let currentRow = 0
+    const maxSearchRows = Math.max(maxExistingY + 50, 100) // Search at least 100 rows or 50 rows past existing widgets
+    
+    while (currentRow < maxSearchRows) {
+      // Try to place the widget in the current row, starting from x=0
       for (let x = 0; x <= gridCols - widgetWidth; x++) {
         let canPlace = true
+        
+        // Check if the widget can fit at this position
         for (let checkX = x; checkX < x + widgetWidth && canPlace; checkX++) {
-          for (let checkY = y; checkY < y + widgetHeight && canPlace; checkY++) {
+          for (let checkY = currentRow; checkY < currentRow + widgetHeight && canPlace; checkY++) {
             if (occupiedSpaces.has(`${checkX},${checkY}`)) {
               canPlace = false
+              break
             }
           }
         }
+        
         if (canPlace) {
-          return { x, y }
+          console.log(`Found position for widget ${widgetId} at (${x}, ${currentRow})`);
+          return { x, y: currentRow }
         }
       }
+      
+      // If we can't place the widget in this row, move to the next row
+      currentRow++
     }
-    return null
+    
+    // If we've searched all rows and still can't find a place, place it at the end
+    // This should never happen with unlimited vertical space, but just in case
+    console.log(`No empty space found after searching ${maxSearchRows} rows, placing widget at (0, ${maxSearchRows})`);
+    return { x: 0, y: maxSearchRows }
   }
 
   // Use the utility function from grid config for constraining layouts
   const constrainLayout = (layout: Layout): Layout => {
-    // Calculate max rows based on viewport height minus header and padding
-    const viewportHeight = window.innerHeight
-    const headerHeight = getHeaderHeight()
-    const padding = GRID_CONFIG.containerPadding[0] * 2
-    const availableHeight = viewportHeight - headerHeight - padding
-    const maxRows = Math.floor(availableHeight / GRID_CONFIG.rowHeight)
-    
-    // Constrain the layout
+    // Constrain the layout horizontally only - allow unlimited vertical placement
     const maxCols = GRID_CONFIG.cols.lg
     
     // Constrain x position (left/right boundaries)
     const constrainedX = Math.max(0, Math.min(layout.x, maxCols - layout.w))
     
-    // Constrain y position (top/bottom boundaries)
-    const constrainedY = Math.max(0, Math.min(layout.y, maxRows - layout.h))
+    // Don't constrain y position - allow unlimited vertical placement
+    const constrainedY = Math.max(0, layout.y) // Only ensure y is not negative
     
     // Constrain width
     const maxWidth = maxCols - constrainedX
     const constrainedW = Math.max(1, Math.min(layout.w, maxWidth))
     
-    // Constrain height
-    const maxHeight = maxRows - constrainedY
-    const constrainedH = Math.max(1, Math.min(layout.h, maxHeight))
+    // Don't constrain height - allow widgets to be as tall as needed
+    const constrainedH = Math.max(1, layout.h)
     
     return {
       ...layout,
@@ -345,20 +348,9 @@ const Dashboard = () => {
   const applyConstraints = (layout: Layout[]) => {
     const constrainedLayout = layout.map(constrainLayout)
     
-    // Debug: Log the constraint calculations
-    const viewportHeight = window.innerHeight
-    const headerHeight = getHeaderHeight()
-    const padding = GRID_CONFIG.containerPadding[0] * 2
-    const availableHeight = viewportHeight - headerHeight - padding
-    const maxRows = Math.floor(availableHeight / GRID_CONFIG.rowHeight)
-    
+    // Debug: Log the constraint calculations (horizontal only now)
     console.log('Boundary Debug:', {
-      viewportHeight,
-      headerHeight,
-      padding,
-      availableHeight,
-      rowHeight: GRID_CONFIG.rowHeight,
-      maxRows,
+      maxCols: GRID_CONFIG.cols.lg,
       layouts: layout.map(l => ({ id: l.i, x: l.x, y: l.y, w: l.w, h: l.h }))
     })
     
@@ -415,11 +407,6 @@ const Dashboard = () => {
     }
     
     const position = findEmptyPosition(widgetId)
-    
-    if (!position) {
-      alert('No space available for new widget. Please remove or resize existing widgets.')
-      return
-    }
 
     const newLayout = {
       i: `${widgetId}-${Date.now()}`,
@@ -538,13 +525,6 @@ const Dashboard = () => {
       case 'todo':
         return (
           <TaskListWidget
-            onRemove={() => removeWidget(widget.id)}
-            config={widget.config}
-          />
-        );
-      case 'calendar':
-        return (
-          <CalendarWidget
             onRemove={() => removeWidget(widget.id)}
             config={widget.config}
           />
@@ -687,9 +667,9 @@ const Dashboard = () => {
         </div>
       </div>
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         <ResponsiveGridLayout
-          className={`layout h-full ${showGridLines ? 'show-grid-lines' : ''}`}
+          className={`layout min-h-full ${showGridLines ? 'show-grid-lines' : ''}`}
           layouts={{ lg: Object.values(layouts) }}
           breakpoints={GRID_CONFIG.breakpoints}
           cols={GRID_CONFIG.cols}

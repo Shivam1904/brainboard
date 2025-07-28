@@ -240,12 +240,6 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
                       )}
                     </div>
                   </div>
-
-                  <div className="flex gap-1 ml-2">
-                    <span className="text-xs text-muted-foreground">
-                      ID: {widget.id}
-                    </span>
-                  </div>
                 </div>
               </div>
             ))
