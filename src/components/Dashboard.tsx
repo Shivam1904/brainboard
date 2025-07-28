@@ -3,6 +3,8 @@ import { Responsive, WidthProvider, Layout } from 'react-grid-layout'
 import ReminderWidget from './widgets/ReminderWidget'
 import WebSummaryWidget from './widgets/WebSummaryWidget'
 import WebSearchWidget from './widgets/WebSearchWidget';
+import TaskListWidget from './widgets/TaskListWidget'
+import AllSchedulesWidget from './widgets/AllSchedulesWidget';
 import BaseWidget from './widgets/BaseWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { getWidgetConfig } from '../config/widgets'
@@ -360,6 +362,21 @@ const Dashboard = () => {
             onRemove={() => removeWidget(widget.id)}
             config={widget.config}
             scheduledItem={widget.scheduledItem}
+          />
+        );
+      case 'taskList':
+        return (
+          <TaskListWidget
+            onRemove={() => removeWidget(widget.id)}
+            config={widget.config}
+            scheduledItem={widget.scheduledItem}
+          />
+        );
+      case 'allSchedules':
+        return (
+          <AllSchedulesWidget
+            onRemove={() => removeWidget(widget.id)}
+            config={widget.config}
           />
         );
       default:
