@@ -129,6 +129,14 @@ class ComprehensiveTester:
                 "category": "health",
                 "importance": 5,
                 "settings": {"streak_goal": 30, "reminder_time": "09:00"}
+            },
+            {
+                "title": "Daily Weight Tracking",
+                "widget_type": "singleitemtracker",
+                "frequency": "daily",
+                "category": "health",
+                "importance": 4,
+                "settings": {"item_name": "Weight", "item_unit": "kg", "target_value": "70"}
             }
         ]
         
@@ -365,6 +373,109 @@ class ComprehensiveTester:
             if not result.get("error"):
                 self.log(f"Deleted task {task_id}", "SUCCESS")
 
+    def test_single_item_tracker_widget(self):
+        """Test single item tracker widget endpoints for metrics tracking"""
+        self.log("📈 Testing Single Item Tracker Widget Endpoints", "INFO")
+        
+        # 1. Find or create a single item tracker widget
+        tracker_widget_id = None
+        result = self.request("GET", f"{self.base_url}/api/v1/dashboard/widgets")
+        if isinstance(result, list):
+            widgets = result
+            for widget in widgets:
+                if widget.get("widget_type") == "singleitemtracker":
+                    tracker_widget_id = widget["id"]
+                    break
+        
+        if not tracker_widget_id:
+            # Create a new single item tracker widget
+            widget_data = {
+                "title": "Weight Tracker",
+                "widget_type": "singleitemtracker",
+                "frequency": "daily",
+                "category": "health",
+                "importance": 4
+            }
+            result = self.request("POST", f"{self.base_url}/api/v1/dashboard/widget", widget_data)
+            if not result.get("error"):
+                tracker_widget_id = result["id"]
+                self.created_widgets.append(tracker_widget_id)
+        
+        if not tracker_widget_id:
+            self.log("Failed to get tracker widget for testing", "ERROR")
+            return
+        
+        self.log(f"Using tracker widget: {tracker_widget_id}", "INFO")
+        
+        # 2. Create a single item tracker
+        tracker_data = {
+            "dashboard_widget_id": tracker_widget_id,
+            "item_name": "Weight",
+            "item_unit": "kg",
+            "current_value": "75.5",
+            "target_value": "70.0",
+            "value_type": "decimal"
+        }
+        
+        result = self.request("POST", f"{self.base_url}/api/widgets/single-item-tracker/create", tracker_data)
+        tracker_id = None
+        if not result.get("error"):
+            self.validate(result, ["id", "item_name", "value_type"], "Create Single Item Tracker")
+            tracker_id = result["id"]
+        
+        if not tracker_id:
+            self.log("Failed to create tracker for testing", "ERROR")
+            return
+        
+        # 3. Update tracker value (simulate daily weigh-in)
+        value_updates = [
+            {"value": "75.0", "notes": "Morning weigh-in"},
+            {"value": "74.8", "notes": "Good progress"},
+            {"value": "74.5", "notes": "Steady decline"}
+        ]
+        
+        for i, update_data in enumerate(value_updates):
+            result = self.request("PUT", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}/update-value", update_data)
+            if not result.get("error"):
+                self.validate(result, ["id", "current_value"], f"Update Value #{i+1}")
+        
+        # 4. Get tracker with logs
+        result = self.request("GET", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}?limit=5")
+        if not result.get("error"):
+            self.validate(result, ["id", "item_name", "recent_logs"], "Get Tracker with Logs")
+            logs = result.get("recent_logs", [])
+            self.log(f"Tracker has {len(logs)} log entries", "SUCCESS")
+        
+        # 5. Get widget data for dashboard
+        result = self.request("GET", f"{self.base_url}/api/widgets/single-item-tracker/widget/{tracker_widget_id}/data")
+        if not result.get("error"):
+            self.validate(result, ["widget_id", "tracker", "stats"], "Get Widget Data")
+            stats = result.get("stats", {})
+            current_value = stats.get("current_value")
+            target_value = stats.get("target_value")
+            progress = stats.get("progress_percentage")
+            self.log(f"Tracker stats: {current_value}{tracker_data['item_unit']} → {target_value}{tracker_data['item_unit']} ({progress:.1f}% progress)" if progress else f"Current: {current_value}{tracker_data['item_unit']}", "SUCCESS")
+        
+        # 6. Update tracker settings
+        settings_update = {
+            "item_name": "Body Weight",
+            "target_value": "68.0"
+        }
+        result = self.request("PUT", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}", settings_update)
+        if not result.get("error"):
+            self.validate(result, ["id", "item_name"], "Update Tracker Settings")
+        
+        # 7. Get tracker logs with pagination
+        result = self.request("GET", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}/logs?limit=10&offset=0")
+        if isinstance(result, list):
+            logs = result
+            self.log(f"Retrieved {len(logs)} log entries", "SUCCESS")
+        
+        # 8. Delete tracker (cleanup)
+        result = self.request("DELETE", f"{self.base_url}/api/widgets/single-item-tracker/{tracker_id}")
+        if not result.get("error"):
+            self.log(f"Deleted tracker {tracker_id}", "SUCCESS")
+
     def run_all_tests(self):
         """Execute complete test suite"""
         self.log("🚀 Starting Complete AI Dashboard Test Suite", "INFO")
@@ -375,7 +486,8 @@ class ComprehensiveTester:
             self.test_health()
             self.test_dashboard()
             self.test_web_summary()
-            self.test_todo_widget()  # New Todo widget specific tests
+            self.test_todo_widget()  # Todo widget specific tests
+            self.test_single_item_tracker_widget()  # Single item tracker widget tests
             
             # Results
             duration = time.time() - start_time
