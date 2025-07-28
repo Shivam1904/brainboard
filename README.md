@@ -1,8 +1,8 @@
 # 🧠 Brainboard
 
-An AI-powered dashboard with smart widgets for productivity and personal development.
+An AI-powered modular productivity dashboard with smart widgets for managing tasks, summaries, and automation.
 
-## 🚀 Features
+## 🚀 Quick Start
 
 ### ✅ **Implemented Widgets**
 - **Web Search Widget** - Individual search widgets with unique queries and results
@@ -10,76 +10,238 @@ An AI-powered dashboard with smart widgets for productivity and personal develop
 - **Calendar Widget** - Monthly calendar with events, milestones, and navigation
 - **All Schedules Widget** - Comprehensive schedule management for all widgets
 
-### 🏗️ **Architecture**
-- **Dashboard API** - Dynamic widget loading from server configuration
-- **Two-Tier API System** - Dashboard-level configuration + Widget-level data fetching
-- **TypeScript** - Full type safety with comprehensive interfaces
-- **Responsive Design** - Grid-based layout with drag-and-drop functionality
+2. **Set up Node.js environment:**
+   ```bash
+   # Using nvm (recommended)
+   nvm use 18
+   # Or install Node.js 18+ if you don't have nvm
+   ```
 
-### 📱 **Widget Management**
-- **Dynamic Loading** - Widgets loaded based on server configuration
-- **Individual Data Fetching** - Each widget fetches its own data
-- **Schedule Management** - Complete CRUD operations for widget schedules
-- **Type-Specific Forms** - Different forms for different widget types
+3. **Set up Python environment:**
+   ```bash
+   # Using conda (recommended)
+   conda create -n brainboard python=3.10
+   
+   # The environment will activate automatically when you enter the brainboard directory
+   # For manual activation:
+   conda activate brainboard
+   ```
 
-## 🛠️ Tech Stack
+4. **Install dependencies:**
+   ```bash
+   # Install frontend dependencies
+   npm install
+   
+   # Install backend dependencies
+   ./setup_backend.sh
+   ```
 
-- **Frontend**: React + TypeScript + Vite
-- **Styling**: Tailwind CSS
-- **Grid System**: React Grid Layout
-- **Icons**: Lucide React
-- **State Management**: React Hooks
+5. **Set up environment:**
+   ```bash
+   # Copy environment template
+   cp .env.example .env
+   ```
+   
+   Edit `.env` with your API keys:
+   ```bash
+   # Required for AI features
+   OPENAI_API_KEY=your-openai-api-key
+   SERPER_API_KEY=your-serper-api-key
+   
+   # Optional: AWS credentials for DynamoDB (can use local development without)
+   AWS_REGION=us-east-1
+   ```
 
-## 📦 Installation
+6. **Start development servers:**
+
+   **Option 1: Using the development script (Recommended):**
+   ```bash
+   # Set up everything
+   ./dev.sh setup
+   
+   # Start frontend
+   ./dev.sh frontend
+   
+   # Start backend (in another terminal)
+   ./dev.sh backend
+   ```
+
+   **Option 2: Manual commands:**
+   
+   **Frontend:**
+   ```bash
+   npm run dev
+   ```
+   This starts the frontend at: http://localhost:5173 (or next available port like 5174)
+   
+   **Backend:**
+   ```bash
+   # The conda environment should activate automatically when you enter the brainboard directory
+   # If not, activate manually:
+   conda activate brainboard
+   
+   # Option 1: Using Python script
+   python run_backend.py
+   
+   # Option 2: Using shell script
+   ./run_backend.sh
+   ```
+   This starts the backend at: http://localhost:8000
+
+7. **Database Management (Optional):**
+   ```bash
+   # Install DB Browser for SQLite for visual database management
+   brew install --cask db-browser-for-sqlite
+   ```
+   Then open the app and load `apps/backend/brainboard.db` to view/edit your data visually.
+
+## ⚠️ Local Development Notes
+
+- **Database**: Uses SQLite for local development stored in `apps/backend/brainboard.db`
+- **Database GUI**: Install [DB Browser for SQLite](https://sqlitebrowser.org/) with `brew install --cask db-browser-for-sqlite` for visual database management
+- **AWS Credentials**: Not required for local development. The backend will run in local mode without DynamoDB
+- **PostCSS**: Uses `.cjs` extension for compatibility with ES modules
+- **Port Conflicts**: If port 5173 is in use, Vite will automatically use the next available port
+- **Conda Environment**: Automatically activates when you enter the brainboard directory. If you open a new terminal, the environment will activate automatically.
+
+## 📁 Project Structure
+
+```
+brainboard/
+├── src/                   # React + Vite frontend source
+├── apps/
+│   └── backend/           # FastAPI backend
+├── infra/                 # AWS CDK infrastructure
+├── ideas/                 # Project documentation
+├── run_backend.py         # Python script to run backend
+├── run_backend.sh         # Shell script to run backend
+├── setup_backend.sh       # Script to set up backend environment
+├── dev.sh                 # Development script for easy commands
+└── package.json           # Frontend dependencies
+```
+
+## 🛠️ Development
+
+### Prerequisites
+- **Node.js 18+** (recommended: use [nvm](https://github.com/nvm-sh/nvm) for version management)
+- **Python 3.10** (recommended: use [conda](https://docs.conda.io/en/latest/) for environment management)
+- **Git**
+- **DB Browser for SQLite** (optional): `brew install --cask db-browser-for-sqlite` for visual database management
+
+### Environment Setup
+This project uses specific versions for consistency:
+- **Node.js**: 18+ (use `nvm use 18` if you have nvm)
+- **Python**: 3.10 (create a dedicated conda environment)
+
+### Important Notes
+- **Always activate your conda environment** before installing backend dependencies or running the backend
+- **Use the correct Node.js version** for frontend development  
+- **Keep environments isolated** to avoid dependency conflicts
+- **AWS Credentials are optional** for local development - the app runs in local mode without DynamoDB
+- **Root npm install required** for the `concurrently` package that runs both servers
+
+### Getting API Keys
+To enable full functionality, you'll need:
+- **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/)
+- **Serper.dev API Key**: Get from [Serper.dev](https://serper.dev/)
+
+### Project Structure
+```
+brainboard/
+├── apps/
+│   ├── frontend/          # React + Vite frontend
+│   └── backend/           # FastAPI backend
+├── infra/                 # AWS CDK infrastructure (for deployment)
+└── ideas/                 # Project documentation
+```
+
+## 🧩 Widget System
+
+Widgets are self-contained modules that can be added to the dashboard:
+
+- **Reminder Widget:** Task management with CRUD operations
+- **Web Summary Widget:** AI-powered web search and summarization
+- **Extensible:** Easy to add new widgets following the established patterns
+
+## 📋 Available Scripts
+
+### Root Level
+- `npm run dev` - Start both frontend and backend in development mode
+- `npm run build` - Build both applications for production
+- `npm run test` - Run all tests
+- `npm run lint` - Lint all code
+
+### Frontend (`apps/frontend/`)
+- `npm run dev` - Start Vite development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+
+### Backend (`apps/backend/`)
+- `npm run dev` - Start FastAPI development server
+- `npm run test` - Run Python tests
+- `npm run lint` - Lint Python code
+
+### Setup
+No additional setup scripts needed - just follow the Quick Start guide above.
+
+## 🔧 Environment Configuration
+
+The project uses environment variables for configuration. Copy `.env.example` to `.env` and configure:
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd brainboard
+# Backend Configuration
+FASTAPI_ENV=development
+FASTAPI_HOST=localhost
+FASTAPI_PORT=8000
+DATABASE_URL=sqlite:///./brainboard.db
 
-# Install dependencies
-npm install
+# External APIs (required for full functionality)
+OPENAI_API_KEY=your-openai-api-key-here
+SERPER_API_KEY=your-serper-api-key-here
 
-# Start development server
-npm run dev
+# AWS Configuration (optional for local development)
+AWS_REGION=us-east-1
+DYNAMODB_TABLE_REMINDERS=brainboard-reminders
+DYNAMODB_TABLE_SUMMARIES=brainboard-summaries
 
-# Build for production
-npm run build
+# Frontend Configuration
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
-## 🏗️ Project Structure
+## 🚀 Deployment
 
+The app is designed to deploy on AWS using CDK (located in `infra/`):
+- Frontend: S3 + CloudFront
+- Backend: Lambda + API Gateway
+- Database: DynamoDB
+- Auth: Cognito
+
+*Deployment scripts coming soon for production use.*
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**PostCSS Error**: If you see "module is not defined in ES module scope"
+- The `postcss.config.cjs` file should have `.cjs` extension (not `.js`)
+
+**Backend Port Already in Use**: 
+```bash
+lsof -ti:8000 | xargs kill -9
 ```
-src/
-├── components/
-│   ├── widgets/
-│   │   ├── WebSearchWidget.tsx      # Web search functionality
-│   │   ├── AllSchedulesWidget.tsx   # Schedule management
-│   │   └── BaseWidget.tsx           # Base widget component
-│   ├── Dashboard.tsx                # Main dashboard
-│   └── AddWidgetButton.tsx          # Widget addition UI
-├── config/
-│   ├── api.ts                       # API configuration
-│   ├── widgets.ts                   # Widget definitions
-│   └── grid.ts                      # Grid layout configuration
-├── types/
-│   └── dashboard.ts                 # TypeScript interfaces
-├── data/
-│   └── dashboardDummyData.ts        # Dummy data for development
-└── App.tsx                          # Main application
+
+**Conda Environment Issues**:
+```bash
+# If conda activate doesn't work, try:
+source /opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh
+conda activate brainboard
 ```
 
-## 🎯 Widget Types
+**AWS Credentials Error**: 
+- For local development, ignore AWS credential errors - the app runs in local mode
 
-### **Web Search Widget**
-- **Purpose**: Display web search results for scheduled queries
-- **Features**: Individual search queries, unique results, image support
-- **Size**: Medium (10x8)
-
-### **Task List Widget**
-- **Purpose**: Daily task management and mission tracking
-- **Features**: Progress tracking, task completion, mission creation, priority system
-- **Size**: Medium-Large (12x10)
+**Frontend Port Changes**: 
+- Vite automatically finds available ports, so check terminal output for the correct URL
 
 ### **Calendar Widget**
 - **Purpose**: Monthly calendar with events and milestones
@@ -98,87 +260,21 @@ src/
 - Weather Widget
 - Stats Widget
 - News Widget
+### Database Management
 
-## 🔧 Configuration
+**View Database Visually**:
+1. Install: `brew install --cask db-browser-for-sqlite`
+2. Open "DB Browser for SQLite" app
+3. Click "Open Database" → Navigate to `apps/backend/brainboard.db`
+4. Use "Browse Data" tab to view/edit your widgets and summaries
 
-### **API Configuration**
-The system uses a two-tier API architecture:
-
-1. **Dashboard API** (`/api/dashboard/today`) - Returns widget configuration
-2. **Widget APIs** - Each widget fetches its own data
-
-### **Widget Configuration**
-Widgets are defined in `src/config/widgets.ts` with:
-- Size constraints (min/max/default)
-- Category classification
-- Component mapping
-- Icon and description
-
-## 🚀 Development
-
-### **Adding New Widgets**
-1. Create widget component in `src/components/widgets/`
-2. Add configuration to `src/config/widgets.ts`
-3. Update Dashboard component to render the widget
-4. Add to `getImplementedWidgets()` function
-
-### **API Integration**
-1. Uncomment API calls in widget components
-2. Update `src/config/api.ts` with real endpoints
-3. Implement backend API endpoints
-
-### **Dummy Data**
-- Located in `src/data/dashboardDummyData.ts`
-- Provides realistic test data for development
-- Easy to extend for new widget types
-
-## 📋 Widget Schedule Management
-
-The All Schedules widget supports:
-
-### **Widget Types**
-- `userTask` - Tasks with importance levels
-- `userHabit` - Habits with alarms and importance
-- `itemTracker` - Metric tracking
-- `webSearch` - Web search queries
-- `alarm` - Time-based alarms
-- `calendar` - Calendar widgets
-- `weatherWig` - Weather information
-- `statsWidget` - Statistics display
-- `newsWidget` - News feeds
-
-### **Schedule Properties**
-- **Title** - Widget name
-- **Type** - Widget type
-- **Frequency** - Schedule frequency (daily, weekly-2, hourly, etc.)
-- **Category** - Organization category (health, finance, etc.)
-- **Importance** - Priority level (High, Medium, Low)
-- **Alarm** - Time specifications
-- **Search Query** - For web search widgets
-
-## 🎨 UI/UX Features
-
-- **Responsive Grid Layout** - Drag and drop widget positioning
-- **Loading States** - Professional loading indicators
-- **Error Handling** - Graceful error states with retry options
-- **Modal Forms** - Clean form interfaces for editing
-- **Category Colors** - Visual organization with color coding
-- **Type-Specific Forms** - Dynamic forms based on widget type
-
-## 🔮 Future Enhancements
-
-- [ ] Real-time updates
-- [ ] Widget data caching
-- [ ] Offline support
-- [ ] User preferences
-- [ ] Widget themes
-- [ ] Advanced scheduling
-- [ ] Analytics dashboard
-- [ ] Mobile optimization
-
-## 📄 License
-
-This project is licensed under the MIT License.
+**Database Features**:
+- ✅ View all widgets and AI summaries
+- ✅ Edit data directly by double-clicking cells
+- ✅ Delete rows with right-click → "Delete Row"
+- ✅ Export data to CSV/JSON
+- ✅ Run custom SQL queries
+- ✅ Search and filter data
 
 ## 🤝 Contributing
 

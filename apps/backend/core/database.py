@@ -1,139 +1,91 @@
-import boto3
-from botocore.exceptions import ClientError, NoCredentialsError, ProfileNotFound
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 from core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Initialize DynamoDB resource with error handling for local development
-try:
-    dynamodb = boto3.resource('dynamodb', region_name=settings.aws_region)
-    # Test the connection
-    list(dynamodb.tables.all())
-    logger.info("Connected to AWS DynamoDB")
-except (NoCredentialsError, ProfileNotFound) as e:
-    logger.warning(f"AWS credentials not found: {e}. Running in local mode without DynamoDB.")
-    dynamodb = None
-except Exception as e:
-    logger.error(f"Error connecting to DynamoDB: {e}")
-    dynamodb = None
+# Create SQLite engine
+engine = create_engine(
+    settings.database_url, 
+    connect_args={"check_same_thread": False}  # Needed for SQLite
+)
+
+# Create SessionLocal class
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Create Base class for models
+Base = declarative_base()
+
+def get_db():
+    """Dependency to get database session"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 def init_db():
-    """Initialize database tables if they don't exist"""
-    if dynamodb is None:
-        logger.warning("DynamoDB not available. Skipping database initialization.")
-        return
-    
+    """Initialize database tables"""
     try:
-        # Check if tables exist, create if they don't
-        create_reminders_table()
-        create_summaries_table()
-        create_users_table()
-        logger.info("Database initialization completed")
+        # Import all models to ensure they are registered with Base
+        from models.database_models import (
+            Widget, Summary,  # Legacy models
+            User, DashboardWidget,  # Core new models
+            TodoTask, WebSearchQuery, Alarm, Habit, HabitLog  # Widget-specific models
+        )
+        
+        # Create all tables
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+        
+        # Create default user if not exists
+        from sqlalchemy.orm import sessionmaker
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        try:
+            # Check if default user exists
+            existing_user = session.query(User).filter_by(email="default@brainboard.com").first()
+            if not existing_user:
+                default_user = User(
+                    email="default@brainboard.com",
+                    name="Default User"
+                )
+                session.add(default_user)
+                session.commit()
+                logger.info("Default user created successfully")
+        except Exception as e:
+            logger.warning(f"Could not create default user: {e}")
+            session.rollback()
+        finally:
+            session.close()
+            
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
+        raise
 
-def create_reminders_table():
-    """Create reminders table"""
-    if dynamodb is None:
-        logger.warning("DynamoDB not available. Cannot create reminders table.")
-        return
+def _create_default_user():
+    """Create default user for development"""
+    try:
+        from models.database_models import User
         
-    try:
-        table = dynamodb.create_table(
-            TableName=settings.dynamodb_table_reminders,
-            KeySchema=[
-                {
-                    'AttributeName': 'user_id',
-                    'KeyType': 'HASH'  # Partition key
-                },
-                {
-                    'AttributeName': 'reminder_id',
-                    'KeyType': 'RANGE'  # Sort key
-                }
-            ],
-            AttributeDefinitions=[
-                {
-                    'AttributeName': 'user_id',
-                    'AttributeType': 'S'
-                },
-                {
-                    'AttributeName': 'reminder_id',
-                    'AttributeType': 'S'
-                }
-            ],
-            BillingMode='PAY_PER_REQUEST'
-        )
-        logger.info(f"Created table: {settings.dynamodb_table_reminders}")
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceInUseException':
-            logger.info(f"Table {settings.dynamodb_table_reminders} already exists")
+        db = SessionLocal()
+        # Check if default user exists
+        existing_user = db.query(User).filter(User.email == "default@brainboard.com").first()
+        
+        if not existing_user:
+            default_user = User(
+                email="default@brainboard.com",
+                name="Default User"
+            )
+            db.add(default_user)
+            db.commit()
+            logger.info("Default user created successfully")
         else:
-            raise
-
-def create_summaries_table():
-    """Create summaries table"""
-    try:
-        table = dynamodb.create_table(
-            TableName=settings.dynamodb_table_summaries,
-            KeySchema=[
-                {
-                    'AttributeName': 'user_id',
-                    'KeyType': 'HASH'  # Partition key
-                },
-                {
-                    'AttributeName': 'summary_id',
-                    'KeyType': 'RANGE'  # Sort key
-                }
-            ],
-            AttributeDefinitions=[
-                {
-                    'AttributeName': 'user_id',
-                    'AttributeType': 'S'
-                },
-                {
-                    'AttributeName': 'summary_id',
-                    'AttributeType': 'S'
-                }
-            ],
-            BillingMode='PAY_PER_REQUEST'
-        )
-        logger.info(f"Created table: {settings.dynamodb_table_summaries}")
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceInUseException':
-            logger.info(f"Table {settings.dynamodb_table_summaries} already exists")
-        else:
-            raise
-
-def create_users_table():
-    """Create users table"""
-    try:
-        table = dynamodb.create_table(
-            TableName=settings.dynamodb_table_users,
-            KeySchema=[
-                {
-                    'AttributeName': 'user_id',
-                    'KeyType': 'HASH'  # Partition key
-                }
-            ],
-            AttributeDefinitions=[
-                {
-                    'AttributeName': 'user_id',
-                    'AttributeType': 'S'
-                }
-            ],
-            BillingMode='PAY_PER_REQUEST'
-        )
-        logger.info(f"Created table: {settings.dynamodb_table_users}")
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceInUseException':
-            logger.info(f"Table {settings.dynamodb_table_users} already exists")
-        else:
-            raise
-
-def get_dynamodb_table(table_name: str):
-    """Get DynamoDB table resource"""
-    if dynamodb is None:
-        logger.warning(f"DynamoDB not available. Cannot access table: {table_name}")
-        return None
-    return dynamodb.Table(table_name)
+            logger.info("Default user already exists")
+            
+        db.close()
+    except Exception as e:
+        logger.error(f"Failed to create default user: {e}")

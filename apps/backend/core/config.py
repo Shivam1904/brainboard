@@ -9,26 +9,36 @@ class Settings(BaseSettings):
     app_name: str = "Brainboard API"
     debug: bool = True
     
-    # AWS
-    aws_region: str = "us-east-1"
-    dynamodb_table_reminders: str = "brainboard-reminders"
-    dynamodb_table_summaries: str = "brainboard-summaries"
-    dynamodb_table_users: str = "brainboard-users"
+    # Database
+    database_url: str = "sqlite:///./brainboard.db"
     
-    # Authentication
-    cognito_user_pool_id: Optional[str] = None
-    cognito_client_id: Optional[str] = None
+    # API Keys
+    openai_api_key: Optional[str] = None
+    serper_api_key: Optional[str] = None
+    
+    # AI Configuration
+    default_ai_model: str = "gpt-3.5-turbo"
+    max_search_results: int = 5
+    max_summary_tokens: int = 400
+    
+    # Widget Configuration
+    default_user_id: str = "default_user"
+    widget_max_summaries_history: int = 50
+    
+    # AWS (for future migration)
+    aws_region: str = "us-east-1"
+    dynamodb_table_widgets: str = "brainboard-widgets"
+    dynamodb_table_summaries: str = "brainboard-summaries"
+    
+    # Authentication (for future)
     jwt_secret_key: str = "your-secret-key-here"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 30
     
-    # External APIs
-    openai_api_key: Optional[str] = None
-    serper_api_key: Optional[str] = None
-    
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"  # Ignore extra fields in .env file
 
 # Create settings instance
 settings = Settings()
