@@ -1,6 +1,6 @@
 // Base widget types and interfaces
 
-export type WidgetType = 'todo' | 'habittracker' | 'websearch' | 'websummary' | 'calendar' | 'reminder';
+export type WidgetType = 'todo' | 'habittracker' | 'websearch' | 'websummary' | 'calendar' | 'reminder' | 'allSchedules';
 export type WidgetSize = 'small' | 'medium' | 'large' | 'full';
 export type WidgetFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'once';
 export type WidgetImportance = 1 | 2 | 3 | 4 | 5;
