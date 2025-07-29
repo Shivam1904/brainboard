@@ -1,8 +1,12 @@
+// Widget Configuration - API-Compatible
+// These configs map directly to API widget types without conversions
+
 export interface WidgetConfig {
   id: string;
   title: string;
   description: string;
   component: string;
+  apiWidgetType: string; // Maps directly to API widget_type
   minSize: {
     w: number; // width in grid units
     h: number; // height in grid units
@@ -17,19 +21,65 @@ export interface WidgetConfig {
   };
   deletable: boolean;
   resizable: boolean;
-  category: 'productivity' | 'information' | 'entertainment' | 'utilities';
+  category: 'productivity' | 'health' | 'job' | 'information' | 'entertainment' | 'utilities';
   icon?: string;
-  // API mapping fields
-  apiWidgetType?: string; // Maps to API widget type (e.g., 'todo', 'websearch')
 }
 
 export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
-  // Medium sized widgets (10x8 or 8x10)
-  webSearch: {
-    id: 'webSearch',
+  // TODO Widget
+  todo: {
+    id: 'todo',
+    apiWidgetType: 'todo',
+    title: 'Todo List',
+    description: 'Manage daily tasks and habits',
+    component: 'TaskListWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 30, h: 36 },
+    defaultSize: { w: 15, h: 15 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '📋'
+  },
+
+  // ALARM Widget
+  alarm: {
+    id: 'alarm',
+    apiWidgetType: 'alarm',
+    title: 'Alarms',
+    description: 'Time-based reminders and alarms',
+    component: 'AlarmWidget',
+    minSize: { w: 6, h: 4 },
+    maxSize: { w: 20, h: 28 },
+    defaultSize: { w: 12, h: 10 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '⏰'
+  },
+
+  // SINGLE ITEM TRACKER Widget
+  singleitemtracker: {
+    id: 'singleitemtracker',
+    apiWidgetType: 'singleitemtracker',
+    title: 'Item Tracker',
+    description: 'Track single items like weight, water intake, etc.',
+    component: 'SingleItemTrackerWidget',
+    minSize: { w: 6, h: 4 },
+    maxSize: { w: 15, h: 18 },
+    defaultSize: { w: 10, h: 12 },
+    deletable: true,
+    resizable: true,
+    category: 'health',
+    icon: '📈'
+  },
+
+  // WEBSEARCH Widget
+  websearch: {
+    id: 'websearch',
     apiWidgetType: 'websearch',
     title: 'Web Search',
-    description: 'Daily web search functionality',
+    description: 'AI-powered web search and summaries',
     component: 'WebSearchWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 20, h: 24 },
@@ -39,23 +89,11 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     category: 'information',
     icon: '🔍'
   },
-  calendar: {
-    id: 'calendar',
-    apiWidgetType: 'calendar',
-    title: 'Calendar',
-    description: 'Monthly calendar with events and milestones',
-    component: 'CalendarWidget',
-    minSize: { w: 12, h: 12 },
-    maxSize: { w: 20, h: 28 },
-    defaultSize: { w: 12, h: 16 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '📅'
-  },
+
+  // ALL SCHEDULES Widget (UI-only, not in API)
   allSchedules: {
     id: 'allSchedules',
-    apiWidgetType: 'allSchedules',
+    apiWidgetType: 'allSchedules', // This doesn't exist in API, but we keep it for UI
     title: 'All Schedules',
     description: 'Manage all widget schedules and configurations',
     component: 'AllSchedulesWidget',
@@ -66,137 +104,6 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     resizable: true,
     category: 'productivity',
     icon: '⚙️'
-  },
-
-  everydayTaskList: {
-    id: 'everydayTaskList',
-    apiWidgetType: 'todo',
-    title: 'Every Day Task List',
-    description: 'Daily task management and tracking',
-    component: 'TaskListWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 30, h: 36 },
-    defaultSize: { w: 15, h: 15 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '📋'
-  },
-  habitListTracker: {
-    id: 'habitListTracker',
-    apiWidgetType: 'habittracker',
-    title: 'Habit List Tracker',
-    description: 'Track and monitor daily habits',
-    component: 'HabitListTrackerWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 12, h: 10 },
-    defaultSize: { w: 10, h: 8 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '✅'
-  },
-
-  notes: {
-    id: 'notes',
-    title: 'Notes',
-    description: 'Quick notes and idea capture',
-    component: 'NotesWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 12, h: 10 },
-    defaultSize: { w: 10, h: 8 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '📝'
-  },
-
-  aiTaskHistory: {
-    id: 'aiTaskHistory',
-    title: 'AI Task History',
-    description: 'AI-powered task history and insights',
-    component: 'AiTaskHistoryWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 12, h: 10 },
-    defaultSize: { w: 10, h: 8 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '🤖'
-  },
-
-  webSearchChart: {
-    id: 'webSearchChart',
-    apiWidgetType: 'websearchchart',
-    title: 'Web Search Chart',
-    description: 'Visualize web search patterns and trends',
-    component: 'WebSearchChartWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 12, h: 10 },
-    defaultSize: { w: 10, h: 8 },
-    deletable: true,
-    resizable: true,
-    category: 'information',
-    icon: '📊'
-  },
-
-  notifications: {
-    id: 'notifications',
-    title: 'Notifications',
-    description: 'Centralized notification center',
-    component: 'NotificationsWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 12, h: 10 },
-    defaultSize: { w: 10, h: 8 },
-    deletable: true,
-    resizable: true,
-    category: 'utilities',
-    icon: '🔔'
-  },
-
-  // Small sized widgets (8x6)
-  reminders: {
-    id: 'reminders',
-    apiWidgetType: 'alarm',
-    title: 'Reminders',
-    description: 'Quick reminder management',
-    component: 'RemindersWidget',
-    minSize: { w: 6, h: 4 },
-    maxSize: { w: 20, h: 28 },
-    defaultSize: { w: 12, h: 10 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '⏰'
-  },
-
-  singleItemTracker: {
-    id: 'singleItemTracker',
-    apiWidgetType: 'singleitemtracker',
-    title: 'Item Tracker',
-    description: 'Track single items like smoke/gym/weight',
-    component: 'SingleItemTrackerWidget',
-    minSize: { w: 6, h: 4 },
-    maxSize: { w: 15, h: 18 },
-    defaultSize: { w: 10, h: 12 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '📈'
-  },
-
-  thisHour: {
-    id: 'thisHour',
-    title: 'This Hour',
-    description: 'Hourly task and time tracking',
-    component: 'ThisHourWidget',
-    minSize: { w: 6, h: 4 },
-    maxSize: { w: 10, h: 8 },
-    defaultSize: { w: 8, h: 6 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '⏱️'
   }
 };
 
@@ -214,12 +121,13 @@ export const getAllWidgets = (): WidgetConfig[] => {
 };
 
 export const getImplementedWidgets = (): WidgetConfig[] => {
-  // Currently implemented widgets
+  // Currently implemented widgets that match API types
   return [
-    WIDGET_CONFIGS.webSearch,
-    WIDGET_CONFIGS.everydayTaskList,
-    WIDGET_CONFIGS.calendar,
-    WIDGET_CONFIGS.allSchedules,
+    WIDGET_CONFIGS.todo,
+    WIDGET_CONFIGS.alarm,
+    WIDGET_CONFIGS.singleitemtracker,
+    WIDGET_CONFIGS.websearch,
+    WIDGET_CONFIGS.allSchedules, // UI-only widget
   ];
 };
 
@@ -250,7 +158,6 @@ export const getConfigWidgetIdByApiType = (apiWidgetType: string): string | unde
 export const getApiWidgetTypeByConfigId = (configWidgetId: string): string | undefined => {
   return WIDGET_CONFIGS[configWidgetId]?.apiWidgetType;
 };
-
 
 // Type mapping for Dashboard component
 export const getApiTypeToConfigMapping = (): Record<string, string> => {

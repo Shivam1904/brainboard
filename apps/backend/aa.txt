@@ -1,0 +1,161 @@
+Core Tables:
+
+
+---User input tables - User inserts occassionally:
+
+--- When we add new widget (it creates an entry in the DashboardWidgetsDetails, and also in a Details table of the type of widget)
+DashboardWidgetDetails
+ widget_id  | user_id | widget_type | frequency | importance | title | category       (title is a redundant column in this table)
+ id0 |  u1 | todo | weekly | 0.9 | "AWS" | "Job"
+ id1 |  u1 | todo | daily | 0.5 | "Meditation" | "Health"
+ id2 |  u1 | todo | daily | 1.0 | "Gym" | "Health"
+ id3 |  u1 | todo | daily | 1.0 | "Take meds" | "Health"
+ id4 |  u1 | alarm | daily | 1.0 | "Gym Alarm" | "Health"
+ id5 |  u1 | singleitemtracker | daily | 0.5 | "Weight Tracker" | "Health"
+ id6 |  u1 | websearch | daily | 1.0 | "YC funded AI companies" | "Productivity"
+ 
+--- For each DashboardWidgetDetails of type todo- there can be a single TodoDetails - which may be of type 'task' and 'habit'
+ToDoDetails
+ tododetails_id | widget_id | title | todo_type  | description | due_date 
+ txi1 | id0 | "AWS" | task | ...
+ txi1 | id1 | "Meditation" | task | ...
+ txi2 | id2 | "Gym" | habit | 
+ txi2 | id3 | "Take meds" | habit | 
+
+--- For each DashboardWidgetDetails of type singleitemtracker- there can be a single SingleItemTrackerDetails
+SingleItemTrackerDetails
+ singleitemtrackerdetails_id | widget_id | title | value_type | value_unit | target_value
+ sxi1 | id5 | "Weight Tracker" | number | "kg" | 59
+
+--- For each DashboardWidgetDetails of type websearch- there can be a single WebSearchDetails
+WebSearchDetails
+ websearchdetails_id | widget_id | title
+
+--- For each DashboardWidgetDetails of type alarm- there can be a single AlarmDetails
+AlarmDetails
+ alarmdetails_id | widget_id | title | description | alarm_times[] | target_value | is_snoozable
+
+
+
+When the user clicks on 'Add widget' - 
+We will open a form with the following fields:
+Fixed for all widgets:
+	Widget Type (already selected from main add widget dropdown)
+	Title
+	Frequency
+	Importance
+	Category
+Fields for 'todo':
+	title (has already been added)
+	Todo type (habit/task)
+	due date
+Fields for 'alarm':
+	title (has already been added)
+	time of day
+Fields for 'websearch':
+	title (has already been added)
+Fields for 'singleitemtracker':
+	title (has already been added)
+	value data type
+	value data unit
+	target value
+
+After filling the form- the user will save - and we will call /widget/addnew api 
+	this api will save in the table - DashboardWidgetDetails and specific type details table with its own fields
+	To see this table data, user can go inside the widget "All schedules" and see the list of all widgets. /widget/getAllWidgetList
+	User can edit these from All schedules widget using widget/updateDetails/{widget_id}
+
+
+
+DashboardWidgetDetails
+/api/v1/dashboard/getAllWidgetList 
+/api/v1/dashboard/widget/addnew
+/api/v1/dashboard/widget/updateDetails/{widget_id}
+	-type, freq, name, basic form
+	-> create the dashboard widget item and then create details table entry with only name column 
+
+
+ToDoDetails
+/api/v1/dashboard/getTodoList/{todo_type}
+/api/v1/widgets/todo/getTodoDetails/{widget_id}
+/api/v1/widgets/todo/updateDetails/{tododetails_id}
+
+WebSearchDetails
+/api/v1/widgets/websearch/getWebsearchDetails/{widget_id}
+/api/v1/widgets/websearch/updateDetails/{websearchdetails_id}
+
+
+SingleItemTrackerDetails
+/api/v1/widgets/single-item-tracker/getTrackerDetails/{widget_id}
+/api/v1/widgets/single-item-tracker/updateDetails/{singleitemtrackerdetails_id}
+
+AlarmDetails
+/api/v1/widgets/alarm/getAlarmDetails/{widget_id}
+/api/v1/widgets/alarm/updateDetails/{alarmdetails_id}
+
+
+
+
+------------
+
+
+
+
+--- AI genaration and processing: daily activity tables- AI generates daily, User updates daily:
+	Every day at midnight - an AI will run and create entries for that day in DailyWidget.
+	With daily_widget_id created, we will create entries for the corresponding type's activity tables along with the original widget_id, and the details table id 
+	these activity tables will be used for user inputs everyday. 
+
+DailyWidget  -- how many widgets "today"?
+daily_widget_id | widget_ids | widget_type | priority | reasoning | date | 
+id_xxx_todo	| [id0, id1, id2, id3]| todo | HIGH 	| Reason | july 28 | other columns		(todo items are grouped together)
+id_xxx_4	| [id4]		| alarm 	| HIGH 	| Reason | july 28 	(other items are not grouped)
+id_xxx_5	| [id5]		| singleitemtracker | HIGH 	| Reason | july 28 	(other items are not grouped)
+id_xxx_6	| [id6]		| websearch | HIGH 	| Reason | july 28 	(other items are not grouped)
+id_xxx_7	| [id7]		| alarm 	| LOW 	| Reason | july 28 	(other items are not grouped)
+id_xxx_8	| [id8]		| websearch | LOW 	| Reason | july 28 	(other items are not grouped)
+
+ToDoItemActivity
+ToDoItemActivity__id | daily_widget_id | widget_id | tododetails_id | status | progress | 
+id | id_xxx_todo | id0 | txi1 | "in progress" | 32%
+
+SingleItemTrackerItemActivity
+SingleItemTrackerItemActivity_id | daily_widget_id | widget_id | singleitemtrackerdetails_id | value | time_added
+
+AlarmItemActivity
+AlarmItemActivity_id | daily_widget_id | widget_id | alarmdetails_id | started_at | snoozed_at | 
+
+WebSearchItemActivity
+WebSearchItemActivity_id | daily_widget_id | widget_id | websearchdetails_id | status | reaction |  summary | source_json
+
+
+
+
+EXTERNAL APIs LIST:
+
+At all times on load of dashboard - we will fetch the list of DailyWidgets using dashboard/getTodayWidgetList
+The list of widgets will be spawned and inside each child widget, we will send the widget_id for that widget.
+The widget details for today inside the widget will be fetched by /getTypeDetailsAndSummary/{widget_id} Apis for all types.
+
+All widgets such as alarm, websearch and singleitemtracker will be able to fetch the activity details using the widget_id. 
+But the habit and task list widgets will fetch their list of todos from todo/getTodayTodoList/task and todo/getTodayTodoList/habit
+
+Inside each one's own widget, user will update status of todos, value of item tracker, etc. We will use specific type /updateActivity/{specific id} to update the activity entries.
+
+
+/api/v1/dashboard/getTodayWidgetList
+	- Get todays widget list from table DailyWidget 
+
+/api/v1/widgets/single-item-tracker/getTrackerDetailsAndActivity/{widget_id}
+/api/v1/widgets/single-item-tracker/updateActivity/{SingleItemTrackerItemActivity_id}
+
+/api/v1/widgets/alarm/getAlarmDetailsAndActivity/{widget_id}
+/api/v1/widgets/alarm/updateActivity/{AlarmItemActivity_id}
+
+/api/v1/widgets/todo/getTodayTodoList/{todo_type}
+	- get ToDoActivity filter by type habit/task
+/api/v1/widgets/todo/updateActivity/{ToDoItemActivity__id}
+
+/api/v1/widgets/websearch/getSummaryAndActivity/{widget_id}
+/api/v1/widgets/websearch/updateActivity/{WebSearchItemActivity_id}
+

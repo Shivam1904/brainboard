@@ -1,35 +1,50 @@
-// Export all types from the types directory
-export * from './dashboard';
-export * from './widgets';
-export * from './frequency';
+// Export all API-compatible types
+// These types match the actual backend API responses exactly
 
-// Main types that should be used throughout the application
-export type { 
-  BaseWidget, 
-  WidgetType, 
-  WidgetSize, 
-  WidgetFrequency, 
-  WidgetImportance,
+// Dashboard types
+export type {
   TodayWidgetsResponse,
-  DashboardStats
-} from './widgets';
+  DailyWidget,
+  AllWidgetsResponse,
+  DashboardWidget,
+  ApiWidgetType,
+  ApiFrequency,
+  ApiPriority,
+  ApiCategory
+} from './dashboard';
 
+// Widget-specific API types
 export type {
-  TodoWidgetData,
-  HabitTrackerWidgetData,
-  WebSearchWidgetData,
-  WebSummaryWidgetData,
-  CalendarWidgetData,
-  ReminderWidgetData
-} from './widgets';
-
-export type {
-  TodoTask,
-  TodoStats,
-  Habit,
-  WebSearch,
-  WebSearchResult,
-  WebSummary,
-  CalendarEvent,
-  Reminder
+  // Todo widget types
+  TodoTodayResponse,
+  TodoActivity,
+  TodoDetailsAndActivityResponse,
+  TodoDetails,
+  TodoActivityStatus,
+  TodoDetailsResponse,
+  
+  // Alarm widget types
+  AlarmDetailsAndActivityResponse,
+  AlarmDetails,
+  AlarmActivity,
+  AlarmDetailsResponse,
+  
+  // Single item tracker widget types
+  TrackerDetailsAndActivityResponse,
+  TrackerDetails,
+  TrackerActivity,
+  TrackerDetailsResponse,
+  
+  // WebSearch widget types
+  WebSearchSummaryAndActivityResponse,
+  WebSearchDetails,
+  WebSearchActivity,
+  WebSearchDetailsResponse,
+  WebSearchAISummaryResponse,
+  
+  // Common status types
+  TodoStatus,
+  AlarmStatus,
+  WebSearchStatus,
+  ReactionType
 } from './widgets'; 

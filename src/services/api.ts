@@ -1,203 +1,309 @@
-import { API_CONFIG, buildApiUrl } from '../config/api';
-import { TodayWidgetsResponse, BaseWidget } from '../types';
+// API Service - Direct API calls without conversions
+// This service matches the actual backend API endpoints exactly
 
-// Types for API responses
-export interface ApiResponse<T = any> {
-  data: T;
-  message?: string;
-  status: 'success' | 'error';
-}
+import { 
+  TodayWidgetsResponse,
+  AllWidgetsResponse,
+  TodoTodayResponse,
+  TodoDetailsAndActivityResponse,
+  TodoDetailsResponse,
+  AlarmDetailsAndActivityResponse,
+  AlarmDetailsResponse,
+  TrackerDetailsAndActivityResponse,
+  TrackerDetailsResponse,
+  WebSearchSummaryAndActivityResponse,
+  WebSearchDetailsResponse,
+  WebSearchAISummaryResponse,
+  ApiWidgetType,
+  ApiFrequency,
+  ApiPriority,
+  ApiCategory,
+  TodoStatus,
+  AlarmStatus,
+  WebSearchStatus,
+  ReactionType
+} from '../types';
 
-export interface ApiError {
-  message: string;
-  status: number;
-  details?: any;
-}
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
-// Authentication types
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  access_token: string;
-  token_type: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  };
-}
-
-// Base API service class
 class ApiService {
-  private baseUrl: string;
-  private token: string | null = null;
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
 
-  constructor(baseUrl: string = API_CONFIG.baseUrl) {
-    this.baseUrl = baseUrl;
-    this.token = localStorage.getItem('auth_token');
-  }
-
-  private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'bypass-tunnel-reminder': 'true',
-      'ngrok-skip-browser-warning': 'true',
-    };
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    return headers;
-  }
-
-  private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
 
     return response.json();
   }
 
-  async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
-    const url = buildApiUrl(`${endpoint}`, params);
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
+  // ============================================================================
+  // DASHBOARD ENDPOINTS
+  // ============================================================================
 
-    return this.handleResponse<T>(response);
+  // GET /api/v1/dashboard/getTodayWidgetList
+  async getTodayWidgetList(targetDate?: string): Promise<TodayWidgetsResponse> {
+    const params = targetDate ? `?target_date=${targetDate}` : '';
+    return this.request<TodayWidgetsResponse>(`/dashboard/getTodayWidgetList${params}`);
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<T> {
-    const url = buildApiUrl(`${this.baseUrl}${endpoint}`);
-    const response = await fetch(url, {
+  // GET /api/v1/dashboard/getAllWidgetList
+  async getAllWidgetList(): Promise<AllWidgetsResponse> {
+    return this.request<AllWidgetsResponse>('/dashboard/getAllWidgetList');
+  }
+
+  // POST /api/v1/dashboard/widget/addnew
+  async addNewWidget(data: {
+    widget_type: ApiWidgetType;
+    frequency: ApiFrequency;
+    importance: number;
+    title: string;
+    category: ApiCategory;
+  }): Promise<{
+    message: string;
+    widget_id: string;
+    widget_type: string;
+    title: string;
+  }> {
+    return this.request('/dashboard/widget/addnew', {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: data ? JSON.stringify(data) : undefined,
+      body: JSON.stringify(data),
     });
-
-    return this.handleResponse<T>(response);
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<T> {
-    const url = buildApiUrl(`${this.baseUrl}${endpoint}`);
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: data ? JSON.stringify(data) : undefined,
+  // GET /api/v1/dashboard/getTodoList/{todo_type}
+  async getTodoList(todoType: 'habit' | 'task'): Promise<{
+    todo_type: 'habit' | 'task';
+    todos: Array<{
+      id: string;
+      title: string;
+      todo_type: 'habit' | 'task';
+      description: string;
+      due_date: string;
+      created_at: string;
+    }>;
+    total_todos: number;
+  }> {
+    return this.request(`/dashboard/getTodoList/${todoType}`);
+  }
+
+  // ============================================================================
+  // TODO WIDGET ENDPOINTS
+  // ============================================================================
+
+  // GET /api/v1/widgets/todo/getTodayTodoList/{todo_type}
+  async getTodayTodoList(todoType: 'habit' | 'task'): Promise<TodoTodayResponse> {
+    return this.request<TodoTodayResponse>(`/widgets/todo/getTodayTodoList/${todoType}`);
+  }
+
+  // POST /api/v1/widgets/todo/updateActivity/{activity_id}
+  async updateTodoActivity(activityId: string, data: {
+    status: TodoStatus;
+    progress: number;
+    updated_by: string;
+  }): Promise<{
+    activity_id: string;
+    status: TodoStatus;
+    progress: number;
+    updated_at: string;
+  }> {
+    return this.request(`/widgets/todo/updateActivity/${activityId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
-
-    return this.handleResponse<T>(response);
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
-    const url = buildApiUrl(`${this.baseUrl}${endpoint}`);
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
+  // GET /api/v1/widgets/todo/getTodoItemDetailsAndActivity/{daily_widget_id}/{widget_id}
+  async getTodoItemDetailsAndActivity(dailyWidgetId: string, widgetId: string): Promise<TodoDetailsAndActivityResponse> {
+    return this.request<TodoDetailsAndActivityResponse>(`/widgets/todo/getTodoItemDetailsAndActivity/${dailyWidgetId}/${widgetId}`);
+  }
+
+  // GET /api/v1/widgets/todo/getTodoDetails/{widget_id}
+  async getTodoDetails(widgetId: string): Promise<TodoDetailsResponse> {
+    return this.request<TodoDetailsResponse>(`/widgets/todo/getTodoDetails/${widgetId}`);
+  }
+
+  // POST /api/v1/widgets/todo/updateDetails/{todo_details_id}
+  async updateTodoDetails(todoDetailsId: string, data: {
+    title: string;
+    description: string;
+    due_date: string;
+    todo_type: 'habit' | 'task';
+  }): Promise<TodoDetailsResponse> {
+    return this.request(`/widgets/todo/updateDetails/${todoDetailsId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
-
-    return this.handleResponse<T>(response);
   }
 
-  setToken(token: string) {
-    this.token = token;
-    localStorage.setItem('auth_token', token);
+  // ============================================================================
+  // ALARM WIDGET ENDPOINTS
+  // ============================================================================
+
+  // GET /api/v1/widgets/alarm/getAlarmDetailsAndActivity/{widget_id}
+  async getAlarmDetailsAndActivity(widgetId: string): Promise<AlarmDetailsAndActivityResponse> {
+    return this.request<AlarmDetailsAndActivityResponse>(`/widgets/alarm/getAlarmDetailsAndActivity/${widgetId}`);
   }
 
-  clearToken() {
-    this.token = null;
-    localStorage.removeItem('auth_token');
+  // POST /api/v1/widgets/alarm/updateActivity/{activity_id}
+  async updateAlarmActivity(activityId: string, data: {
+    status: AlarmStatus;
+    snooze_count: number;
+    updated_by: string;
+  }): Promise<{
+    activity_id: string;
+    status: AlarmStatus;
+    snooze_count: number;
+    updated_at: string;
+  }> {
+    return this.request(`/widgets/alarm/updateActivity/${activityId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
-  isAuthenticated(): boolean {
-    return !!this.token;
+  // GET /api/v1/widgets/alarm/getAlarmDetails/{widget_id}
+  async getAlarmDetails(widgetId: string): Promise<AlarmDetailsResponse> {
+    return this.request<AlarmDetailsResponse>(`/widgets/alarm/getAlarmDetails/${widgetId}`);
+  }
+
+  // POST /api/v1/widgets/alarm/updateDetails/{alarm_details_id}
+  async updateAlarmDetails(alarmDetailsId: string, data: {
+    title: string;
+    alarm_times: string[];
+    enabled: boolean;
+  }): Promise<AlarmDetailsResponse> {
+    return this.request(`/widgets/alarm/updateDetails/${alarmDetailsId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ============================================================================
+  // SINGLE ITEM TRACKER WIDGET ENDPOINTS
+  // ============================================================================
+
+  // GET /api/v1/widgets/single-item-tracker/getTrackerDetailsAndActivity/{widget_id}
+  async getTrackerDetailsAndActivity(widgetId: string): Promise<TrackerDetailsAndActivityResponse> {
+    return this.request<TrackerDetailsAndActivityResponse>(`/widgets/single-item-tracker/getTrackerDetailsAndActivity/${widgetId}`);
+  }
+
+  // POST /api/v1/widgets/single-item-tracker/updateActivity/{activity_id}
+  async updateTrackerActivity(activityId: string, data: {
+    current_value: number;
+    updated_by: string;
+  }): Promise<{
+    activity_id: string;
+    current_value: number;
+    updated_at: string;
+  }> {
+    return this.request(`/widgets/single-item-tracker/updateActivity/${activityId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // GET /api/v1/widgets/single-item-tracker/getTrackerDetails/{widget_id}
+  async getTrackerDetails(widgetId: string): Promise<TrackerDetailsResponse> {
+    return this.request<TrackerDetailsResponse>(`/widgets/single-item-tracker/getTrackerDetails/${widgetId}`);
+  }
+
+  // POST /api/v1/widgets/single-item-tracker/updateDetails/{tracker_details_id}
+  async updateTrackerDetails(trackerDetailsId: string, data: {
+    title: string;
+    target_value: number;
+    unit: string;
+  }): Promise<TrackerDetailsResponse> {
+    return this.request(`/widgets/single-item-tracker/updateDetails/${trackerDetailsId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ============================================================================
+  // WEBSEARCH WIDGET ENDPOINTS
+  // ============================================================================
+
+  // GET /api/v1/widgets/websearch/getSummaryAndActivity/{widget_id}
+  async getWebSearchSummaryAndActivity(widgetId: string): Promise<WebSearchSummaryAndActivityResponse> {
+    return this.request<WebSearchSummaryAndActivityResponse>(`/widgets/websearch/getSummaryAndActivity/${widgetId}`);
+  }
+
+  // POST /api/v1/widgets/websearch/updateActivity/{activity_id}
+  async updateWebSearchActivity(activityId: string, data: {
+    status: WebSearchStatus;
+    reaction: ReactionType;
+    summary: string;
+    sources: string[];
+    updated_by: string;
+  }): Promise<{
+    activity_id: string;
+    status: WebSearchStatus;
+    reaction: ReactionType;
+    summary: string;
+    sources: string[];
+    updated_at: string;
+  }> {
+    return this.request(`/widgets/websearch/updateActivity/${activityId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // GET /api/v1/widgets/websearch/getWebsearchDetails/{widget_id}
+  async getWebSearchDetails(widgetId: string): Promise<WebSearchDetailsResponse> {
+    return this.request<WebSearchDetailsResponse>(`/widgets/websearch/getWebsearchDetails/${widgetId}`);
+  }
+
+  // POST /api/v1/widgets/websearch/updateDetails/{websearch_details_id}
+  async updateWebSearchDetails(webSearchDetailsId: string, data: {
+    title: string;
+    search_query: string;
+  }): Promise<WebSearchDetailsResponse> {
+    return this.request(`/widgets/websearch/updateDetails/${webSearchDetailsId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // GET /api/v1/widgets/websearch/getaisummary/{widget_id}
+  async getWebSearchAISummary(widgetId: string): Promise<WebSearchAISummaryResponse> {
+    return this.request<WebSearchAISummaryResponse>(`/widgets/websearch/getaisummary/${widgetId}`);
+  }
+
+  // ============================================================================
+  // HEALTH CHECK ENDPOINTS
+  // ============================================================================
+
+  // GET /api/v1/health
+  async getHealth(): Promise<{
+    status: string;
+    service: string;
+    version: string;
+  }> {
+    return this.request('/health');
+  }
+
+  // GET /api/v1/health/detailed
+  async getDetailedHealth(): Promise<{
+    status: string;
+    service: string;
+    version: string;
+    services: {
+      database: string;
+      ai_services: string;
+    };
+  }> {
+    return this.request('/health/detailed');
   }
 }
 
-// Create singleton instance
-export const apiService = new ApiService();
-
-// Specific API services
-export class AuthService {
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await apiService.post<LoginResponse>('/api/auth/login', credentials);
-    apiService.setToken(response.access_token);
-    return response;
-  }
-
-  async logout(): Promise<void> {
-    try {
-      await apiService.post('/api/auth/logout');
-    } finally {
-      apiService.clearToken();
-    }
-  }
-
-  async register(userData: { email: string; password: string; name: string }): Promise<LoginResponse> {
-    const response = await apiService.post<LoginResponse>('/api/auth/register', userData);
-    apiService.setToken(response.access_token);
-    return response;
-  }
-}
-
-export class ReminderService {
-  async getReminders(): Promise<any[]> {
-    return apiService.get<any[]>('/api/reminders');
-  }
-
-  async createReminder(reminder: any): Promise<any> {
-    return apiService.post<any>('/api/reminders', reminder);
-  }
-
-  async updateReminder(id: string, reminder: any): Promise<any> {
-    return apiService.put<any>(`/api/reminders/${id}`, reminder);
-  }
-
-  async deleteReminder(id: string): Promise<void> {
-    return apiService.delete(`/api/reminders/${id}`);
-  }
-}
-
-export class SummaryService {
-  async getSummaries(): Promise<any[]> {
-    return apiService.get<any[]>('/api/summaries');
-  }
-
-  async createSummary(summary: any): Promise<any> {
-    return apiService.post<any>('/api/summaries', summary);
-  }
-}
-
-export class DashboardService {
-  async getTodayWidgets(): Promise<TodayWidgetsResponse> {
-    return apiService.get<TodayWidgetsResponse>('/api/v1/dashboard/widgets/today');
-  }
-
-  async getWidget(widgetId: string): Promise<BaseWidget> {
-    return apiService.get<BaseWidget>(`/api/v1/widgets/${widgetId}`);
-  }
-
-  async updateWidget(widgetId: string, widgetData: Partial<BaseWidget>): Promise<BaseWidget> {
-    return apiService.put<BaseWidget>(`/api/v1/widgets/${widgetId}`, widgetData);
-  }
-
-  async deleteWidget(widgetId: string): Promise<void> {
-    return apiService.delete(`/api/v1/widgets/${widgetId}`);
-  }
-
-  async createWidget(widgetData: Omit<BaseWidget, 'id'>): Promise<BaseWidget> {
-    return apiService.post<BaseWidget>('/api/v1/widgets', widgetData);
-  }
-}
-
-// Export service instances
-export const authService = new AuthService();
-export const reminderService = new ReminderService();
-export const summaryService = new SummaryService();
-export const dashboardService = new DashboardService(); 
+// Export singleton instance
+export const apiService = new ApiService(); 

@@ -1,43 +1,43 @@
 import { useState, useEffect } from 'react'
 import { Responsive, WidthProvider, Layout } from 'react-grid-layout'
-import WebSummaryWidget from './widgets/WebSummaryWidget'
 import WebSearchWidget from './widgets/WebSearchWidget';
 import TaskListWidget from './widgets/TaskListWidget'
-import CalendarWidget from './widgets/CalendarWidget'
 import SingleItemTrackerWidget from './widgets/SingleItemTrackerWidget'
 import AlarmWidget from './widgets/AlarmWidget'
 import BaseWidget from './widgets/BaseWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
-import { dashboardService } from '../services/api'
+import { dashboardService } from '../services/dashboard'
 import { 
-  TodayWidgetsResponse
+  TodayWidgetsResponse,
+  DailyWidget
 } from '../types'
-import { getDummyTodayWidgets } from '../data/dashboardDummyData'
+import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
-import {
-  Widget,
-  constrainLayout,
-  applyConstraintsToLayouts,
-  convertApiWidgetsToInternal,
-  createNewWidget,
-  prepareDashboardLayoutForSave,
-  getConfigWidgetId,
-  createLayoutsFromWidgets
-} from '../utils/dashboardUtils'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
+
+// Simple widget interface for UI layout
+interface UIWidget {
+  id: string;
+  daily_widget_id: string;
+  widget_ids: string[];
+  widget_type: string;
+  priority: string;
+  reasoning: string;
+  date: string;
+  created_at: string;
+  layout: Layout;
+}
 
 const Dashboard = () => {
   const [showGridLines, setShowGridLines] = useState(false)
   const [dashboardLoading, setDashboardLoading] = useState(true)
   const [dashboardError, setDashboardError] = useState<string | null>(null)
-  
-
+  const [widgets, setWidgets] = useState<UIWidget[]>([])
 
   // Apply grid CSS properties on component mount
-  // This ensures CSS grid lines and other grid-related styles use the same values as the TypeScript config
   useEffect(() => {
     const cssProperties = getGridCSSProperties()
     Object.entries(cssProperties).forEach(([property, value]) => {
@@ -70,10 +70,28 @@ const Dashboard = () => {
         }
       }
       
-      // Convert API widget data to internal widget format using utility function
-      const newWidgets = convertApiWidgetsToInternal(data);
-      console.log('Converted widgets:', newWidgets);
-      setWidgets(newWidgets)
+      // Convert API widgets to UI widgets with layout
+      const uiWidgets: UIWidget[] = data.widgets.map((widget: DailyWidget, index: number) => {
+        const config = getWidgetConfig(widget.widget_type);
+        const defaultSize = config?.defaultSize || { w: 10, h: 10 };
+        
+        return {
+          ...widget,
+          layout: {
+            i: widget.daily_widget_id,
+            x: (index * 2) % 12, // Simple grid positioning
+            y: Math.floor(index / 6) * 2,
+            w: defaultSize.w,
+            h: defaultSize.h,
+            minW: config?.minSize?.w || 4,
+            minH: config?.minSize?.h || 4,
+            maxW: config?.maxSize?.w || 20,
+            maxH: config?.maxSize?.h || 20,
+          }
+        };
+      });
+      
+      setWidgets(uiWidgets);
     } catch (err) {
       console.error('Failed to fetch today\'s widgets:', err)
       setDashboardError('Failed to load dashboard configuration')
@@ -91,8 +109,8 @@ const Dashboard = () => {
   useEffect(() => {
     const handleResize = () => {
       // Re-constrain all widgets when window is resized
-      setWidgets((prev: Widget[]) => 
-        prev.map((widget: Widget) => ({
+      setWidgets((prev: UIWidget[]) => 
+        prev.map((widget: UIWidget) => ({
           ...widget,
           layout: constrainLayout(widget.layout)
         }))
@@ -102,34 +120,34 @@ const Dashboard = () => {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
-  
-  const [widgets, setWidgets] = useState<Widget[]>([])
 
-  const layouts = createLayoutsFromWidgets(widgets)
+  // Simple layout constraint function
+  const constrainLayout = (layout: Layout): Layout => {
+    const gridCols = GRID_CONFIG.cols.lg;
+    const maxHeight = 50; // Maximum grid height
+    
+    return {
+      ...layout,
+      x: Math.max(0, Math.min(layout.x, gridCols - layout.w)),
+      y: Math.max(0, Math.min(layout.y, maxHeight - layout.h)),
+      w: Math.max(layout.minW || 1, Math.min(layout.w, layout.maxW || gridCols)),
+      h: Math.max(layout.minH || 1, Math.min(layout.h, layout.maxH || maxHeight))
+    };
+  }
+
+  // Create layouts object for react-grid-layout
+  const layouts = {
+    lg: widgets.map(widget => widget.layout)
+  };
 
   const onLayoutChange = (layout: Layout[]) => {
-    // During drag/resize, just update the layout without constraints
-    // This allows smooth dragging and resizing
-    setWidgets((prev: Widget[]) => 
-      prev.map((widget: Widget) => {
-        const newLayout = layout.find(l => l.i === widget.id)
+    // Update widget layouts
+    setWidgets((prev: UIWidget[]) => 
+      prev.map((widget: UIWidget) => {
+        const newLayout = layout.find(l => l.i === widget.daily_widget_id)
         return newLayout ? { ...widget, layout: newLayout } : widget
       })
     )
-  }
-
-  // Save dashboard layout to API
-  const saveDashboardLayout = async (widgets: Widget[]) => {
-    try {
-      const dashboardLayout = prepareDashboardLayoutForSave(widgets);
-
-      // Note: saveDashboardLayout method doesn't exist in the new API service
-      // For now, just log the layout data
-      console.log('Dashboard layout to save:', dashboardLayout);
-    } catch (error) {
-      console.error('Failed to save dashboard layout:', error);
-      // Don't show error to user for layout saves, just log it
-    }
   }
 
   const onDragStop = (layout: Layout[]) => {
@@ -143,121 +161,118 @@ const Dashboard = () => {
   }
 
   const applyConstraints = (layout: Layout[]) => {
-    const { constrainedLayout, wasConstrained } = applyConstraintsToLayouts(layout)
+    const constrainedLayout = layout.map(l => constrainLayout(l));
     
-    const updatedWidgets = widgets.map((widget: Widget) => {
-      const newLayout = constrainedLayout.find(l => l.i === widget.id)
+    const updatedWidgets = widgets.map((widget: UIWidget) => {
+      const newLayout = constrainedLayout.find(l => l.i === widget.daily_widget_id)
       return newLayout ? { ...widget, layout: newLayout } : widget
     });
     
     setWidgets(updatedWidgets)
     
-    // Save layout to API after constraints are applied
-    saveDashboardLayout(updatedWidgets)
-    
-    // Add visual feedback if any widget was constrained
-    if (wasConstrained) {
-      const constrainedElements = document.querySelectorAll('.widget-container')
-      constrainedElements.forEach((element) => {
-        element.classList.add('constrained')
-        setTimeout(() => {
-          element.classList.remove('constrained')
-        }, 500)
-      })
-    }
+    // Add visual feedback
+    const constrainedElements = document.querySelectorAll('.widget-container')
+    constrainedElements.forEach((element) => {
+      element.classList.add('constrained')
+      setTimeout(() => {
+        element.classList.remove('constrained')
+      }, 500)
+    })
   }
 
   const addWidget = (widgetId: string) => {
-    const newWidget = createNewWidget(widgetId)
+    const config = getWidgetConfig(widgetId);
     
-    if (!newWidget) {
+    if (!config) {
       alert('Widget configuration not found.')
       return
     }
     
-    const updatedWidgets = [...widgets, newWidget];
-    setWidgets(updatedWidgets)
-    saveDashboardLayout(updatedWidgets)
+    const newWidget: UIWidget = {
+      id: `new-${Date.now()}`,
+      daily_widget_id: `daily-${widgetId}-${Date.now()}`,
+      widget_ids: [],
+      widget_type: widgetId,
+      priority: 'LOW',
+      reasoning: 'Manually added widget',
+      date: new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString(),
+      layout: {
+        i: `daily-${widgetId}-${Date.now()}`,
+        x: (widgets.length * 2) % 12,
+        y: Math.floor(widgets.length / 6) * 2,
+        w: config.defaultSize.w,
+        h: config.defaultSize.h,
+        minW: config.minSize.w,
+        minH: config.minSize.h,
+        maxW: config.maxSize.w,
+        maxH: config.maxSize.h,
+      }
+    };
+    
+    setWidgets([...widgets, newWidget]);
   }
 
-  const removeWidget = (id: string) => {
-    const widget = widgets.find(w => w.id === id)
-    const widgetType = widget?.type || 'widget'
+  const removeWidget = (dailyWidgetId: string) => {
+    const widget = widgets.find(w => w.daily_widget_id === dailyWidgetId)
+    const widgetType = widget?.widget_type || 'widget'
     
     if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
-      const updatedWidgets = widgets.filter((widget: Widget) => widget.id !== id);
+      const updatedWidgets = widgets.filter((widget: UIWidget) => widget.daily_widget_id !== dailyWidgetId);
       setWidgets(updatedWidgets)
-      saveDashboardLayout(updatedWidgets)
     }
   }
 
-  const renderWidget = (widget: Widget) => {
-
-    switch (widget.type) {
+  const renderWidget = (widget: UIWidget) => {
+    switch (widget.widget_type) {
       case 'alarm':
         return (
           <AlarmWidget 
             widget={widget}
-            onRemove={() => removeWidget(widget.id)}
-          />
-        )
-      case 'websummary':
-        return (
-          <WebSummaryWidget
-            widget={widget}
-            onRemove={() => removeWidget(widget.id)}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         )
       case 'websearch':
         return (
           <WebSearchWidget
             widget={widget}
-            onRemove={() => removeWidget(widget.id)}
-          />
-        );
-      case 'calendar':
-        return (
-          <CalendarWidget
-            widget={widget}
-            onRemove={() => removeWidget(widget.id)}
-          />
-        );
-      case 'allSchedules':
-        return (
-          <AllSchedulesWidget
-            widget={widget}
-            onRemove={() => removeWidget(widget.id)}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );
       case 'todo':
         return (
           <TaskListWidget
             widget={widget}
-            onRemove={() => removeWidget(widget.id)}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );
       case 'singleitemtracker':
         return (
           <SingleItemTrackerWidget
             widget={widget}
-            onRemove={() => removeWidget(widget.id)}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+        );
+      case 'allSchedules':
+        return (
+          <AllSchedulesWidget
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );
       default:
         // For unimplemented widgets, show BaseWidget with placeholder content
-        {
-          const configWidgetId = getConfigWidgetId(widget.type);
-          const config = getWidgetConfig(configWidgetId);
+        const config = getWidgetConfig(widget.widget_type);
     
-          return (
+        return (
           <BaseWidget
-            title={config?.title || widget.type}
+            title={config?.title || widget.widget_type}
             icon={config?.icon}
-            onRemove={() => removeWidget(widget.id)}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
           >
             <div className="flex flex-col items-center justify-center h-full text-center p-4">
               <div className="text-4xl mb-2">{config?.icon || '🚧'}</div>
-              <h3 className="font-medium mb-2">{config?.title || widget.type}</h3>
+              <h3 className="font-medium mb-2">{config?.title || widget.widget_type}</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 {config?.description || 'This widget is coming soon!'}
               </p>
@@ -266,7 +281,7 @@ const Dashboard = () => {
               </div>
             </div>
           </BaseWidget>
-        )}
+        )
     }
   }
 
@@ -369,7 +384,7 @@ const Dashboard = () => {
       <div className="flex-1 overflow-auto">
         <ResponsiveGridLayout
           className={`layout min-h-full ${showGridLines ? 'show-grid-lines' : ''}`}
-          layouts={{ lg: Object.values(layouts) }}
+          layouts={layouts}
           breakpoints={GRID_CONFIG.breakpoints}
           cols={GRID_CONFIG.cols}
           rowHeight={GRID_CONFIG.rowHeight}
@@ -385,7 +400,7 @@ const Dashboard = () => {
           onDragStop={onDragStop}
           onResizeStop={onResizeStop}
         >
-        {widgets.map((widget: Widget) => (
+        {widgets.map((widget: UIWidget) => (
           <div key={widget.layout.i} className="widget-container">
             {renderWidget(widget)}
           </div>

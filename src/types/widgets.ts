@@ -1,354 +1,197 @@
-// Base widget types and interfaces
+// API Response Types for Widgets - Single Source of Truth
+// These types match exactly what the backend API returns
 
-export type WidgetType = 'todo' | 'habittracker' | 'websearch' | 'websummary' | 'calendar' | 'alarm' | 'allSchedules' | 'singleitemtracker' | 'thisHour';
-export type WidgetSize = 'small' | 'medium' | 'large' | 'full';
-export type WidgetFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'once';
-export type WidgetImportance = 1 | 2 | 3 | 4 | 5;
+// ============================================================================
+// TODO WIDGET API TYPES
+// ============================================================================
 
-// New API response structure for dashboard widgets
-export interface ApiDashboardWidget {
-  id: string;
+// Response from /api/v1/widgets/todo/getTodayTodoList/{todo_type}
+export interface TodoTodayResponse {
+  todo_type: 'habit' | 'task';
+  todos: TodoActivity[];
+  total_todos: number;
+}
+
+// Todo activity structure from API
+export interface TodoActivity {
+  activity_id: string;
+  widget_id: string;
   daily_widget_id: string;
+  todo_details_id: string;
   title: string;
-  widget_type: string;
-  category: string;
-  importance: number;
-  frequency: string;
-  position: number;
-  grid_position: any; // Can be null or layout object
-  is_pinned: boolean;
-  ai_reasoning: string;
-  settings: any; // Can be null or settings object
+  todo_type: 'habit' | 'task';
+  description: string;
+  due_date: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  progress: number;
   created_at: string;
   updated_at: string;
 }
 
-// Updated TodayWidgetsResponse to match new API structure
-export interface TodayWidgetsResponse {
-  date: string;
-  widgets: ApiDashboardWidget[];
-  total_widgets: number;
-  ai_generated: boolean;
+// Response from /api/v1/widgets/todo/getTodoItemDetailsAndActivity/{daily_widget_id}/{widget_id}
+export interface TodoDetailsAndActivityResponse {
+  todo_details: TodoDetails;
+  activity: TodoActivityStatus;
+}
+
+// Todo details structure from API
+export interface TodoDetails {
+  id: string;
+  title: string;
+  todo_type: 'habit' | 'task';
+  description: string;
+  due_date: string;
+}
+
+// Todo activity status from API
+export interface TodoActivityStatus {
+  id: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  progress: number;
+  created_at: string;
+}
+
+// Response from /api/v1/widgets/todo/getTodoDetails/{widget_id}
+export interface TodoDetailsResponse {
+  id: string;
+  title: string;
+  todo_type: 'habit' | 'task';
+  description: string;
+  due_date: string;
+  created_at: string;
+}
+
+// ============================================================================
+// ALARM WIDGET API TYPES
+// ============================================================================
+
+// Response from /api/v1/widgets/alarm/getAlarmDetailsAndActivity/{widget_id}
+export interface AlarmDetailsAndActivityResponse {
+  alarm_details: AlarmDetails;
+  activity: AlarmActivity;
+}
+
+// Alarm details structure from API
+export interface AlarmDetails {
+  id: string;
+  title: string;
+  alarm_times: string[];
+  enabled: boolean;
+}
+
+// Alarm activity structure from API
+export interface AlarmActivity {
+  id: string;
+  status: 'pending' | 'triggered' | 'started' | 'snoozed' | 'dismissed';
+  snooze_count: number;
+  last_triggered: string;
+}
+
+// Response from /api/v1/widgets/alarm/getAlarmDetails/{widget_id}
+export interface AlarmDetailsResponse {
+  id: string;
+  title: string;
+  alarm_times: string[];
+  enabled: boolean;
+  created_at: string;
+}
+
+// ============================================================================
+// SINGLE ITEM TRACKER WIDGET API TYPES
+// ============================================================================
+
+// Response from /api/v1/widgets/single-item-tracker/getTrackerDetailsAndActivity/{widget_id}
+export interface TrackerDetailsAndActivityResponse {
+  tracker_details: TrackerDetails;
+  activity: TrackerActivity;
+}
+
+// Tracker details structure from API
+export interface TrackerDetails {
+  id: string;
+  title: string;
+  value_type: string;
+  unit: string;
+  target_value: number;
+}
+
+// Tracker activity structure from API
+export interface TrackerActivity {
+  id: string;
+  current_value: number;
   last_updated: string;
 }
 
-// Base widget interface (for internal use)
-export interface BaseWidget {
+// Response from /api/v1/widgets/single-item-tracker/getTrackerDetails/{widget_id}
+export interface TrackerDetailsResponse {
   id: string;
-  type: WidgetType;
   title: string;
-  size: WidgetSize;
-  category?: string | null;
-  importance?: WidgetImportance | null;
-  frequency: WidgetFrequency;
-  settings: Record<string, any>;
-  data: WidgetData;
-}
-
-// Widget data union type
-export type WidgetData = 
-  | TodoWidgetData
-  | HabitTrackerWidgetData
-  | WebSearchWidgetData
-  | WebSummaryWidgetData
-  | CalendarWidgetData
-  | ReminderWidgetData
-  | SingleItemTrackerWidgetData
-  | AlarmWidgetData;
-
-// Todo Widget Types
-export interface TodoTask {
-  id: string;
-  dashboard_widget_id: string;
-  content: string;
-  due_date: string | null;
-  frequency: string;
-  priority: number;
-  category: string;
-  is_done: boolean;
-  is_recurring: boolean;
-  last_completed_date: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TodoStats {
-  total_tasks: number;
-  completed_tasks: number;
-  pending_tasks: number;
-  completion_rate: number;
-  tasks_by_priority: Record<string, number>;
-  tasks_by_category: Record<string, number>;
-}
-
-export interface TodoWidgetData {
-  tasks: TodoTask[];
-  stats: TodoStats;
-}
-
-// API Response Types for Todo Widget
-export interface TodoTodayResponse {
-  widget_id: string;
-  date: string;
-  tasks: TodoTask[];
-  stats: TodoStats;
-}
-
-// API Response Types for Web Search Widget
-export interface WebSearchResponse {
-  widget_id: string;
-  date: string;
-  searches: WebSearch[];
-}
-
-// Habit Tracker Widget Types
-export interface Habit {
-  id: string;
-  name: string;
-  description?: string;
-  streak: number;
-  completed_today: boolean;
+  value_type: string;
+  unit: string;
+  target_value: number;
   created_at: string;
 }
 
-export interface HabitTrackerWidgetData {
-  habits: Habit[];
-  total_habits: number;
+// ============================================================================
+// WEBSEARCH WIDGET API TYPES
+// ============================================================================
+
+// Response from /api/v1/widgets/websearch/getSummaryAndActivity/{widget_id}
+export interface WebSearchSummaryAndActivityResponse {
+  websearch_details: WebSearchDetails;
+  activity: WebSearchActivity;
 }
 
-// Web Search Widget Types
-export interface WebSearch {
+// WebSearch details structure from API
+export interface WebSearchDetails {
   id: string;
-  query: string;
-  results?: WebSearchResult[];
-  last_searched?: string;
-}
-
-export interface WebSearchResult {
   title: string;
-  url: string;
-  snippet: string;
+  search_query: string;
 }
 
-export interface WebSearchWidgetData {
-  message?: string;
-  searches: WebSearch[];
-}
-
-// Web Summary Widget Types
-export interface WebSummary {
+// WebSearch activity structure from API
+export interface WebSearchActivity {
   id: string;
-  url: string;
-  title: string;
+  status: 'pending' | 'searching' | 'summarizing' | 'completed' | 'failed';
+  reaction: 'positive' | 'negative' | 'neutral';
   summary: string;
-  created_at: string;
+  sources: string[];
 }
 
-export interface WebSummaryWidgetData {
-  summaries: WebSummary[];
-  total_summaries: number;
-}
-
-// Calendar Widget Types
-export interface CalendarEvent {
+// Response from /api/v1/widgets/websearch/getWebsearchDetails/{widget_id}
+export interface WebSearchDetailsResponse {
   id: string;
   title: string;
-  date: string;
-  time?: string;
-  description?: string;
-  is_completed: boolean;
-}
-
-export interface CalendarWidgetData {
-  events: CalendarEvent[];
-  current_date: string;
-  total_events: number;
-}
-
-// Reminder Widget Types
-export interface Reminder {
-  id: string;
-  title: string;
-  message: string;
-  due_date: string;
-  is_completed: boolean;
-  priority: 'low' | 'medium' | 'high';
+  search_query: string;
   created_at: string;
 }
 
-export interface ReminderWidgetData {
-  reminders: Reminder[];
-  total_reminders: number;
-  overdue_count: number;
+// Response from /api/v1/widgets/websearch/getaisummary/{widget_id}
+export interface WebSearchAISummaryResponse {
+  summary: string;
+  sources: string[];
+  generated_at: string;
+  confidence_score: number;
 }
 
-// Single Item Tracker Widget Types
-export interface SingleItemTrackerLog {
-  id: string;
-  value: string;
-  date: string;
-  notes?: string;
-  created_at: string;
-}
+// ============================================================================
+// COMMON API TYPES
+// ============================================================================
 
-export interface SingleItemTracker {
-  id: string;
-  dashboard_widget_id: string;
-  item_name: string;
-  item_unit?: string;
-  current_value?: string;
-  target_value?: string;
-  value_type: string;
-  created_at: string;
-  updated_at: string;
-}
+// Status types used across widgets
+export type TodoStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+export type AlarmStatus = 'pending' | 'triggered' | 'started' | 'snoozed' | 'dismissed';
+export type WebSearchStatus = 'pending' | 'searching' | 'summarizing' | 'completed' | 'failed';
+export type ReactionType = 'positive' | 'negative' | 'neutral';
 
-export interface SingleItemTrackerStats {
-  total_entries: number;
-  current_value?: string;
-  target_value?: string;
-  progress_percentage?: number;
-  last_updated?: string;
-  streak_days: number;
-}
+// Widget types supported by the API
+export type ApiWidgetType = 'todo' | 'alarm' | 'singleitemtracker' | 'websearch';
 
-export interface SingleItemTrackerWidgetData {
-  tracker: SingleItemTracker;
-  stats: SingleItemTrackerStats;
-  recent_logs: SingleItemTrackerLog[];
-}
+// Frequency types supported by the API
+export type ApiFrequency = 'daily' | 'weekly' | 'monthly';
 
-// API Response Types for Single Item Tracker Widget
-export interface SingleItemTrackerResponse {
-  id: string;
-  dashboard_widget_id: string;
-  item_name: string;
-  item_unit?: string;
-  current_value?: string;
-  target_value?: string;
-  value_type: string;
-  created_at: string;
-  updated_at: string;
-  recent_logs: SingleItemTrackerLog[];
-}
+// Priority types supported by the API
+export type ApiPriority = 'HIGH' | 'LOW';
 
-export interface SingleItemTrackerWidgetDataResponse {
-  widget_id: string;
-  tracker: SingleItemTrackerResponse;
-  stats: SingleItemTrackerStats;
-  recent_logs: SingleItemTrackerLog[];
-}
-
-// Alarm Widget Types
-export interface Alarm {
-  id: string;
-  dashboard_widget_id: string;
-  title: string;
-  alarm_type: string; // 'once', 'daily', 'weekly', 'monthly', 'yearly'
-  alarm_times: string[]; // List of times: ["09:00", "15:00"]
-  frequency_value?: number; // For daily-5, weekly-2, etc. (interval)
-  specific_date?: string; // For one-time alarms
-  is_active: boolean;
-  is_snoozed: boolean;
-  snooze_until?: string;
-  last_triggered?: string;
-  next_trigger_time?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AlarmStats {
-  total_alarms: number;
-  active_alarms: number;
-  next_alarm_time?: string;
-  next_alarm_title?: string;
-}
-
-export interface AlarmWidgetData {
-  alarms: Alarm[];
-  stats: AlarmStats;
-}
-
-export interface AlarmWidgetDataResponse {
-  widget_id: string;
-  alarms: Alarm[];
-  stats: AlarmStats;
-}
-
-// Dashboard response types
-export interface DashboardStats {
-  total_widgets: number;
-  daily_count: number;
-  weekly_count: number;
-  monthly_count: number;
-}
-
-// Widget settings types
-export interface TodoWidgetSettings {
-  max_tasks?: number;
-  show_completed?: boolean;
-  sort_by?: 'created_at' | 'due_date' | 'priority';
-}
-
-export interface HabitTrackerWidgetSettings {
-  streak_goal?: number;
-  reminder_time?: string;
-  show_streaks?: boolean;
-}
-
-export interface WebSearchWidgetSettings {
-  max_results?: number;
-  search_engines?: string[];
-  auto_search?: boolean;
-}
-
-export interface WebSummaryWidgetSettings {
-  max_summaries?: number;
-  summary_length?: number;
-  include_metadata?: boolean;
-}
-
-export interface CalendarWidgetSettings {
-  view_mode?: 'day' | 'week' | 'month';
-  show_completed?: boolean;
-  max_events?: number;
-}
-
-export interface ReminderWidgetSettings {
-  max_reminders?: number;
-  show_overdue?: boolean;
-  sort_by?: 'due_date' | 'priority' | 'created_at';
-}
-
-// Type guards for widget data
-export const isTodoWidget = (widget: BaseWidget): widget is BaseWidget & { data: TodoWidgetData } => {
-  return widget.type === 'todo';
-};
-
-export const isHabitTrackerWidget = (widget: BaseWidget): widget is BaseWidget & { data: HabitTrackerWidgetData } => {
-  return widget.type === 'habittracker';
-};
-
-export const isWebSearchWidget = (widget: BaseWidget): widget is BaseWidget & { data: WebSearchWidgetData } => {
-  return widget.type === 'websearch';
-};
-
-export const isWebSummaryWidget = (widget: BaseWidget): widget is BaseWidget & { data: WebSummaryWidgetData } => {
-  return widget.type === 'websummary';
-};
-
-export const isCalendarWidget = (widget: BaseWidget): widget is BaseWidget & { data: CalendarWidgetData } => {
-  return widget.type === 'calendar';
-};
-
-export const isReminderWidget = (widget: BaseWidget): widget is BaseWidget & { data: ReminderWidgetData } => {
-  return widget.type === 'alarm';
-};
-
-export const isSingleItemTrackerWidget = (widget: BaseWidget): widget is BaseWidget & { data: SingleItemTrackerWidgetData } => {
-  return widget.type === 'singleitemtracker';
-};
-
-export const isAlarmWidget = (widget: BaseWidget): widget is BaseWidget & { data: AlarmWidgetData } => {
-  return widget.type === 'alarm';
-}; 
+// Categories supported by the API
+export type ApiCategory = 'productivity' | 'health' | 'job' | 'information' | 'entertainment' | 'utilities'; 
