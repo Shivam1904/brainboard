@@ -4,11 +4,15 @@ import { GRID_CONFIG } from '../config/grid'
 import { 
   TodayWidgetsResponse, 
   BaseWidget as WidgetData, 
-  WidgetType
+  WidgetType,
+  WidgetSize,
+  WidgetImportance,
+  WidgetFrequency
 } from '../types'
 
 export interface Widget {
   id: string
+  daily_widget_id: string
   type: WidgetType
   layout: Layout
   config?: Record<string, any>
@@ -173,24 +177,24 @@ export const applyConstraintsToLayouts = (layouts: Layout[]) => {
 export const convertApiWidgetsToInternal = (data: TodayWidgetsResponse): Widget[] => {
   const newWidgets: Widget[] = []
   
-  for (const widgetData of data.widgets) {
+  for (const apiWidget of data.widgets) {
     // Map API widget types to config widget IDs using centralized mapping
     const typeMapping = getApiTypeToConfigMapping()
-    const configWidgetId = typeMapping[widgetData.type] || widgetData.type
+    const configWidgetId = typeMapping[apiWidget.widget_type] || apiWidget.widget_type
     const defaultConfig = getWidgetConfig(configWidgetId)
     
     if (!defaultConfig) {
-      console.warn(`No widget config found for type: ${widgetData.type} (mapped to: ${configWidgetId})`)
+      console.warn(`No widget config found for type: ${apiWidget.widget_type} (mapped to: ${configWidgetId})`)
       continue // Skip widgets without config
     }
 
     // Find empty position for this widget (considering already placed widgets)
     const position = findEmptyPosition(configWidgetId, newWidgets)
 
-    console.log(`Placing widget ${widgetData.title} at position (${position.x}, ${position.y}) with size (${defaultConfig.defaultSize.w}, ${defaultConfig.defaultSize.h})`)
+    console.log(`Placing widget ${apiWidget.title} at position (${position.x}, ${position.y}) with size (${defaultConfig.defaultSize.w}, ${defaultConfig.defaultSize.h})`)
 
     const layout: Layout = {
-      i: widgetData.id,
+      i: apiWidget.id,
       x: position.x,
       y: position.y,
       w: defaultConfig.defaultSize.w,
@@ -201,12 +205,26 @@ export const convertApiWidgetsToInternal = (data: TodayWidgetsResponse): Widget[
       maxH: defaultConfig.maxSize.h
     }
 
+    // Convert API widget to internal BaseWidget format
+    const widgetData: WidgetData = {
+      id: apiWidget.id,
+      type: apiWidget.widget_type as WidgetType,
+      title: apiWidget.title,
+      size: 'medium' as WidgetSize, // Default size, could be derived from grid_position if available
+      category: apiWidget.category,
+      importance: apiWidget.importance as WidgetImportance,
+      frequency: apiWidget.frequency as WidgetFrequency,
+      settings: apiWidget.settings || {},
+      data: {} as any // Widget-specific data will be fetched separately by each widget
+    }
+
     newWidgets.push({
-      id: widgetData.id,
-      type: widgetData.type,
+      id: apiWidget.id,
+      daily_widget_id: apiWidget.daily_widget_id,
+      type: apiWidget.widget_type as WidgetType,
       layout,
-      config: widgetData.settings,
-      priority: widgetData.importance || undefined,
+      config: apiWidget.settings || {},
+      priority: apiWidget.importance,
       enabled: true, // All widgets from API are enabled by default
       widgetData
     })

@@ -10,11 +10,11 @@ interface SingleItemTrackerWidgetProps {
   widget: Widget;
 }
 
-const getDummyTracker = (): SingleItemTrackerWidgetDataResponse => ({
-  widget_id: 'dummy-widget-id',
+const getDummyTracker = (widgetId: string): SingleItemTrackerWidgetDataResponse => ({
+  widget_id: widgetId,
   tracker: {
     id: 'dummy-tracker-id',
-    dashboard_widget_id: 'dummy-widget-id',
+    dashboard_widget_id: widgetId,
     item_name: 'Weight',
     item_unit: 'kg',
     current_value: '75.5',
@@ -89,7 +89,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
       setLoading(true);
       setError(null);
       
-      const widgetId = widget.id;
+      const widgetId = widget.daily_widget_id;
       
       // Get the tracker data for this widget
       const response = await apiCall<SingleItemTrackerWidgetDataResponse>(
@@ -100,7 +100,8 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
     } catch (err) {
       console.error('Error fetching tracker:', err);
       // Fallback to dummy data on error
-      const dummyTracker = getDummyTracker();
+      const widgetId = widget.daily_widget_id;
+      const dummyTracker = getDummyTracker(widgetId);
       setWidgetData(dummyTracker);
       setError('Using offline data - API unavailable');
     } finally {

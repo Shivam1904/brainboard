@@ -7,144 +7,78 @@ export const getDummyTodayWidgets = (): TodayWidgetsResponse => {
     widgets: [
       {
         id: "18f2f446-6cb1-465c-b92c-52b3e758c3bf",
-        type: "todo",
-        title: "Test Todo Widget",
-        size: "medium",
-        category: "testing",
+        daily_widget_id: "daily-todo-001",
+        title: "Daily Task Manager",
+        widget_type: "todo",
+        category: "productivity",
         importance: 5,
         frequency: "daily",
-        settings: {},
-        data: {
-          tasks: [
-            {
-              id: "230a0dd7-4532-42bd-8f30-7c0c7aac67cd",
-              dashboard_widget_id: "18f2f446-6cb1-465c-b92c-52b3e758c3bf",
-              content: "Monthly task - Budget review",
-              due_date: null,
-              frequency: "daily",
-              priority: 2,
-              category: "work",
-              is_done: false,
-              is_recurring: true,
-              last_completed_date: null,
-              created_at: "2025-07-28T08:07:09.285093",
-              updated_at: "2025-07-28T08:07:09.285093"
-            },
-            {
-              id: "9c369ab9-2a63-4203-a6e0-b402771651ff",
-              dashboard_widget_id: "18f2f446-6cb1-465c-b92c-52b3e758c3bf",
-              content: "Updated task content",
-              due_date: null,
-              frequency: "daily",
-              priority: 1,
-              category: "personal",
-              is_done: false,
-              is_recurring: false,
-              last_completed_date: null,
-              created_at: "2025-07-28T08:07:09.282820",
-              updated_at: "2025-07-28T08:07:09.282820"
-            },
-            {
-              id: "a5755376-9480-4658-9b8e-ea2c46e74670",
-              dashboard_widget_id: "18f2f446-6cb1-465c-b92c-52b3e758c3bf",
-              content: "Daily task - Check emails",
-              due_date: null,
-              frequency: "daily",
-              priority: 3,
-              category: "work",
-              is_done: true,
-              is_recurring: true,
-              last_completed_date: "2025-07-28T08:07:09.280270",
-              created_at: "2025-07-28T08:07:09.280270",
-              updated_at: "2025-07-28T08:07:09.280270"
-            }
-          ],
-          stats: {
-            total_tasks: 3,
-            completed_tasks: 1,
-            pending_tasks: 2,
-            completion_rate: 33.33333333333333,
-            tasks_by_priority: {
-              "1": 1,
-              "2": 1,
-              "3": 1
-            },
-            tasks_by_category: {
-              "work": 2,
-              "personal": 1
-            }
-          }
-        }
+        position: 0,
+        grid_position: null,
+        is_pinned: false,
+        ai_reasoning: "Todo widget is essential for daily productivity",
+        settings: null,
+        created_at: "2025-07-29T01:38:26.710661",
+        updated_at: "2025-07-29T01:38:26.710661"
       },
       {
         id: "68c2ab14-23e0-41f9-8d98-50b04d01961d",
-        type: "habittracker",
+        daily_widget_id: "daily-habit-001",
         title: "Daily Habits",
-        size: "medium",
+        widget_type: "habittracker",
         category: "health",
         importance: 5,
         frequency: "daily",
+        position: 1,
+        grid_position: null,
+        is_pinned: false,
+        ai_reasoning: "Habit tracking is important for health goals",
         settings: {
           streak_goal: 30,
           reminder_time: "09:00"
         },
-        data: {
-          habits: [],
-          total_habits: 0
-        }
+        created_at: "2025-07-29T01:38:26.710661",
+        updated_at: "2025-07-29T01:38:26.710661"
       },
       {
         id: "08db6466-e5a4-4c6c-9341-0cd2366360a4",
-        type: "websearch",
+        daily_widget_id: "daily-websearch-001",
         title: "FastAPI Research Widget",
-        size: "medium",
-        category: null,
-        importance: null,
+        widget_type: "websearch",
+        category: "research",
+        importance: 3,
         frequency: "daily",
-        settings: {},
-        data: {
-          message: "No search queries configured",
-          searches: []
-        }
+        position: 2,
+        grid_position: null,
+        is_pinned: false,
+        ai_reasoning: "Web search widget for research tasks",
+        settings: null,
+        created_at: "2025-07-29T01:38:26.710661",
+        updated_at: "2025-07-29T01:38:26.710661"
       },
       {
         id: "b2df57d5-d5a5-4eb0-8c27-fe5edc67dcde",
-        type: "allSchedules",
-        title: "Updated Widget Title",
-        size: "medium",
+        daily_widget_id: "daily-schedules-001",
+        title: "All Schedules",
+        widget_type: "allSchedules",
         category: "productivity",
-        importance: 3,
+        importance: 4,
         frequency: "daily",
+        position: 3,
+        grid_position: null,
+        is_pinned: false,
+        ai_reasoning: "Schedule overview is important for productivity",
         settings: {
           max_tasks: 10,
           show_completed: true
         },
-        data: {
-          tasks: [],
-          stats: {
-            total_tasks: 0,
-            completed_tasks: 0,
-            pending_tasks: 0,
-            completion_rate: 0,
-            tasks_by_priority: {
-              "1": 0,
-              "2": 0,
-              "3": 0
-            },
-            tasks_by_category: {
-              "work": 0,
-              "personal": 0
-            }
-          }
-        }
+        created_at: "2025-07-29T01:38:26.710661",
+        updated_at: "2025-07-29T01:38:26.710661"
       }
     ],
-    stats: {
-      total_widgets: 4,
-      daily_count: 4,
-      weekly_count: 0,
-      monthly_count: 0
-    }
+    total_widgets: 4,
+    ai_generated: true,
+    last_updated: "2025-07-29T02:36:55.560747"
   };
 };
 

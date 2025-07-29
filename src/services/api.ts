@@ -176,7 +176,7 @@ export class SummaryService {
 
 export class DashboardService {
   async getTodayWidgets(): Promise<TodayWidgetsResponse> {
-    return apiService.get<TodayWidgetsResponse>('/api/v1/dashboard/today');
+    return apiService.get<TodayWidgetsResponse>('/api/v1/dashboard/widgets/today');
   }
 
   async getWidget(widgetId: string): Promise<BaseWidget> {

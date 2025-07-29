@@ -70,11 +70,9 @@ const Dashboard = () => {
         }
       }
       
-      // Add dummy widget for testing
-      data.widgets.push(dummyData.widgets[3]);
-      
       // Convert API widget data to internal widget format using utility function
       const newWidgets = convertApiWidgetsToInternal(data);
+      console.log('Converted widgets:', newWidgets);
       setWidgets(newWidgets)
     } catch (err) {
       console.error('Failed to fetch today\'s widgets:', err)
