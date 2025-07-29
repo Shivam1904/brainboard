@@ -7,7 +7,7 @@
 
 // Response from /api/v1/widgets/todo/getTodayTodoList/{todo_type}
 export interface TodoTodayResponse {
-  todo_type: 'habit' | 'task';
+  todo_type: 'habit' | 'task' | 'event';
   todos: TodoActivity[];
   total_todos: number;
 }
@@ -19,7 +19,7 @@ export interface TodoActivity {
   daily_widget_id: string;
   todo_details_id: string; // Backend: tododetails_id
   title: string;
-  todo_type: 'habit' | 'task';
+  todo_type: 'habit' | 'task' | 'event';
   description: string;
   due_date: string;
   status: 'pending' | 'in progress' | 'completed' | 'cancelled'; // Backend: 'in progress'
@@ -39,7 +39,7 @@ export interface TodoDetails {
   id: string;
   widget_id: string;
   title: string;
-  todo_type: 'habit' | 'task';
+  todo_type: 'habit' | 'task' | 'event';
   description: string;
   due_date: string;
   created_at: string;
@@ -60,7 +60,7 @@ export interface TodoDetailsResponse {
   id: string;
   widget_id: string;
   title: string;
-  todo_type: 'habit' | 'task';
+  todo_type: 'habit' | 'task' | 'event';
   description: string;
   due_date: string;
   created_at: string;
@@ -221,7 +221,7 @@ export type TodoStatus = 'pending' | 'in progress' | 'completed' | 'cancelled';
 export type WebSearchStatus = 'pending' | 'completed' | 'failed';
 
 // Widget types supported by the API
-export type ApiWidgetType = 'todo' | 'alarm' | 'singleitemtracker' | 'websearch';
+export type ApiWidgetType = 'todo-habit' | 'todo-task' | 'todo-event' | 'alarm' | 'singleitemtracker' | 'websearch';
 
 // Frequency types supported by the API
 export type ApiFrequency = 'daily' | 'weekly' | 'monthly';

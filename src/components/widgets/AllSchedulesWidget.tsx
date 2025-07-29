@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { DashboardWidget, ApiWidgetType, ApiCategory } from '../../types';
+import { DashboardWidget, ApiWidgetType, ApiCategory, ApiFrequency } from '../../types';
 import { dashboardService } from '../../services/dashboard';
 import { getDummyAllSchedulesWidgets } from '../../data/widgetDummyData';
 
@@ -49,9 +49,9 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
   // Update widget details
   const updateWidgetDetails = async (widgetId: string, updateData: {
     title?: string;
-    frequency?: string;
+    frequency?: ApiFrequency;
     importance?: number;
-    category?: string;
+    category?: ApiCategory;
   }) => {
     try {
       // Call the updateDetails API endpoint
@@ -70,7 +70,9 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
   // Get widget type display name
   const getWidgetTypeDisplayName = (type: ApiWidgetType): string => {
     const typeNames: Record<ApiWidgetType, string> = {
-      'todo': 'Todo',
+      'todo-habit': 'Habit Tracker',
+      'todo-task': 'Task List',
+      'todo-event': 'Event Tracker',
       'alarm': 'Alarm',
       'singleitemtracker': 'Item Tracker',
       'websearch': 'Web Search'

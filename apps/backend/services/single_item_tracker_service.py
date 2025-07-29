@@ -40,6 +40,25 @@ class SingleItemTrackerService:
                 SingleItemTrackerItemActivity.widget_id == widget_id
             ).first()
             
+            # If no activity exists for today, create one
+            if not today_activity:
+                # Get today's daily widget
+                daily_widget = self.db.query(DailyWidget).filter(
+                    DailyWidget.date == date.today(),
+                    DailyWidget.delete_flag == False
+                ).first()
+                
+                if daily_widget:
+                    today_activity = SingleItemTrackerItemActivity(
+                        daily_widget_id=daily_widget.id,
+                        widget_id=widget_id,
+                        singleitemtrackerdetails_id=tracker_details.id,
+                        created_by="system"
+                    )
+                    self.db.add(today_activity)
+                    self.db.commit()
+                    self.db.refresh(today_activity)
+            
             return {
                 "tracker_details": {
                     "id": tracker_details.id,
@@ -61,28 +80,46 @@ class SingleItemTrackerService:
             }
         except Exception as e:
             logger.error(f"Error getting tracker details and activity for widget {widget_id}: {e}")
+            self.db.rollback()
             return None
     
     def update_activity(self, activity_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update tracker activity"""
         try:
+            logger.info(f"Attempting to update tracker activity with ID: {activity_id}")
+            logger.info(f"Update data: {update_data}")
+            
+            # First, let's check if the activity exists
             activity = self.db.query(SingleItemTrackerItemActivity).filter(
                 SingleItemTrackerItemActivity.id == activity_id
             ).first()
             
             if not activity:
+                logger.error(f"Tracker activity with ID {activity_id} not found in database")
+                # Let's also log all tracker activities to see what's available
+                all_activities = self.db.query(SingleItemTrackerItemActivity).all()
+                logger.info(f"All tracker activities in database: {[{'id': a.id, 'widget_id': a.widget_id, 'created_at': a.created_at} for a in all_activities]}")
                 return None
+            
+            logger.info(f"Found tracker activity: {activity.id}, widget_id: {activity.widget_id}")
             
             # Update fields
             if "value" in update_data:
                 activity.value = update_data["value"]
+                logger.info(f"Updated value to: {update_data['value']}")
             if "time_added" in update_data:
-                activity.time_added = update_data["time_added"]
+                # Convert ISO string to datetime object
+                if isinstance(update_data["time_added"], str):
+                    activity.time_added = datetime.fromisoformat(update_data["time_added"].replace('Z', '+00:00'))
+                else:
+                    activity.time_added = update_data["time_added"]
+                logger.info(f"Updated time_added to: {update_data['time_added']}")
             
             activity.updated_at = datetime.utcnow()
             activity.updated_by = update_data.get("updated_by")
             
             self.db.commit()
+            logger.info(f"Successfully updated tracker activity {activity_id}")
             
             return {
                 "activity_id": activity.id,

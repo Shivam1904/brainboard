@@ -67,7 +67,7 @@ interface TaskListWidgetProps {
   };
 }
 
-const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
+const HabitListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +94,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       setError(null);
       
       // Use real API call
-      const response = await dashboardService.getTodayTodoList('task');
+      const response = await dashboardService.getTodayTodoList('habit');
       
       // Convert API response to internal Task format
       const convertedTasks: Task[] = response.todos.map((todo: TodoActivity) => ({
@@ -257,7 +257,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
   }
 
   return (
-    <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
+    <BaseWidget title="Habit Tracker" icon="📋" onRemove={onRemove}>
       <div className="p-4 h-full overflow-y-auto">
         {/* Offline Indicator */}
         {error && (
@@ -289,7 +289,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
             className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={16} />
-            Add Mission
+            Add Habit
           </button>
         </div>
 
@@ -518,4 +518,4 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
   );
 };
 
-export default TaskListWidget; 
+export default HabitListWidget; 

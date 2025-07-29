@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { getDummyWebSearchSummaryAndActivity } from '../../data/widgetDummyData';
 import { WebSearchAISummaryResponse } from '../../types';
-import { apiService } from '../../services/api';
+import { dashboardService } from '../../services/dashboard';
 
 interface WebSearchWidgetProps {
   onRemove: () => void;
@@ -19,28 +18,84 @@ interface WebSearchWidgetProps {
 
 const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
   const [webSearchData, setWebSearchData] = useState<WebSearchAISummaryResponse | null>(null);
+  const [activityData, setActivityData] = useState<{
+    websearch_details: {
+      id: string;
+      widget_id: string;
+      title: string;
+      created_at: string;
+      updated_at: string;
+    };
+    activity: {
+      id: string;
+      status: 'pending' | 'completed' | 'failed';
+      reaction: string;
+      summary: string;
+      source_json: any;
+      created_at: string;
+      updated_at: string;
+    };
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isUsingDummyData, setIsUsingDummyData] = useState(false);
+  const [isRead, setIsRead] = useState(false);
 
   // Fetch web search data for this specific widget
   const fetchWebSearchData = async () => {
     try {
-      setIsUsingDummyData(false);
-      
       // Get the widget_id from the widget_ids array (first one for websearch widgets)
       const widgetId = widget.widget_ids[0];
       
-      // Call the real API
-      const response = await apiService.getWebSearchAISummary(widgetId);
-      setWebSearchData(response);
+      // Call both APIs in parallel
+      const [aiSummaryResponse, activityResponse] = await Promise.all([
+        dashboardService.getWebSearchAISummary(widgetId),
+        dashboardService.getWebSearchSummaryAndActivity(widgetId)
+      ]);
+      
+      setWebSearchData(aiSummaryResponse);
+      setActivityData(activityResponse);
+      
+      // Set initial read status based on activity data
+      setIsRead(activityResponse.activity.status === 'completed');
     } catch (err) {
       console.error('Failed to fetch web search data:', err);
       setError('Failed to load web search data');
-      setIsUsingDummyData(true);
-      // Fallback to dummy data
-      const dummyData = getDummyWebSearchSummaryAndActivity(widget.daily_widget_id);
-      setWebSearchData(dummyData as any); // Type assertion for fallback
+      // Fallback to empty state
+      setWebSearchData(null);
+      setActivityData(null);
+    }
+  };
+
+  // Update read status
+  const updateReadStatus = async (read: boolean) => {
+    if (!webSearchData || !activityData) return;
+    
+    try {
+      // Update the activity status using the activity_id we already have
+      await dashboardService.updateWebSearchActivity(activityData.activity.id, {
+        status: read ? 'completed' : 'pending',
+        reaction: read ? 'read' : 'unread',
+        summary: webSearchData.summary,
+        source_json: webSearchData.sources,
+        updated_by: 'user'
+      });
+      
+      // Update local activity data
+      setActivityData(prev => prev ? {
+        ...prev,
+        activity: {
+          ...prev.activity,
+          status: read ? 'completed' : 'pending',
+          reaction: read ? 'read' : 'unread',
+          updated_at: new Date().toISOString()
+        }
+      } : null);
+      
+      setIsRead(read);
+    } catch (err) {
+      console.error('Error updating read status:', err);
+      // Still update local state even if API fails
+      setIsRead(read);
     }
   };
 
@@ -114,27 +169,43 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
       onRemove={onRemove}
     >
       <div className="space-y-4 h-full overflow-y-auto">
-        {/* Dummy Data Indicator */}
-        {isUsingDummyData && (
-          <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-700 text-center">
-              🔍 Showing sample data - API not connected
-            </p>
-          </div>
-        )}
+
         
         <div className="bg-card/50 border border-border rounded-lg p-4">
           <div className="space-y-3">
-            {/* Status */}
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-1 rounded ${
-                webSearchData.search_successful ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                {webSearchData.search_successful ? 'Search Successful' : 'Search Failed'}
-              </span>
-              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                {webSearchData.results_count} results
-              </span>
+            {/* Status and Read Checkbox */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-1 rounded ${
+                  webSearchData.search_successful ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {webSearchData.search_successful ? 'Search Successful' : 'Search Failed'}
+                </span>
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  {webSearchData.results_count} results
+                </span>
+                {activityData && (
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    activityData.activity.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {activityData.activity.status === 'completed' ? 'Read' : 'Unread'}
+                  </span>
+                )}
+              </div>
+              
+              {/* Read Checkbox */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="read-checkbox"
+                  checked={isRead}
+                  onChange={(e) => updateReadStatus(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <label htmlFor="read-checkbox" className="text-xs text-gray-600">
+                  Mark as Read
+                </label>
+              </div>
             </div>
 
             {/* Summary */}
@@ -172,6 +243,9 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
             <div className="text-xs text-muted-foreground pt-2 border-t">
               <div>AI Model: {webSearchData.ai_model_used}</div>
               <div>Generated: {new Date(webSearchData.created_at).toLocaleDateString()}</div>
+              {activityData && (
+                <div>Last Activity: {new Date(activityData.activity.updated_at).toLocaleDateString()}</div>
+              )}
             </div>
           </div>
         </div>

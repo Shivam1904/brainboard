@@ -4,7 +4,9 @@ from pydantic import BaseModel, Field
 from enum import Enum
 
 class WidgetType(str, Enum):
-    TODO = "todo"
+    TODO_HABIT = "todo-habit"
+    TODO_TASK = "todo-task"
+    TODO_EVENT = "todo-event"
     ALARM = "alarm"
     SINGLEITEMTRACKER = "singleitemtracker"
     WEBSEARCH = "websearch"

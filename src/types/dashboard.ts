@@ -40,7 +40,7 @@ export interface DashboardWidget {
 }
 
 // Widget types supported by the API
-export type ApiWidgetType = 'todo' | 'alarm' | 'singleitemtracker' | 'websearch';
+export type ApiWidgetType = 'todo-habit' | 'todo-task' | 'todo-event' | 'alarm' | 'singleitemtracker' | 'websearch';
 
 // Frequency types supported by the API
 export type ApiFrequency = 'daily' | 'weekly' | 'monthly';

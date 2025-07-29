@@ -95,12 +95,12 @@ class ApiService {
   }
 
   // GET /api/v1/dashboard/getTodoList/{todo_type}
-  async getTodoList(todoType: 'habit' | 'task'): Promise<{
-    todo_type: 'habit' | 'task';
+  async getTodoList(todoType: 'habit' | 'task' | 'event'): Promise<{
+    todo_type: 'habit' | 'task' | 'event';
     todos: Array<{
       id: string;
       title: string;
-      todo_type: 'habit' | 'task';
+      todo_type: 'habit' | 'task' | 'event';
       description: string;
       due_date: string;
       created_at: string;
@@ -115,7 +115,7 @@ class ApiService {
   // ============================================================================
 
   // GET /api/v1/widgets/todo/getTodayTodoList/{todo_type}
-  async getTodayTodoList(todoType: 'habit' | 'task'): Promise<TodoTodayResponse> {
+  async getTodayTodoList(todoType: 'habit' | 'task' | 'event'): Promise<TodoTodayResponse> {
     return this.request<TodoTodayResponse>(`/widgets/todo/getTodayTodoList/${todoType}`);
   }
 
@@ -151,7 +151,7 @@ class ApiService {
     title: string;
     description: string;
     due_date: string;
-    todo_type: 'habit' | 'task';
+    todo_type: 'habit' | 'task' | 'event';
   }): Promise<TodoDetailsResponse> {
     return this.request(`/widgets/todo/updateDetails/${todoDetailsId}`, {
       method: 'POST',

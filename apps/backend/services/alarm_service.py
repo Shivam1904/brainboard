@@ -40,6 +40,25 @@ class AlarmService:
                 AlarmItemActivity.widget_id == widget_id
             ).first()
             
+            # If no activity exists for today, create one
+            if not today_activity:
+                # Get today's daily widget
+                daily_widget = self.db.query(DailyWidget).filter(
+                    DailyWidget.date == date.today(),
+                    DailyWidget.delete_flag == False
+                ).first()
+                
+                if daily_widget:
+                    today_activity = AlarmItemActivity(
+                        daily_widget_id=daily_widget.id,
+                        widget_id=widget_id,
+                        alarmdetails_id=alarm_details.id,
+                        created_by="system"
+                    )
+                    self.db.add(today_activity)
+                    self.db.commit()
+                    self.db.refresh(today_activity)
+            
             return {
                 "alarm_details": {
                     "id": alarm_details.id,
@@ -62,28 +81,50 @@ class AlarmService:
             }
         except Exception as e:
             logger.error(f"Error getting alarm details and activity for widget {widget_id}: {e}")
+            self.db.rollback()
             return None
     
     def update_activity(self, activity_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update alarm activity"""
         try:
+            logger.info(f"Attempting to update alarm activity with ID: {activity_id}")
+            logger.info(f"Update data: {update_data}")
+            
+            # First, let's check if the activity exists
             activity = self.db.query(AlarmItemActivity).filter(
                 AlarmItemActivity.id == activity_id
             ).first()
             
             if not activity:
+                logger.error(f"Alarm activity with ID {activity_id} not found in database")
+                # Let's also log all alarm activities to see what's available
+                all_activities = self.db.query(AlarmItemActivity).all()
+                logger.info(f"All alarm activities in database: {[{'id': a.id, 'widget_id': a.widget_id, 'created_at': a.created_at} for a in all_activities]}")
                 return None
+            
+            logger.info(f"Found alarm activity: {activity.id}, widget_id: {activity.widget_id}")
             
             # Update fields
             if "started_at" in update_data:
-                activity.started_at = update_data["started_at"]
+                # Convert ISO string to datetime object
+                if isinstance(update_data["started_at"], str):
+                    activity.started_at = datetime.fromisoformat(update_data["started_at"].replace('Z', '+00:00'))
+                else:
+                    activity.started_at = update_data["started_at"]
+                logger.info(f"Updated started_at to: {update_data['started_at']}")
             if "snoozed_at" in update_data:
-                activity.snoozed_at = update_data["snoozed_at"]
+                # Convert ISO string to datetime object
+                if isinstance(update_data["snoozed_at"], str):
+                    activity.snoozed_at = datetime.fromisoformat(update_data["snoozed_at"].replace('Z', '+00:00'))
+                else:
+                    activity.snoozed_at = update_data["snoozed_at"]
+                logger.info(f"Updated snoozed_at to: {update_data['snoozed_at']}")
             
             activity.updated_at = datetime.utcnow()
             activity.updated_by = update_data.get("updated_by")
             
             self.db.commit()
+            logger.info(f"Successfully updated alarm activity {activity_id}")
             
             return {
                 "activity_id": activity.id,

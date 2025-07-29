@@ -147,12 +147,14 @@ async def add_new_widget(
         db.refresh(widget)
         
         # Create corresponding details table entry based on widget type
-        if request.widget_type == "todo":
+        if request.widget_type in ["todo-habit", "todo-task", "todo-event"]:
             from models.database import ToDoDetails
+            # Extract todo type from widget type
+            todo_type = request.widget_type.replace("todo-", "")
             todo_details = ToDoDetails(
                 widget_id=widget.id,
                 title=request.title,
-                todo_type="task",  # Default to task
+                todo_type=todo_type,  # 'habit', 'task', or 'event'
                 created_by=user_id
             )
             db.add(todo_details)

@@ -18,6 +18,8 @@ import {
 } from '../types'
 import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
+import HabitListWidget from './widgets/HabitListWidget';
+import EventTrackerWidget from './widgets/EventTrackerWidget';
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -349,9 +351,23 @@ const Dashboard = () => {
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );
-      case 'todo':
+      case 'todo-task':
         return (
           <TaskListWidget
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+        );
+      case 'todo-event':
+        return (
+          <EventTrackerWidget
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+          );
+      case 'todo-habit':
+        return (
+          <HabitListWidget
             widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />

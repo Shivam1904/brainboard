@@ -26,20 +26,52 @@ export interface WidgetConfig {
 }
 
 export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
-  // TODO Widget
-  todo: {
-    id: 'todo',
-    apiWidgetType: 'todo',
-    title: 'Todo List',
-    description: 'Manage daily tasks and habits',
+  // TODO HABIT Widget
+  'todo-habit': {
+    id: 'todo-habit',
+    apiWidgetType: 'todo-habit',
+    title: 'Habit Tracker',
+    description: 'Track daily habits and routines',
     component: 'TaskListWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 30, h: 36 },
-    defaultSize: { w: 15, h: 15 },
+    defaultSize: { w: 12, h: 15 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '🔄'
+  },
+
+  // TODO TASK Widget
+  'todo-task': {
+    id: 'todo-task',
+    apiWidgetType: 'todo-task',
+    title: 'Task List',
+    description: 'Manage daily tasks and to-dos',
+    component: 'TaskListWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 30, h: 36 },
+    defaultSize: { w: 12, h: 15 },
     deletable: true,
     resizable: true,
     category: 'productivity',
     icon: '📋'
+  },
+
+  // TODO EVENT Widget
+  'todo-event': {
+    id: 'todo-event',
+    apiWidgetType: 'todo-event',
+    title: 'Event Tracker',
+    description: 'Track events and appointments',
+    component: 'TaskListWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 30, h: 36 },
+    defaultSize: { w: 10, h: 6 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '📅'
   },
 
   // ALARM Widget
@@ -83,7 +115,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'WebSearchWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 20, h: 24 },
-    defaultSize: { w: 10, h: 10 },
+    defaultSize: { w: 11, h: 14 },
     deletable: true,
     resizable: true,
     category: 'information',
@@ -123,7 +155,9 @@ export const getAllWidgets = (): WidgetConfig[] => {
 export const getImplementedWidgets = (): WidgetConfig[] => {
   // Currently implemented widgets that match API types
   return [
-    WIDGET_CONFIGS.todo,
+    WIDGET_CONFIGS['todo-habit'],
+    WIDGET_CONFIGS['todo-task'],
+    WIDGET_CONFIGS['todo-event'],
     WIDGET_CONFIGS.alarm,
     WIDGET_CONFIGS.singleitemtracker,
     WIDGET_CONFIGS.websearch,

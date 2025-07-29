@@ -27,11 +27,29 @@ export const getDummyTodayWidgets = (): TodayWidgetsResponse => {
     date: new Date().toISOString().split('T')[0],
     widgets: [
       {
-        daily_widget_id: "daily-todo-001",
-        widget_ids: ["widget-todo-001", "widget-todo-002", "widget-todo-003"],
-        widget_type: "todo",
+        daily_widget_id: "daily-todo-habit-001",
+        widget_ids: ["widget-todo-habit-001"],
+        widget_type: "todo-habit",
         priority: "HIGH",
-        reasoning: "Todo widget is essential for daily productivity",
+        reasoning: "Habit tracker is essential for daily routines",
+        date: new Date().toISOString().split('T')[0],
+        created_at: "2024-01-15T10:00:00Z"
+      },
+      {
+        daily_widget_id: "daily-todo-task-001",
+        widget_ids: ["widget-todo-task-001"],
+        widget_type: "todo-task",
+        priority: "HIGH",
+        reasoning: "Task list is essential for daily productivity",
+        date: new Date().toISOString().split('T')[0],
+        created_at: "2024-01-15T10:00:00Z"
+      },
+      {
+        daily_widget_id: "daily-todo-event-001",
+        widget_ids: ["widget-todo-event-001"],
+        widget_type: "todo-event",
+        priority: "LOW",
+        reasoning: "Event tracker for important appointments",
         date: new Date().toISOString().split('T')[0],
         created_at: "2024-01-15T10:00:00Z"
       },
@@ -63,7 +81,7 @@ export const getDummyTodayWidgets = (): TodayWidgetsResponse => {
         created_at: "2024-01-15T10:00:00Z"
       }
     ],
-    total_widgets: 4,
+    total_widgets: 6,
     ai_generated: true,
     last_updated: "2024-01-15T10:00:00Z"
   };
@@ -73,7 +91,29 @@ export const getDummyTodayWidgets = (): TodayWidgetsResponse => {
 // TODO WIDGET DUMMY DATA
 // ============================================================================
 
-export const getDummyTodoTodayResponse = (todoType: 'habit' | 'task'): TodoTodayResponse => {
+export const getDummyTodoTodayResponse = (todoType: 'habit' | 'task' | 'event'): TodoTodayResponse => {
+  if(todoType === 'event') {
+    return {
+      todo_type: todoType,
+      todos: [
+        {
+          id: "activity-001",
+          widget_id: "widget-todo-001",
+          daily_widget_id: "daily-todo-001",
+          todo_details_id: "todo-details-001",
+          title: "Event 1",
+          todo_type: todoType,
+          description: "Event 1 description",
+          due_date: "2024-01-20",
+          status: "pending",
+          progress: 0,
+          created_at: "2024-01-15T10:00:00Z",
+          updated_at: "2024-01-15T10:00:00Z"
+        }
+      ],
+      total_todos: 1
+    }
+  }
   return {
     todo_type: todoType,
     todos: [
@@ -82,9 +122,9 @@ export const getDummyTodoTodayResponse = (todoType: 'habit' | 'task'): TodoToday
         widget_id: "widget-todo-001",
         daily_widget_id: "daily-todo-001",
         todo_details_id: "todo-details-001",
-        title: todoType === 'task' ? "Complete project documentation" : "Morning meditation",
+        title: todoType === 'task' ? "Complete project documentation" : todoType === 'habit' ? "Morning meditation everyday" : "",
         todo_type: todoType,
-        description: todoType === 'task' ? "Finish the project documentation by end of day" : "Practice mindfulness for 10 minutes",
+        description: todoType === 'task' ? "Finish the project documentation by end of day" : todoType === 'habit' ? "Practice mindfulness for 10 minutes" : "",
         due_date: "2024-01-20",
         status: "pending",
         progress: 0,
@@ -196,14 +236,30 @@ export const getDummyWebSearchSummaryAndActivity = (widgetId: string): WebSearch
 
 export const getDummyWebSearchAISummary = (widgetId: string): WebSearchAISummaryResponse => {
   return {
+    ai_summary_id: "ai-summary-001",
+    widget_id: widgetId,
+    query: "AI Research",
     summary: "Recent AI developments show significant progress in large language models, with new breakthroughs in multimodal AI and improved reasoning capabilities. Key areas include GPT-4 advancements, Claude 3 improvements, and emerging open-source alternatives.",
     sources: [
-      "https://example.com/ai-news-1",
-      "https://example.com/ai-news-2",
-      "https://example.com/ai-news-3"
+      {
+        title: "AI News Article 1",
+        url: "https://example.com/ai-news-1"
+      },
+      {
+        title: "AI News Article 2", 
+        url: "https://example.com/ai-news-2"
+      },
+      {
+        title: "AI News Article 3",
+        url: "https://example.com/ai-news-3"
+      }
     ],
-    generated_at: "2024-01-15T10:00:00Z",
-    confidence_score: 0.85
+    search_successful: true,
+    results_count: 3,
+    ai_model_used: "gpt-3.5-turbo",
+    generation_type: "ai_generated",
+    created_at: "2024-01-15T10:00:00Z",
+    updated_at: "2024-01-15T10:00:00Z"
   };
 };
 

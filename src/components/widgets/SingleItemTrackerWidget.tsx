@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { TrendingUp, Target, Calendar, Plus, X, Save } from 'lucide-react';
 import { TrackerDetailsAndActivityResponse, TrackerDetails, TrackerActivity } from '../../types';
-import { getDummyTrackerDetailsAndActivity } from '../../data/widgetDummyData';
-import { apiService } from '../../services/api';
+import { dashboardService } from '../../services/dashboard';
 
 interface SingleItemTrackerWidgetProps {
   onRemove: () => void;
@@ -44,27 +43,23 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
   const [showAddForm, setShowAddForm] = useState(false);
   const [newValue, setNewValue] = useState('');
   const [notes, setNotes] = useState('');
-  const [isUsingDummyData, setIsUsingDummyData] = useState(false);
 
   const fetchTracker = async () => {
     try {
       setLoading(true);
       setError(null);
-      setIsUsingDummyData(false);
       
       // Get the widget_id from the widget_ids array (first one for singleitemtracker widgets)
       const widgetId = widget.widget_ids[0];
       
       // Call the real API
-      const response = await apiService.getTrackerDetailsAndActivity(widgetId);
+      const response = await dashboardService.getTrackerDetailsAndActivity(widgetId);
       setTrackerData(response);
     } catch (err) {
       console.error('Failed to fetch tracker:', err);
       setError('Failed to load tracker data');
-      setIsUsingDummyData(true);
-      // Fallback to dummy data
-      const dummyData = getDummyTrackerDetailsAndActivity(widget.daily_widget_id);
-      setTrackerData(dummyData);
+      // Fallback to empty state
+      setTrackerData(null);
     } finally {
       setLoading(false);
     }
@@ -75,7 +70,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
     
     try {
       // Update tracker activity using the real API
-      await apiService.updateTrackerActivity(trackerData.activity.id, {
+      await dashboardService.updateTrackerActivity(trackerData.activity.id, {
         value: newValue,
         time_added: new Date().toISOString(),
         updated_by: 'user'
@@ -166,14 +161,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
           </div>
         )}
         
-        {/* Dummy Data Indicator */}
-        {isUsingDummyData && (
-          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-700 text-center">
-              📈 Showing sample data - API not connected
-            </p>
-          </div>
-        )}
+
 
         {/* Current Value Display */}
         <div className="mb-4 text-center">
