@@ -20,6 +20,7 @@ class DailyWidgetsAIOutput(Base):
     ai_prompt_used = Column(Text, nullable=True)  # The prompt sent to AI
     ai_response_time = Column(String, nullable=True)  # Time taken for AI response
     confidence_score = Column(String, nullable=True)  # AI confidence in the decision
+    generation_type = Column(String, nullable=False, default="ai_generated")  # 'ai_generated' or 'fallback'
     
     # Audit columns
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -143,4 +143,32 @@ async def update_websearch_details(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update websearch details: {str(e)}"
+        )
+
+@router.get("/getaisummary/{widget_id}")
+async def get_ai_summary(
+    widget_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get AI-generated summary for a specific websearch widget
+    """
+    try:
+        service = WebSearchService(db)
+        result = service.get_ai_summary(widget_id)
+        
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="AI summary not found for this widget"
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting AI summary: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get AI summary: {str(e)}"
         ) 

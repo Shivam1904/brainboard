@@ -20,6 +20,7 @@ class WebSearchSummaryAIOutput(Base):
     search_results_count = Column(String, nullable=True)  # Number of search results processed
     summary_length = Column(String, nullable=True)  # Length of generated summary
     sources_used = Column(JSON, nullable=True)  # List of sources used for summary
+    generation_type = Column(String, nullable=False, default="ai_generated")  # 'ai_generated' or 'fallback'
     
     # Audit columns
     created_at = Column(DateTime, default=datetime.utcnow)

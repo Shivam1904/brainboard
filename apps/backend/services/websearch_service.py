@@ -8,7 +8,8 @@ from datetime import date, datetime
 import logging
 
 from models.database import (
-    WebSearchDetails, WebSearchItemActivity, DashboardWidgetDetails, DailyWidget
+    WebSearchDetails, WebSearchItemActivity, DashboardWidgetDetails, DailyWidget,
+    WebSearchSummaryAIOutput
 )
 
 logger = logging.getLogger(__name__)
@@ -150,4 +151,32 @@ class WebSearchService:
         except Exception as e:
             logger.error(f"Error updating websearch details {websearch_details_id}: {e}")
             self.db.rollback()
+            return None
+    
+    def get_ai_summary(self, widget_id: str) -> Optional[Dict[str, Any]]:
+        """Get AI-generated summary for a specific widget"""
+        try:
+            # Get the most recent AI summary for this widget
+            ai_summary = self.db.query(WebSearchSummaryAIOutput).filter(
+                WebSearchSummaryAIOutput.widget_id == widget_id
+            ).order_by(WebSearchSummaryAIOutput.created_at.desc()).first()
+            
+            if not ai_summary:
+                return None
+            
+            return {
+                "ai_summary_id": ai_summary.id,
+                "widget_id": ai_summary.widget_id,
+                "query": ai_summary.query,
+                "summary": ai_summary.result_json.get("summary", ""),
+                "sources": ai_summary.result_json.get("sources", []),
+                "search_successful": ai_summary.result_json.get("search_successful", False),
+                "results_count": ai_summary.result_json.get("results_count", 0),
+                "ai_model_used": ai_summary.ai_model_used,
+                "generation_type": ai_summary.generation_type,
+                "created_at": ai_summary.created_at.isoformat(),
+                "updated_at": ai_summary.updated_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error getting AI summary for widget {widget_id}: {e}")
             return None 
