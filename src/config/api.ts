@@ -2,7 +2,7 @@
 export const API_CONFIG = {
   baseUrl: 'http://localhost:8000', // Backend server URL
   dashboard: {
-    getTodayWidgets: '/api/v1/dashboard/today', // Get today's widget configuration
+    getTodayWidgets: '/api/v1/dashboard/widgets/today', // Get today's widget configuration
   },
   webSearch: {
     getScheduledSearches: '/api/v1/web-search/scheduled',
@@ -19,10 +19,10 @@ export const API_CONFIG = {
     getWidgetData: '/api/v1/widgets/single-item-tracker/{widget_id}', // Get complete widget data
   },
   alarm: {
-    getAlarms: '/api/v1/widgets/alarm', // Get all alarms for widget
-    createAlarm: '/api/v1/widgets/alarm/add', // Create new alarm
+    getAlarms: '/api/v1/widgets/alarm/{widget_id}', // Get all alarms for widget
+    createAlarm: '/api/v1/widgets/alarm/create', // Create new alarm
     updateAlarmStatus: '/api/v1/widgets/alarm/{widget_id}/updateStatus', // Snooze or activate alarm
-    getWidgetData: '/api/v1/widgets/alarm/widget/{widget_id}/data', // Get alarm widget data
+    getWidgetData: '/api/v1/widgets/alarm/{widget_id}', // Get alarm widget data
   },
   reminders: {
     getReminders: '/api/v1/reminders',

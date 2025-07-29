@@ -141,7 +141,7 @@ const WebSearchWidget = ({ onRemove, widget }: EverydayWebSearchWidgetProps) => 
   const fetchSearchResults = async () => {
     try {
       // Get widget_id from config or use the centralized mapping
-      const widgetId = widget.id;
+      const widgetId = widget.daily_widget_id;
       const targetDate = new Date().toISOString().split('T')[0];
       
       // const response = await apiCall<WebSearchResponse>(

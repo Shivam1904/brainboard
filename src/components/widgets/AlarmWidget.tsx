@@ -10,12 +10,12 @@ interface AlarmWidgetProps {
   widget: Widget;
 }
 
-const getDummyAlarms = (): AlarmWidgetDataResponse => ({
-  widget_id: 'dummy-widget-id',
+const getDummyAlarms = (widgetId: string): AlarmWidgetDataResponse => ({
+  widget_id: widgetId,
   alarms: [
     {
       id: '1',
-      dashboard_widget_id: 'dummy-widget-id',
+      dashboard_widget_id: widgetId,
       title: 'Morning Standup',
       alarm_type: 'daily',
       alarm_times: ['09:00'],
@@ -27,7 +27,7 @@ const getDummyAlarms = (): AlarmWidgetDataResponse => ({
     },
     {
       id: '2',
-      dashboard_widget_id: 'dummy-widget-id',
+      dashboard_widget_id: widgetId,
       title: 'Lunch Break',
       alarm_type: 'daily',
       alarm_times: ['12:30'],
@@ -39,7 +39,7 @@ const getDummyAlarms = (): AlarmWidgetDataResponse => ({
     },
     {
       id: '3',
-      dashboard_widget_id: 'dummy-widget-id',
+      dashboard_widget_id: widgetId,
       title: 'Evening Exercise',
       alarm_type: 'daily',
       alarm_times: ['18:00'],
@@ -117,7 +117,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
       setLoading(true);
       setError(null);
       
-      const widgetId = widget.id;
+      const widgetId = widget.daily_widget_id;
       
       const response = await apiCall<AlarmWidgetDataResponse>(
         buildApiUrl(API_CONFIG.alarm.getWidgetData.replace('{widget_id}', widgetId))
@@ -127,7 +127,8 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
     } catch (err) {
       console.error('Error fetching alarms:', err);
       // Fallback to dummy data on error
-      const dummyAlarms = getDummyAlarms();
+      const widgetId = widget.daily_widget_id;
+      const dummyAlarms = getDummyAlarms(widgetId);
       setWidgetData(dummyAlarms);
       setError('Using offline data - API unavailable');
     } finally {

@@ -74,7 +74,7 @@ export const FEATURE_FLAGS = {
 // API endpoints configuration
 export const API_ENDPOINTS = {
   dashboard: {
-    widgets: '/api/v1/dashboard/today',
+    widgets: '/api/v1/dashboard/widgets/today',
     layout: '/api/v1/dashboard/layout',
     preferences: '/api/v1/dashboard/preferences',
   },

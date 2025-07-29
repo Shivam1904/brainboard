@@ -5,7 +5,34 @@ export type WidgetSize = 'small' | 'medium' | 'large' | 'full';
 export type WidgetFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'once';
 export type WidgetImportance = 1 | 2 | 3 | 4 | 5;
 
-// Base widget interface
+// New API response structure for dashboard widgets
+export interface ApiDashboardWidget {
+  id: string;
+  daily_widget_id: string;
+  title: string;
+  widget_type: string;
+  category: string;
+  importance: number;
+  frequency: string;
+  position: number;
+  grid_position: any; // Can be null or layout object
+  is_pinned: boolean;
+  ai_reasoning: string;
+  settings: any; // Can be null or settings object
+  created_at: string;
+  updated_at: string;
+}
+
+// Updated TodayWidgetsResponse to match new API structure
+export interface TodayWidgetsResponse {
+  date: string;
+  widgets: ApiDashboardWidget[];
+  total_widgets: number;
+  ai_generated: boolean;
+  last_updated: string;
+}
+
+// Base widget interface (for internal use)
 export interface BaseWidget {
   id: string;
   type: WidgetType;
@@ -254,12 +281,6 @@ export interface DashboardStats {
   daily_count: number;
   weekly_count: number;
   monthly_count: number;
-}
-
-export interface TodayWidgetsResponse {
-  date: string;
-  widgets: BaseWidget[];
-  stats: DashboardStats;
 }
 
 // Widget settings types
