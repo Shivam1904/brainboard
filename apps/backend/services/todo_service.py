@@ -1,164 +1,225 @@
 """
-Todo Widget Service
-Business logic for todo task management
+Todo Service - Business logic for todo operations
 """
 
-from datetime import datetime, date, timedelta
-from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
+from typing import List, Optional, Dict, Any
+from datetime import date, datetime
 import logging
 
-from models.database_models import TodoTask, DashboardWidget
-from models.schemas.todo_schemas import TaskFrequency, TaskPriority, TodoWidgetStatsResponse
+from models.database import (
+    ToDoDetails, ToDoItemActivity, DashboardWidgetDetails, DailyWidget
+)
 
 logger = logging.getLogger(__name__)
 
 class TodoService:
-    """Service for todo widget business logic"""
+    """Service for todo operations"""
     
     def __init__(self, db: Session):
         self.db = db
     
-    def should_show_task_today(self, task: TodoTask, target_date: Optional[date] = None) -> bool:
-        """
-        Determine if a task should appear today based on its frequency
-        
-        Args:
-            task: TodoTask object
-            target_date: Target date (defaults to today)
+    def get_today_todo_list(self, todo_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get today's todo activities filtered by type"""
+        try:
+            query = self.db.query(ToDoItemActivity).join(
+                DailyWidget
+            ).filter(
+                DailyWidget.date == date.today(),
+                DailyWidget.delete_flag == False
+            )
             
-        Returns:
-            Boolean indicating if task should be shown
-        """
-        if target_date is None:
-            target_date = date.today()
-        
-        # For one-time tasks
-        if task.frequency == TaskFrequency.ONCE:
-            if not task.is_done:
-                if task.due_date is None:
-                    return True
-                return task.due_date <= target_date
-            return False
-        
-        # For recurring tasks
-        if not task.is_recurring:
-            return not task.is_done
-        
-        # Daily tasks always show (unless completed today)
-        if task.frequency == TaskFrequency.DAILY:
-            if task.last_completed_date == target_date:
-                return False  # Already completed today
-            return True
-        
-        # Weekly tasks - show every 7 days
-        if task.frequency == TaskFrequency.WEEKLY:
-            days_since_creation = (target_date - task.created_at.date()).days
-            if task.last_completed_date:
-                days_since_completion = (target_date - task.last_completed_date).days
-                return days_since_completion >= 7
-            return days_since_creation % 7 == 0
-        
-        # Monthly tasks - show every 30 days
-        if task.frequency == TaskFrequency.MONTHLY:
-            days_since_creation = (target_date - task.created_at.date()).days
-            if task.last_completed_date:
-                days_since_completion = (target_date - task.last_completed_date).days
-                return days_since_completion >= 30
-            return days_since_creation % 30 == 0
-        
-        return True
+            if todo_type:
+                query = query.join(ToDoDetails).filter(
+                    ToDoDetails.todo_type == todo_type
+                )
+            
+            activities = query.all()
+            
+            result = []
+            for activity in activities:
+                todo_details = self.db.query(ToDoDetails).filter(
+                    ToDoDetails.id == activity.tododetails_id
+                ).first()
+                
+                if todo_details:
+                    result.append({
+                        "activity_id": activity.id,
+                        "widget_id": activity.widget_id,
+                        "daily_widget_id": activity.daily_widget_id,
+                        "todo_details_id": activity.tododetails_id,
+                        "title": todo_details.title,
+                        "todo_type": todo_details.todo_type,
+                        "description": todo_details.description,
+                        "due_date": todo_details.due_date.isoformat() if todo_details.due_date else None,
+                        "status": activity.status,
+                        "progress": activity.progress,
+                        "created_at": activity.created_at.isoformat(),
+                        "updated_at": activity.updated_at.isoformat()
+                    })
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error getting today's todo list: {e}")
+            return []
     
-    def get_today_tasks(self, widget_id: str, target_date: Optional[date] = None) -> List[TodoTask]:
-        """
-        Get tasks that should appear today for a widget
-        
-        Args:
-            widget_id: Widget ID
-            target_date: Target date (defaults to today)
+    def update_activity(self, activity_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update todo activity"""
+        try:
+            activity = self.db.query(ToDoItemActivity).filter(
+                ToDoItemActivity.id == activity_id
+            ).first()
             
-        Returns:
-            List of TodoTask objects that should be shown today
-        """
-        if target_date is None:
-            target_date = date.today()
-        
-        # Get all tasks for this widget
-        all_tasks = self.db.query(TodoTask).filter(
-            TodoTask.dashboard_widget_id == widget_id
-        ).all()
-        
-        # Filter tasks based on frequency logic
-        today_tasks = []
-        for task in all_tasks:
-            if self.should_show_task_today(task, target_date):
-                today_tasks.append(task)
-        
-        # Sort by priority (high to low), then by due date, then by creation time
-        today_tasks.sort(key=lambda t: (
-            -(t.priority or 3),  # Higher priority first
-            t.due_date or date.max,  # Earlier due dates first
-            t.created_at
-        ))
-        
-        return today_tasks
+            if not activity:
+                return None
+            
+            # Update fields
+            if "status" in update_data:
+                activity.status = update_data["status"]
+            if "progress" in update_data:
+                activity.progress = update_data["progress"]
+            
+            activity.updated_at = datetime.utcnow()
+            activity.updated_by = update_data.get("updated_by")
+            
+            self.db.commit()
+            
+            return {
+                "activity_id": activity.id,
+                "status": activity.status,
+                "progress": activity.progress,
+                "updated_at": activity.updated_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error updating todo activity {activity_id}: {e}")
+            self.db.rollback()
+            return None
     
-    def calculate_stats(self, tasks: List[TodoTask]) -> TodoWidgetStatsResponse:
-        """
-        Calculate statistics for a list of tasks
-        
-        Args:
-            tasks: List of TodoTask objects
+    def get_todo_details_and_activity(self, daily_widget_id: str, widget_id: str) -> Optional[Dict[str, Any]]:
+        """Get todo details and activity for a specific widget"""
+        try:
+            # Get todo details
+            todo_details = self.db.query(ToDoDetails).filter(
+                ToDoDetails.widget_id == widget_id
+            ).first()
             
-        Returns:
-            TodoWidgetStatsResponse with calculated statistics
-        """
-        total_tasks = len(tasks)
-        completed_tasks = sum(1 for task in tasks if task.is_done)
-        pending_tasks = total_tasks - completed_tasks
-        completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
-        
-        # Group by priority
-        tasks_by_priority = {}
-        for priority in [1, 2, 3, 4, 5]:
-            tasks_by_priority[str(priority)] = sum(1 for t in tasks if (t.priority or 3) == priority)
-        
-        # Group by category
-        tasks_by_category = {}
-        for task in tasks:
-            category = task.category or "uncategorized"
-            tasks_by_category[category] = tasks_by_category.get(category, 0) + 1
-        
-        return TodoWidgetStatsResponse(
-            total_tasks=total_tasks,
-            completed_tasks=completed_tasks,
-            pending_tasks=pending_tasks,
-            completion_rate=completion_rate,
-            tasks_by_priority=tasks_by_priority,
-            tasks_by_category=tasks_by_category
-        )
+            if not todo_details:
+                return None
+            
+            # Get activity
+            activity = self.db.query(ToDoItemActivity).filter(
+                ToDoItemActivity.daily_widget_id == daily_widget_id,
+                ToDoItemActivity.widget_id == widget_id
+            ).first()
+            
+            return {
+                "todo_details": {
+                    "id": todo_details.id,
+                    "widget_id": todo_details.widget_id,
+                    "title": todo_details.title,
+                    "todo_type": todo_details.todo_type,
+                    "description": todo_details.description,
+                    "due_date": todo_details.due_date.isoformat() if todo_details.due_date else None,
+                    "created_at": todo_details.created_at.isoformat(),
+                    "updated_at": todo_details.updated_at.isoformat()
+                },
+                "activity": {
+                    "id": activity.id if activity else None,
+                    "status": activity.status if activity else None,
+                    "progress": activity.progress if activity else None,
+                    "created_at": activity.created_at.isoformat() if activity else None,
+                    "updated_at": activity.updated_at.isoformat() if activity else None
+                } if activity else None
+            }
+        except Exception as e:
+            logger.error(f"Error getting todo details and activity: {e}")
+            return None
     
-    def mark_task_complete(self, task: TodoTask, is_done: bool) -> TodoTask:
-        """
-        Mark a task as complete or incomplete with proper tracking
-        
-        Args:
-            task: TodoTask object to update
-            is_done: New completion status
+    def get_todo_list_by_type(self, todo_type: str) -> List[Dict[str, Any]]:
+        """Get all todo details filtered by type"""
+        try:
+            todos = self.db.query(ToDoDetails).filter(
+                ToDoDetails.todo_type == todo_type,
+                ToDoDetails.delete_flag == False
+            ).all()
             
-        Returns:
-            Updated TodoTask object
-        """
-        old_status = task.is_done
-        task.is_done = is_done
-        
-        # Update completion tracking
-        if not old_status and is_done:
-            task.last_completed_date = date.today()
-            logger.info(f"Task {task.id} marked complete on {date.today()}")
-        elif old_status and not is_done:
-            # If unchecking, we keep the last_completed_date for tracking
-            pass
-        
-        task.updated_at = datetime.utcnow()
-        return task
+            return [
+                {
+                    "id": todo.id,
+                    "widget_id": todo.widget_id,
+                    "title": todo.title,
+                    "todo_type": todo.todo_type,
+                    "description": todo.description,
+                    "due_date": todo.due_date.isoformat() if todo.due_date else None,
+                    "created_at": todo.created_at.isoformat(),
+                    "updated_at": todo.updated_at.isoformat()
+                }
+                for todo in todos
+            ]
+        except Exception as e:
+            logger.error(f"Error getting todo list by type {todo_type}: {e}")
+            return []
+    
+    def get_todo_details(self, widget_id: str) -> Optional[Dict[str, Any]]:
+        """Get todo details for a specific widget"""
+        try:
+            todo = self.db.query(ToDoDetails).filter(
+                ToDoDetails.widget_id == widget_id,
+                ToDoDetails.delete_flag == False
+            ).first()
+            
+            if not todo:
+                return None
+            
+            return {
+                "id": todo.id,
+                "widget_id": todo.widget_id,
+                "title": todo.title,
+                "todo_type": todo.todo_type,
+                "description": todo.description,
+                "due_date": todo.due_date.isoformat() if todo.due_date else None,
+                "created_at": todo.created_at.isoformat(),
+                "updated_at": todo.updated_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error getting todo details for widget {widget_id}: {e}")
+            return None
+    
+    def update_todo_details(self, todo_details_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update todo details"""
+        try:
+            todo = self.db.query(ToDoDetails).filter(
+                ToDoDetails.id == todo_details_id
+            ).first()
+            
+            if not todo:
+                return None
+            
+            # Update fields
+            if "title" in update_data:
+                todo.title = update_data["title"]
+            if "todo_type" in update_data:
+                todo.todo_type = update_data["todo_type"]
+            if "description" in update_data:
+                todo.description = update_data["description"]
+            if "due_date" in update_data:
+                todo.due_date = update_data["due_date"]
+            
+            todo.updated_at = datetime.utcnow()
+            todo.updated_by = update_data.get("updated_by")
+            
+            self.db.commit()
+            
+            return {
+                "id": todo.id,
+                "widget_id": todo.widget_id,
+                "title": todo.title,
+                "todo_type": todo.todo_type,
+                "description": todo.description,
+                "due_date": todo.due_date.isoformat() if todo.due_date else None,
+                "updated_at": todo.updated_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error updating todo details {todo_details_id}: {e}")
+            self.db.rollback()
+            return None 

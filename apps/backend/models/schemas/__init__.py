@@ -1,7 +1,5 @@
-# Schema imports - single source of truth
-from .base_schemas import *
+"""
+Pydantic schemas for API requests and responses
+"""
+
 from .dashboard_schemas import *
-from .todo_schemas import *
-from .alarm_schemas import *
-from .tracker_schemas import *
-from .websearch_schemas import *
