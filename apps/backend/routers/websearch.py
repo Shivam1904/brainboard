@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 import logging
 
 from core.database import get_db
-from models.database_models import WebSearchQuery, DashboardWidget, Summary
+from models.database import WebSearchQuery, DashboardWidget, Summary
 from models.schemas.websearch_schemas import (
     CreateWebSearchQueryRequest,
     CreateWebSearchWidgetRequest,

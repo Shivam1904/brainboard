@@ -15,7 +15,7 @@ from models.schemas import (
     CreateDashboardWidgetRequest,
     UpdateDashboardWidgetRequest
 )
-from models.database_models import User
+from models.database import User
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ async def delete_dashboard_widget(
 ):
     """Delete a dashboard widget"""
     try:
-        from models.database_models import DashboardWidget
+        from models.database import DashboardWidget
         
         widget = db.query(DashboardWidget).filter(
             DashboardWidget.id == widget_id,

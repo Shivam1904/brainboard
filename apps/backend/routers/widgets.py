@@ -17,7 +17,7 @@ from datetime import datetime
 import logging
 
 from core.database import get_db
-from models.database_models import User, DashboardWidget
+from models.database import User, DashboardWidget
 from models.schemas.dashboard_schemas import CreateDashboardWidgetRequest, UpdateDashboardWidgetRequest
 
 logger = logging.getLogger(__name__)

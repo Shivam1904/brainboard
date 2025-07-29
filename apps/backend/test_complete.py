@@ -107,7 +107,7 @@ class TestDatabaseManager:
             from core.database import Base
             
             # Import all models to ensure they're registered
-            from models.database_models import (
+            from models.database import (
                 User, DashboardWidget, TodoItem, WebSearchQuery, Alarm,
                 SingleItemTracker, SingleItemTrackerLog, Summary
             )
@@ -129,6 +129,7 @@ class TestDatabaseManager:
         """Create default test user in test database"""
         try:
             from models.database_models import User
+            from models.database import User
             
             session = self.SessionLocal()
             try:
@@ -156,6 +157,11 @@ class TestDatabaseManager:
         try:
             # Import all models
             from models.database_models import (
+                Summary, User, DashboardWidget,
+                TodoItem, WebSearchQuery, Alarm,
+                SingleItemTracker, SingleItemTrackerLog
+            )
+            from models.database import (
                 Summary, User, DashboardWidget,
                 TodoItem, WebSearchQuery, Alarm,
                 SingleItemTracker, SingleItemTrackerLog

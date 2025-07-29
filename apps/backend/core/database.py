@@ -30,7 +30,7 @@ def init_db():
     """Initialize database tables"""
     try:
         # Import all models to ensure they are registered with Base
-        from models.database_models import (
+        from models.database import (
             Summary,
             User, DashboardWidget,
             TodoItem, WebSearchQuery, Alarm,
@@ -71,7 +71,7 @@ def init_db():
 def _create_default_user():
     """Create default user for development"""
     try:
-        from models.database_models import User
+        from models.database import User
         
         db = SessionLocal()
         # Check if default user exists

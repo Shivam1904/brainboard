@@ -22,7 +22,7 @@ from datetime import datetime, date, time, timedelta
 import logging
 
 from core.database import get_db
-from models.database_models import Alarm, DashboardWidget
+from models.database import Alarm, DashboardWidget
 from models.schemas.alarm_schemas import (
     CreateAlarmRequest,
     UpdateAlarmRequest,

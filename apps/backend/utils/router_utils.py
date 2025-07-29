@@ -8,7 +8,7 @@ from typing import Optional, List, Any
 from datetime import date
 import logging
 
-from models.database_models import DashboardWidget, User
+from models.database import DashboardWidget, User
 
 logger = logging.getLogger(__name__)
 

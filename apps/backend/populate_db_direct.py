@@ -29,7 +29,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.database import get_db, engine, SessionLocal
 from core.config import settings
-from models.database_models import (
+from models.database import (
     User, DashboardWidget, Summary,
     TodoItem, WebSearchQuery, 
     Alarm,

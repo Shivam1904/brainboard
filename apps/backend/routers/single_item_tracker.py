@@ -24,7 +24,7 @@ from datetime import datetime, date
 import logging
 
 from core.database import get_db
-from models.database_models import SingleItemTracker, SingleItemTrackerLog, DashboardWidget
+from models.database import SingleItemTracker, SingleItemTrackerLog, DashboardWidget
 from models.schemas.tracker_schemas import (
     CreateSingleItemTrackerRequest,
     SingleItemTrackerResponse,

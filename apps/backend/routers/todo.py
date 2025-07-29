@@ -22,7 +22,7 @@ import logging
 import json
 
 from core.database import get_db
-from models.database_models import TodoItem, DashboardWidget
+from models.database import TodoItem, DashboardWidget
 from models.schemas.todo_schemas import (
     CreateTodoItemRequest,
     UpdateTodoItemRequest,
