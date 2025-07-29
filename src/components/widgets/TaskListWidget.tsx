@@ -28,58 +28,7 @@ interface MissionFormData {
   frequency: FrequencySettings;
 }
 
-const getDummyTasks = (): Task[] => [
-  {
-    id: '1',
-    title: 'Complete project documentation',
-    description: 'Finish the API documentation for the new features',
-    completed: false,
-    priority: 'High',
-    category: 'work',
-    dueDate: '2024-01-15',
-    createdAt: '2024-01-10T09:00:00Z'
-  },
-  {
-    id: '2',
-    title: 'Review code changes',
-    description: 'Go through the pull requests and provide feedback',
-    completed: true,
-    priority: 'Medium',
-    category: 'work',
-    dueDate: '2024-01-15',
-    createdAt: '2024-01-10T10:00:00Z'
-  },
-  {
-    id: '3',
-    title: 'Exercise routine',
-    description: 'Complete 30 minutes of cardio and strength training',
-    completed: false,
-    priority: 'High',
-    category: 'health',
-    dueDate: '2024-01-15',
-    createdAt: '2024-01-10T07:00:00Z'
-  },
-  {
-    id: '4',
-    title: 'Read technical articles',
-    description: 'Read 2-3 articles about React performance optimization',
-    completed: false,
-    priority: 'Low',
-    category: 'learning',
-    dueDate: '2024-01-15',
-    createdAt: '2024-01-10T14:00:00Z'
-  },
-  {
-    id: '5',
-    title: 'Plan weekend activities',
-    description: 'Organize activities for the upcoming weekend',
-    completed: false,
-    priority: 'Medium',
-    category: 'personal',
-    dueDate: '2024-01-15',
-    createdAt: '2024-01-10T16:00:00Z'
-  }
-];
+import { getDummyTasks } from '../../data/widgetDummyData';
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {

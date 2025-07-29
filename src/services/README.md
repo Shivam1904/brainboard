@@ -7,7 +7,6 @@ This directory contains all the necessary utilities, services, and hooks for com
 The API layer consists of:
 - **Core API Service**: Base service for HTTP requests with authentication
 - **Specialized Services**: Domain-specific services (Auth, Reminders, Summaries)
-- **WebSocket Service**: Real-time communication
 - **React Hooks**: Easy-to-use hooks for API calls
 - **Utilities**: Helper functions for common operations
 - **Configuration**: Environment-specific settings
@@ -77,21 +76,7 @@ const response = await authService.login({
 await authService.logout();
 ```
 
-### 4. Real-time Updates
 
-```typescript
-import { websocketService, subscribeToReminders } from '../services/websocket';
-
-// Subscribe to real-time updates
-useEffect(() => {
-  const handleUpdate = (data) => {
-    console.log('Real-time update:', data);
-    // Refresh your data here
-  };
-
-  subscribeToReminders(handleUpdate);
-}, []);
-```
 
 ## Services
 
@@ -147,28 +132,7 @@ await summaryService.getSummaries();
 await summaryService.createSummary(summary);
 ```
 
-### WebSocket Service (`websocket.ts`)
 
-Handles real-time communication with automatic reconnection and heartbeat.
-
-```typescript
-import { websocketService } from '../services/websocket';
-
-// Connection status
-websocketService.isConnected();
-websocketService.getReadyState();
-
-// Send messages
-websocketService.send('event_name', { data: 'value' });
-
-// Subscribe to events
-websocketService.on('event_name', callback);
-websocketService.off('event_name', callback);
-
-// Manual control
-websocketService.disconnect();
-websocketService.reconnect();
-```
 
 ## React Hooks
 
@@ -302,7 +266,6 @@ Create a `.env` file in your project root:
 ```env
 VITE_ENVIRONMENT=development
 VITE_API_BASE_URL=http://localhost:8000
-VITE_WS_BASE_URL=ws://localhost:8000
 ```
 
 ## Error Handling
@@ -327,7 +290,7 @@ try {
 3. **Handle Loading States**: Always show loading indicators during API calls
 4. **Error Boundaries**: Implement error boundaries for graceful error handling
 5. **Type Safety**: Always define TypeScript interfaces for your API responses
-6. **Real-time Updates**: Use WebSocket service for real-time features
+
 7. **Retry Logic**: Enable retry for critical operations
 8. **Debouncing**: Use debouncing for search and filter operations
 
@@ -341,7 +304,7 @@ See `ApiExample.tsx` for a comprehensive example of how to use all the API servi
 
 1. **CORS Errors**: Ensure your backend has CORS properly configured
 2. **Authentication Issues**: Check if the token is being set correctly
-3. **WebSocket Connection**: Verify the WebSocket endpoint is accessible
+
 4. **Type Errors**: Make sure your TypeScript interfaces match the API response structure
 
 ### Debug Mode

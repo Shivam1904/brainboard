@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Search, ExternalLink } from 'lucide-react'
 import BaseWidget from './BaseWidget'
 import { Widget } from '../../utils/dashboardUtils'
+import { getDummyWebSummary } from '../../data/widgetDummyData'
 
 interface Summary {
   id: string
@@ -40,17 +41,7 @@ const WebSummaryWidget = ({ onRemove, widget }: WebSummaryWidgetProps) => {
       // Mock response for now
       await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate API delay
       
-      const mockSummary: Summary = {
-        id: Date.now().toString(),
-        query,
-        summary: `Here's a comprehensive summary about "${query}": This topic involves multiple aspects and considerations. Based on recent research and available information, the key findings suggest that this is an evolving area with significant implications for various stakeholders.`,
-        sources: [
-          'https://example.com/source1',
-          'https://example.com/source2',
-          'https://example.com/source3'
-        ],
-        createdAt: new Date().toISOString()
-      }
+      const mockSummary = getDummyWebSummary(query);
 
       setCurrentSummary(mockSummary)
       setQuery('')

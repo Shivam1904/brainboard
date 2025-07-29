@@ -4,7 +4,6 @@ export type Environment = 'development' | 'staging' | 'production';
 
 interface EnvironmentConfig {
   apiBaseUrl: string;
-  wsBaseUrl: string;
   enableLogging: boolean;
   enableCache: boolean;
   retryAttempts: number;
@@ -14,7 +13,6 @@ interface EnvironmentConfig {
 const environments: Record<Environment, EnvironmentConfig> = {
   development: {
     apiBaseUrl: 'http://localhost:8000',
-    wsBaseUrl: 'ws://localhost:8000',
     enableLogging: true,
     enableCache: false,
     retryAttempts: 3,
@@ -22,7 +20,6 @@ const environments: Record<Environment, EnvironmentConfig> = {
   },
   staging: {
     apiBaseUrl: 'https://staging-api.brainboard.com',
-    wsBaseUrl: 'wss://staging-api.brainboard.com',
     enableLogging: true,
     enableCache: true,
     retryAttempts: 3,
@@ -30,7 +27,6 @@ const environments: Record<Environment, EnvironmentConfig> = {
   },
   production: {
     apiBaseUrl: 'https://api.brainboard.com',
-    wsBaseUrl: 'wss://api.brainboard.com',
     enableLogging: false,
     enableCache: true,
     retryAttempts: 2,
@@ -80,15 +76,7 @@ export const API_ENDPOINTS = {
   },
 } as const;
 
-// WebSocket events
-export const WS_EVENTS = {
-  REMINDER_CREATED: 'reminder_created',
-  REMINDER_UPDATED: 'reminder_updated',
-  REMINDER_DELETED: 'reminder_deleted',
-  SUMMARY_CREATED: 'summary_created',
-  SUMMARY_UPDATED: 'summary_updated',
-  SUMMARY_DELETED: 'summary_deleted',
-} as const;
+
 
 // HTTP status codes
 export const HTTP_STATUS = {

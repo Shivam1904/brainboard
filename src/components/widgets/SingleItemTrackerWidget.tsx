@@ -10,52 +10,7 @@ interface SingleItemTrackerWidgetProps {
   widget: Widget;
 }
 
-const getDummyTracker = (widgetId: string): SingleItemTrackerWidgetDataResponse => ({
-  widget_id: widgetId,
-  tracker: {
-    id: 'dummy-tracker-id',
-    dashboard_widget_id: widgetId,
-    item_name: 'Weight',
-    item_unit: 'kg',
-    current_value: '75.5',
-    target_value: '70.0',
-    value_type: 'decimal',
-    created_at: '2024-01-10T09:00:00Z',
-    updated_at: '2024-01-15T14:30:00Z',
-    recent_logs: []
-  },
-  stats: {
-    total_entries: 3,
-    current_value: '75.5',
-    target_value: '70.0',
-    progress_percentage: 107.9,
-    last_updated: '2024-01-15',
-    streak_days: 3
-  },
-  recent_logs: [
-    {
-      id: '1',
-      value: '75.5',
-      date: '2024-01-15',
-      notes: 'Morning weigh-in',
-      created_at: '2024-01-15T08:00:00Z'
-    },
-    {
-      id: '2',
-      value: '75.8',
-      date: '2024-01-14',
-      notes: 'After workout',
-      created_at: '2024-01-14T19:00:00Z'
-    },
-    {
-      id: '3',
-      value: '76.0',
-      date: '2024-01-13',
-      notes: 'Evening check',
-      created_at: '2024-01-13T20:00:00Z'
-    }
-  ]
-});
+import { getDummyTracker } from '../../data/widgetDummyData';
 
 const getValueTypeInput = (valueType: string) => {
   switch (valueType) {

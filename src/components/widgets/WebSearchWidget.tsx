@@ -42,54 +42,7 @@ interface WebSearchResult {
 //   }
 // ];
 
-const getDummyWebSearchResult = (searchQuery: string): WebSearchResult => {
-  switch (searchQuery.toLowerCase()) {
-    case 'latest football news and scores':
-      return {
-        id: 'football',
-        searchTerm: searchQuery,
-        heading: 'Football: Champions League Highlights',
-        subheading: 'All the latest scores and news from Europe',
-        text: 'Manchester United secured a dramatic win in the final minutes. Real Madrid and Barcelona both advanced to the next round. Stay tuned for more updates and analysis.',
-        images: ['https://via.placeholder.com/300x200/2563EB/FFFFFF?text=Football'],
-        chartData: null,
-        scheduleDate: new Date().toISOString().split('T')[0]
-      };
-    case 'artificial intelligence developments today':
-      return {
-        id: 'ai',
-        searchTerm: searchQuery,
-        heading: 'AI: New Breakthroughs in 2024',
-        subheading: 'GPT-5 and robotics lead the way',
-        text: 'Researchers have announced major advances in natural language processing and robotics. AI is now being used in healthcare, finance, and creative industries at an unprecedented scale.',
-        images: ['https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=AI+News'],
-        chartData: null,
-        scheduleDate: new Date().toISOString().split('T')[0]
-      };
-    case 'stock market trends and analysis':
-      return {
-        id: 'stocks',
-        searchTerm: searchQuery,
-        heading: 'Stocks: Market Trends & Analysis',
-        subheading: 'Tech stocks rally, S&P 500 hits new high',
-        text: 'The stock market saw a significant rally today, led by gains in the technology sector. Analysts predict continued growth as earnings season approaches.',
-        images: ['https://via.placeholder.com/300x200/10B981/FFFFFF?text=Stocks'],
-        chartData: null,
-        scheduleDate: new Date().toISOString().split('T')[0]
-      };
-    default:
-      return {
-        id: 'default',
-        searchTerm: searchQuery,
-        heading: `Search Results for: ${searchQuery}`,
-        subheading: `Latest information about ${searchQuery}`,
-        text: `This is a sample result for the search query: "${searchQuery}". In a real implementation, this would contain actual search results from the web.`,
-        images: ['https://via.placeholder.com/300x200/64748B/FFFFFF?text=Web+Search'],
-        chartData: null,
-        scheduleDate: new Date().toISOString().split('T')[0]
-      };
-  }
-};
+import { getDummyWebSearchResult } from '../../data/widgetDummyData';
 
 // const DUMMY_SEARCH_RESULTS: Record<string, WebSearchResult> = {
 //   '1': {

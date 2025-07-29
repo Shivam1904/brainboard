@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { BaseWidget as WidgetData, WidgetType } from '../../types';
 import { dashboardService } from '../../services/api';
-import { Widget } from '../../utils/dashboardUtils'
+import { Widget } from '../../utils/dashboardUtils';
+import { getDummyAllSchedulesWidgets } from '../../data/widgetDummyData';
 
 interface AllSchedulesWidgetProps {
   onRemove: () => void;
@@ -23,117 +24,16 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
         
         // If no widgets from API, use dummy data
         if (response.widgets.length === 0) {
-          const dummyWidgets = [
-            {
-              id: '1',
-              title: 'Daily Task List',
-              type: 'todo' as WidgetType,
-              frequency: 'daily',
-              category: 'productivity',
-              importance: 4,
-              size: 'medium',
-              settings: { showCompleted: true, maxTasks: 10 },
-              data: { tasks: [], stats: { total_tasks: 0, completed_tasks: 0, pending_tasks: 0, completion_rate: 0 } }
-            },
-            {
-              id: '2',
-              title: 'Morning Exercise Habit',
-              type: 'habittracker' as WidgetType,
-              frequency: 'daily',
-              category: 'health',
-              importance: 5,
-              size: 'small',
-              settings: { targetDays: 7, currentStreak: 3 },
-              data: { habits: [], stats: { total_habits: 0, completed_habits: 0, current_streak: 3 } }
-            },
-            {
-              id: '3',
-              title: 'Tech News Search',
-              type: 'websearch' as WidgetType,
-              frequency: 'daily',
-              category: 'awareness',
-              importance: 3,
-              size: 'large',
-              settings: { searchQuery: 'latest tech news', maxResults: 5 },
-              data: { search_results: [], query: 'latest tech news' }
-            },
-            {
-              id: '4',
-              title: 'Weekly Finance Summary',
-              type: 'websummary' as WidgetType,
-              frequency: 'weekly',
-              category: 'finance',
-              importance: 4,
-              size: 'medium',
-              settings: { summaryLength: 'medium', includeCharts: true },
-              data: { summary: '', url: 'https://finance.example.com' }
-            },
-            {
-              id: '5',
-              title: 'Calendar Overview',
-              type: 'calendar' as WidgetType,
-              frequency: 'daily',
-              category: 'productivity',
-              importance: 3,
-              size: 'large',
-              settings: { showWeekView: true, includeReminders: true },
-              data: { events: [], reminders: [] }
-            },
-            {
-              id: '6',
-              title: 'Meditation Reminder',
-              type: 'reminder' as WidgetType,
-              frequency: 'daily',
-              category: 'health',
-              importance: 4,
-              size: 'small',
-              settings: { reminderTime: '18:00', repeatDaily: true },
-              data: { total_reminders: 1, overdue_count: 0, severity: 'medium' }
-            }
-          ] as WidgetData[];
-          setWidgets(dummyWidgets);
+          const dummyWidgets = getDummyAllSchedulesWidgets();
+          setWidgets(dummyWidgets as any);
         } else {
-          setWidgets(response.widgets);
+          setWidgets(response.widgets as any);
         }
       } catch (err) {
         console.error('Failed to load widgets:', err);
         // Use dummy data on error
-        const dummyWidgets = [
-          {
-            id: '1',
-            title: 'Daily Task List',
-            type: 'todo' as WidgetType,
-            frequency: 'daily',
-            category: 'productivity',
-            importance: 4,
-            size: 'medium',
-            settings: { showCompleted: true, maxTasks: 10 },
-            data: { tasks: [], stats: { total_tasks: 0, completed_tasks: 0, pending_tasks: 0, completion_rate: 0 } }
-          },
-          {
-            id: '2',
-            title: 'Morning Exercise Habit',
-            type: 'habittracker' as WidgetType,
-            frequency: 'daily',
-            category: 'health',
-            importance: 5,
-            size: 'small',
-            settings: { targetDays: 7, currentStreak: 3 },
-            data: { habits: [], stats: { total_habits: 0, completed_habits: 0, current_streak: 3 } }
-          },
-          {
-            id: '3',
-            title: 'Tech News Search',
-            type: 'websearch' as WidgetType,
-            frequency: 'daily',
-            category: 'awareness',
-            importance: 3,
-            size: 'large',
-            settings: { searchQuery: 'latest tech news', maxResults: 5 },
-            data: { search_results: [], query: 'latest tech news' }
-          }
-        ] as WidgetData[];
-        setWidgets(dummyWidgets);
+        const dummyWidgets = getDummyAllSchedulesWidgets();
+        setWidgets(dummyWidgets as any);
       } finally {
         setLoading(false);
       }
@@ -144,7 +44,7 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
 
   // Get widget type display name
   const getWidgetTypeDisplayName = (type: WidgetType): string => {
-    const typeNames: Record<WidgetType, string> = {
+    const typeNames: Record<string, string> = {
       'todo': 'Todo',
       'habittracker': 'Habit Tracker',
       'websearch': 'Web Search',

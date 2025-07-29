@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Check, Clock, Trash2 } from 'lucide-react'
 import BaseWidget from './BaseWidget'
 import { Widget } from '../../utils/dashboardUtils'
+import { getDummyReminders } from '../../data/widgetDummyData'
 
 interface Reminder {
   id: string
@@ -34,22 +35,8 @@ const ReminderWidget = ({ onRemove, widget }: ReminderWidgetProps) => {
       // const data = await response.json()
       // setReminders(data)
       
-      // Mock data for now
-      setReminders([
-        {
-          id: '1',
-          text: 'Review project proposal',
-          completed: false,
-          dueDate: '2025-07-27',
-          createdAt: '2025-07-26'
-        },
-        {
-          id: '2',
-          text: 'Call dentist for appointment',
-          completed: true,
-          createdAt: '2025-07-26'
-        }
-      ])
+      const dummyReminders = getDummyReminders();
+      setReminders(dummyReminders);
     } catch (error) {
       console.error('Failed to load reminders:', error)
     } finally {

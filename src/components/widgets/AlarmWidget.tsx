@@ -10,53 +10,7 @@ interface AlarmWidgetProps {
   widget: Widget;
 }
 
-const getDummyAlarms = (widgetId: string): AlarmWidgetDataResponse => ({
-  widget_id: widgetId,
-  alarms: [
-    {
-      id: '1',
-      dashboard_widget_id: widgetId,
-      title: 'Morning Standup',
-      alarm_type: 'daily',
-      alarm_times: ['09:00'],
-      is_active: true,
-      is_snoozed: false,
-      next_trigger_time: new Date().toISOString(),
-      created_at: '2024-01-10T09:00:00Z',
-      updated_at: '2024-01-15T14:30:00Z'
-    },
-    {
-      id: '2',
-      dashboard_widget_id: widgetId,
-      title: 'Lunch Break',
-      alarm_type: 'daily',
-      alarm_times: ['12:30'],
-      is_active: true,
-      is_snoozed: false,
-      next_trigger_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours from now
-      created_at: '2024-01-10T10:00:00Z',
-      updated_at: '2024-01-15T14:30:00Z'
-    },
-    {
-      id: '3',
-      dashboard_widget_id: widgetId,
-      title: 'Evening Exercise',
-      alarm_type: 'daily',
-      alarm_times: ['18:00'],
-      is_active: true,
-      is_snoozed: false,
-      next_trigger_time: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), // 4 hours from now
-      created_at: '2024-01-10T11:00:00Z',
-      updated_at: '2024-01-15T14:30:00Z'
-    }
-  ],
-  stats: {
-    total_alarms: 3,
-    active_alarms: 3,
-    next_alarm_time: new Date().toISOString(),
-    next_alarm_title: 'Morning Standup'
-  }
-});
+import { getDummyAlarms } from '../../data/widgetDummyData';
 
 const formatTime = (timeString: string) => {
   const time = new Date(timeString);
