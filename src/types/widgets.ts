@@ -1,6 +1,6 @@
 // Base widget types and interfaces
 
-export type WidgetType = 'todo' | 'habittracker' | 'websearch' | 'websummary' | 'calendar' | 'reminder' | 'allSchedules';
+export type WidgetType = 'todo' | 'habittracker' | 'websearch' | 'websummary' | 'calendar' | 'alarm' | 'allSchedules' | 'singleitemtracker' | 'thisHour';
 export type WidgetSize = 'small' | 'medium' | 'large' | 'full';
 export type WidgetFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'once';
 export type WidgetImportance = 1 | 2 | 3 | 4 | 5;
@@ -25,15 +25,24 @@ export type WidgetData =
   | WebSearchWidgetData
   | WebSummaryWidgetData
   | CalendarWidgetData
-  | ReminderWidgetData;
+  | ReminderWidgetData
+  | SingleItemTrackerWidgetData
+  | AlarmWidgetData;
 
 // Todo Widget Types
 export interface TodoTask {
   id: string;
+  dashboard_widget_id: string;
   content: string;
   due_date: string | null;
+  frequency: string;
+  priority: number;
+  category: string;
   is_done: boolean;
+  is_recurring: boolean;
+  last_completed_date: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface TodoStats {
@@ -41,11 +50,28 @@ export interface TodoStats {
   completed_tasks: number;
   pending_tasks: number;
   completion_rate: number;
+  tasks_by_priority: Record<string, number>;
+  tasks_by_category: Record<string, number>;
 }
 
 export interface TodoWidgetData {
   tasks: TodoTask[];
   stats: TodoStats;
+}
+
+// API Response Types for Todo Widget
+export interface TodoTodayResponse {
+  widget_id: string;
+  date: string;
+  tasks: TodoTask[];
+  stats: TodoStats;
+}
+
+// API Response Types for Web Search Widget
+export interface WebSearchResponse {
+  widget_id: string;
+  date: string;
+  searches: WebSearch[];
 }
 
 // Habit Tracker Widget Types
@@ -129,6 +155,99 @@ export interface ReminderWidgetData {
   overdue_count: number;
 }
 
+// Single Item Tracker Widget Types
+export interface SingleItemTrackerLog {
+  id: string;
+  value: string;
+  date: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface SingleItemTracker {
+  id: string;
+  dashboard_widget_id: string;
+  item_name: string;
+  item_unit?: string;
+  current_value?: string;
+  target_value?: string;
+  value_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SingleItemTrackerStats {
+  total_entries: number;
+  current_value?: string;
+  target_value?: string;
+  progress_percentage?: number;
+  last_updated?: string;
+  streak_days: number;
+}
+
+export interface SingleItemTrackerWidgetData {
+  tracker: SingleItemTracker;
+  stats: SingleItemTrackerStats;
+  recent_logs: SingleItemTrackerLog[];
+}
+
+// API Response Types for Single Item Tracker Widget
+export interface SingleItemTrackerResponse {
+  id: string;
+  dashboard_widget_id: string;
+  item_name: string;
+  item_unit?: string;
+  current_value?: string;
+  target_value?: string;
+  value_type: string;
+  created_at: string;
+  updated_at: string;
+  recent_logs: SingleItemTrackerLog[];
+}
+
+export interface SingleItemTrackerWidgetDataResponse {
+  widget_id: string;
+  tracker: SingleItemTrackerResponse;
+  stats: SingleItemTrackerStats;
+  recent_logs: SingleItemTrackerLog[];
+}
+
+// Alarm Widget Types
+export interface Alarm {
+  id: string;
+  dashboard_widget_id: string;
+  title: string;
+  alarm_type: string; // 'once', 'daily', 'weekly', 'monthly', 'yearly'
+  alarm_times: string[]; // List of times: ["09:00", "15:00"]
+  frequency_value?: number; // For daily-5, weekly-2, etc. (interval)
+  specific_date?: string; // For one-time alarms
+  is_active: boolean;
+  is_snoozed: boolean;
+  snooze_until?: string;
+  last_triggered?: string;
+  next_trigger_time?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AlarmStats {
+  total_alarms: number;
+  active_alarms: number;
+  next_alarm_time?: string;
+  next_alarm_title?: string;
+}
+
+export interface AlarmWidgetData {
+  alarms: Alarm[];
+  stats: AlarmStats;
+}
+
+export interface AlarmWidgetDataResponse {
+  widget_id: string;
+  alarms: Alarm[];
+  stats: AlarmStats;
+}
+
 // Dashboard response types
 export interface DashboardStats {
   total_widgets: number;
@@ -202,5 +321,13 @@ export const isCalendarWidget = (widget: BaseWidget): widget is BaseWidget & { d
 };
 
 export const isReminderWidget = (widget: BaseWidget): widget is BaseWidget & { data: ReminderWidgetData } => {
-  return widget.type === 'reminder';
+  return widget.type === 'alarm';
+};
+
+export const isSingleItemTrackerWidget = (widget: BaseWidget): widget is BaseWidget & { data: SingleItemTrackerWidgetData } => {
+  return widget.type === 'singleitemtracker';
+};
+
+export const isAlarmWidget = (widget: BaseWidget): widget is BaseWidget & { data: AlarmWidgetData } => {
+  return widget.type === 'alarm';
 }; 
