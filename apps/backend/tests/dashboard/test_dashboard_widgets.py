@@ -24,11 +24,28 @@ def test_get_all_widgets():
     assert len(data) >= 0
 
 # Test today's dashboard
-def test_get_todays_dashboard():
+def test_dashboard_today_flow():
+    # 1. Ensure GET returns empty before generation
     response = requests.get(f"{BASE_URL}/api/v1/dashboard/widgets/today")
     assert response.status_code == 200
     data = response.json()
-    assert "widgets" in data or isinstance(data, list)
+    assert "widgets" in data
+    assert isinstance(data["widgets"], list)
+    # Should be empty before generation (unless previous test data exists)
+    # 2. Generate today's widgets
+    gen_response = requests.post(f"{BASE_URL}/api/v1/dashboard/widgets/today/ai_generate")
+    assert gen_response.status_code == 200
+    gen_data = gen_response.json()
+    assert "widgets" in gen_data
+    assert isinstance(gen_data["widgets"], list)
+    assert gen_data["total_widgets"] > 0
+    # 3. GET should now return generated widgets
+    response2 = requests.get(f"{BASE_URL}/api/v1/dashboard/widgets/today")
+    assert response2.status_code == 200
+    data2 = response2.json()
+    assert "widgets" in data2
+    assert isinstance(data2["widgets"], list)
+    assert data2["total_widgets"] == gen_data["total_widgets"]
 
 # Test widget update
 @pytest.mark.skip(reason="Requires widget id from creation test")

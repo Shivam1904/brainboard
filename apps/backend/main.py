@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from routers import websearch, health, dashboard_clean, widgets, todo, single_item_tracker, alarm
+from routers import websearch, health, dashboard, widgets, todo, single_item_tracker, alarm
 from core.config import settings
 from core.database import init_db
 
@@ -31,7 +31,7 @@ app.add_middleware(
 
 # Include routers - Clean API structure
 app.include_router(websearch.router, prefix="/api/v1/widgets/websearch", tags=["websearch"])
-app.include_router(dashboard_clean.router, prefix="/api/v1/dashboard", tags=["dashboard"])  # Daily AI-curated widgets
+app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])  # Daily AI-curated widgets
 app.include_router(widgets.router, prefix="/api/v1/widgets", tags=["widgets"])  # User's complete widget collection
 app.include_router(health.router, prefix="/api", tags=["health"])  # Health uses /api for simplicity
 app.include_router(todo.router, prefix="/api/v1/widgets/todo", tags=["todo"])  # Clean todo API - 4 endpoints only
