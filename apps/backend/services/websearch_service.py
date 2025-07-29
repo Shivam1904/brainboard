@@ -1,0 +1,153 @@
+"""
+WebSearch Service - Business logic for websearch operations
+"""
+
+from sqlalchemy.orm import Session
+from typing import List, Optional, Dict, Any
+from datetime import date, datetime
+import logging
+
+from models.database import (
+    WebSearchDetails, WebSearchItemActivity, DashboardWidgetDetails, DailyWidget
+)
+
+logger = logging.getLogger(__name__)
+
+class WebSearchService:
+    """Service for websearch operations"""
+    
+    def __init__(self, db: Session):
+        self.db = db
+    
+    def get_summary_and_activity(self, widget_id: str) -> Optional[Dict[str, Any]]:
+        """Get websearch summary and activity for a specific widget"""
+        try:
+            # Get websearch details
+            websearch_details = self.db.query(WebSearchDetails).filter(
+                WebSearchDetails.widget_id == widget_id,
+                WebSearchDetails.delete_flag == False
+            ).first()
+            
+            if not websearch_details:
+                return None
+            
+            # Get today's activity
+            today_activity = self.db.query(WebSearchItemActivity).join(
+                DailyWidget
+            ).filter(
+                DailyWidget.date == date.today(),
+                DailyWidget.delete_flag == False,
+                WebSearchItemActivity.widget_id == widget_id
+            ).first()
+            
+            return {
+                "websearch_details": {
+                    "id": websearch_details.id,
+                    "widget_id": websearch_details.widget_id,
+                    "title": websearch_details.title,
+                    "created_at": websearch_details.created_at.isoformat(),
+                    "updated_at": websearch_details.updated_at.isoformat()
+                },
+                "activity": {
+                    "id": today_activity.id if today_activity else None,
+                    "status": today_activity.status if today_activity else None,
+                    "reaction": today_activity.reaction if today_activity else None,
+                    "summary": today_activity.summary if today_activity else None,
+                    "source_json": today_activity.source_json if today_activity else None,
+                    "created_at": today_activity.created_at.isoformat() if today_activity else None,
+                    "updated_at": today_activity.updated_at.isoformat() if today_activity else None
+                } if today_activity else None
+            }
+        except Exception as e:
+            logger.error(f"Error getting websearch summary and activity for widget {widget_id}: {e}")
+            return None
+    
+    def update_activity(self, activity_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update websearch activity"""
+        try:
+            activity = self.db.query(WebSearchItemActivity).filter(
+                WebSearchItemActivity.id == activity_id
+            ).first()
+            
+            if not activity:
+                return None
+            
+            # Update fields
+            if "status" in update_data:
+                activity.status = update_data["status"]
+            if "reaction" in update_data:
+                activity.reaction = update_data["reaction"]
+            if "summary" in update_data:
+                activity.summary = update_data["summary"]
+            if "source_json" in update_data:
+                activity.source_json = update_data["source_json"]
+            
+            activity.updated_at = datetime.utcnow()
+            activity.updated_by = update_data.get("updated_by")
+            
+            self.db.commit()
+            
+            return {
+                "activity_id": activity.id,
+                "status": activity.status,
+                "reaction": activity.reaction,
+                "summary": activity.summary,
+                "source_json": activity.source_json,
+                "updated_at": activity.updated_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error updating websearch activity {activity_id}: {e}")
+            self.db.rollback()
+            return None
+    
+    def get_websearch_details(self, widget_id: str) -> Optional[Dict[str, Any]]:
+        """Get websearch details for a specific widget"""
+        try:
+            websearch = self.db.query(WebSearchDetails).filter(
+                WebSearchDetails.widget_id == widget_id,
+                WebSearchDetails.delete_flag == False
+            ).first()
+            
+            if not websearch:
+                return None
+            
+            return {
+                "id": websearch.id,
+                "widget_id": websearch.widget_id,
+                "title": websearch.title,
+                "created_at": websearch.created_at.isoformat(),
+                "updated_at": websearch.updated_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error getting websearch details for widget {widget_id}: {e}")
+            return None
+    
+    def update_websearch_details(self, websearch_details_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update websearch details"""
+        try:
+            websearch = self.db.query(WebSearchDetails).filter(
+                WebSearchDetails.id == websearch_details_id
+            ).first()
+            
+            if not websearch:
+                return None
+            
+            # Update fields
+            if "title" in update_data:
+                websearch.title = update_data["title"]
+            
+            websearch.updated_at = datetime.utcnow()
+            websearch.updated_by = update_data.get("updated_by")
+            
+            self.db.commit()
+            
+            return {
+                "id": websearch.id,
+                "widget_id": websearch.widget_id,
+                "title": websearch.title,
+                "updated_at": websearch.updated_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error updating websearch details {websearch_details_id}: {e}")
+            self.db.rollback()
+            return None 

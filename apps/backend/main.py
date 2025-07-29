@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from routers import websearch, health, dashboard, widgets, todo, single_item_tracker, alarm
+from routers import v1_router
 from core.config import settings
 from core.database import init_db
 
@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Brainboard API",
-    description="AI-Powered Dashboard Backend with WebSearch Widgets",
-    version="1.0.0"
+    description="AI-Powered Dashboard Backend with Restructured APIs",
+    version="2.0.0"
 )
 
 # CORS middleware
@@ -29,14 +29,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers - Clean API structure
-app.include_router(websearch.router, prefix="/api/v1/widgets/websearch", tags=["websearch"])
-app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])  # Daily AI-curated widgets
-app.include_router(widgets.router, prefix="/api/v1/widgets", tags=["widgets"])  # User's complete widget collection
-app.include_router(health.router, prefix="/api", tags=["health"])  # Health uses /api for simplicity
-app.include_router(todo.router, prefix="/api/v1/widgets/todo", tags=["todo"])  # Clean todo API - 4 endpoints only
-app.include_router(single_item_tracker.router, prefix="/api/v1/widgets/single-item-tracker", tags=["single-item-tracker"])
-app.include_router(alarm.router, prefix="/api/v1/widgets/alarm", tags=["alarm"])
+# Include v1 router
+app.include_router(v1_router, prefix="/api/v1")
 
 @app.on_event("startup")
 async def startup_event():
@@ -53,9 +47,9 @@ async def root():
     """Root endpoint with API information"""
     return {
         "message": "Brainboard API is running",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "docs": "/docs",
-        "health": "/api/health"
+        "health": "/api/v1/health"
     }
 
 if __name__ == "__main__":

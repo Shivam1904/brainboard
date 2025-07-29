@@ -1,22 +1,17 @@
 """
-Clean Dashboard Router
-Handles AI-generated daily dashboard management
-
-Endpoints:
-- GET /widgets/today - Get today's AI-curated widgets (from DailyWidgets)
-- POST /widget/{widget_id} - Update widget grid/visibility settings
+Dashboard Router - New API Structure
+Handles dashboard widget management and daily widget retrieval
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 from typing import Optional, Dict, List, Any
 from datetime import date, datetime
 import logging
 
 from core.database import get_db
-from models.database import User, DashboardWidget, DailyWidget
-from models.schemas.dashboard_schemas import UpdateWidgetDisplayRequest
+from models.database import User, DashboardWidgetDetails, DailyWidget
+from models.schemas.dashboard_schemas import CreateWidgetRequest, UpdateWidgetRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["dashboard"])
@@ -36,56 +31,47 @@ def get_default_user_id(db: Session = Depends(get_db)) -> str:
     return default_user.id
 
 # ============================================================================
-# DASHBOARD ENDPOINTS - Daily AI-Curated Widgets
+# DASHBOARD ENDPOINTS
 # ============================================================================
 
-@router.get("/widgets/today", response_model=Dict[str, Any])
-async def get_today_widgets(
+@router.get("/getTodayWidgetList")
+async def get_today_widget_list(
     target_date: Optional[date] = Query(None, description="Date for dashboard (defaults to today)"),
     user_id: str = Depends(get_default_user_id),
     db: Session = Depends(get_db)
 ):
     """
-    Get today's AI-curated dashboard widgets (read-only)
-    Returns widgets already generated and saved for today.
+    Get today's widget list from table DailyWidget
+    Returns AI-generated daily widget selections for the specified date.
     """
     try:
         if target_date is None:
             target_date = date.today()
-        daily_widgets = db.query(DailyWidget).join(
-            DashboardWidget
-        ).filter(
-            DailyWidget.user_id == user_id,
-            DailyWidget.display_date == target_date,
-            DashboardWidget.is_active == True,
-            DashboardWidget.is_visible == True
-        ).order_by(DailyWidget.position).all()
+        
+        daily_widgets = db.query(DailyWidget).filter(
+            DailyWidget.date == target_date,
+            DailyWidget.delete_flag == False
+        ).order_by(DailyWidget.priority.desc()).all()
+        
         widgets_data = []
         for daily_widget in daily_widgets:
-            widget = daily_widget.dashboard_widget
             widget_data = {
-                # "id": widget.id,
-                "daily_widget_id": daily_widget.dashboard_widget_id,
-                "title": widget.title,
-                "widget_type": widget.widget_type,
-                "category": widget.category,
-                "importance": widget.importance,
-                "frequency": widget.frequency,
-                "position": daily_widget.position,
-                "grid_position": daily_widget.grid_position or widget.grid_size,
-                "is_pinned": daily_widget.is_pinned,
-                "ai_reasoning": daily_widget.ai_reasoning,
-                "settings": widget.settings,
-                "created_at": widget.created_at,
-                "updated_at": widget.updated_at
+                "daily_widget_id": daily_widget.id,
+                "widget_ids": daily_widget.widget_ids,
+                "widget_type": daily_widget.widget_type,
+                "priority": daily_widget.priority,
+                "reasoning": daily_widget.reasoning,
+                "date": daily_widget.date.isoformat(),
+                "created_at": daily_widget.created_at.isoformat()
             }
             widgets_data.append(widget_data)
+        
         return {
-            "date": target_date,
+            "date": target_date.isoformat(),
             "widgets": widgets_data,
             "total_widgets": len(widgets_data),
             "ai_generated": bool(widgets_data),
-            "last_updated": datetime.utcnow()
+            "last_updated": datetime.utcnow().isoformat()
         }
     except Exception as e:
         logger.error(f"Failed to get today's widgets for user {user_id}: {e}")
@@ -94,209 +80,148 @@ async def get_today_widgets(
             detail=f"Failed to get today's widgets: {str(e)}"
         )
 
-@router.post("/widgets/today/ai_generate", response_model=Dict[str, Any])
-async def generate_today_widgets(
-    target_date: Optional[date] = Query(None, description="Date for dashboard (defaults to today)"),
+@router.get("/getAllWidgetList")
+async def get_all_widget_list(
     user_id: str = Depends(get_default_user_id),
     db: Session = Depends(get_db)
 ):
     """
-    Ad-hoc trigger to run AI logic and generate today's widgets, saving them in DB.
+    Get all dashboard widgets for the user
+    Returns all widget configurations from DashboardWidgetDetails.
     """
     try:
-        if target_date is None:
-            target_date = date.today()
-        # Run AI generation and save
-        daily_widgets = await _generate_daily_widgets(db, user_id, target_date)
+        widgets = db.query(DashboardWidgetDetails).filter(
+            DashboardWidgetDetails.user_id == user_id,
+            DashboardWidgetDetails.delete_flag == False
+        ).order_by(DashboardWidgetDetails.importance.desc()).all()
+        
         widgets_data = []
-        for daily_widget in daily_widgets:
-            widget = daily_widget.dashboard_widget
+        for widget in widgets:
             widget_data = {
-                # "id": widget.id,
-                "daily_widget_id": daily_widget.dashboard_widget_id,
-                "title": widget.title,
+                "id": widget.id,
                 "widget_type": widget.widget_type,
-                "category": widget.category,
-                "importance": widget.importance,
                 "frequency": widget.frequency,
-                "position": daily_widget.position,
-                "grid_position": daily_widget.grid_position or widget.grid_size,
-                "is_pinned": daily_widget.is_pinned,
-                "ai_reasoning": daily_widget.ai_reasoning,
-                "settings": widget.settings,
-                "created_at": widget.created_at,
-                "updated_at": widget.updated_at
+                "importance": widget.importance,
+                "title": widget.title,
+                "category": widget.category,
+                "created_at": widget.created_at.isoformat(),
+                "updated_at": widget.updated_at.isoformat()
             }
             widgets_data.append(widget_data)
+        
         return {
-            "date": target_date,
             "widgets": widgets_data,
-            "total_widgets": len(widgets_data),
-            "ai_generated": True,
-            "last_updated": datetime.utcnow(),
-            "message": "Today's widgets generated and saved successfully."
+            "total_widgets": len(widgets_data)
         }
     except Exception as e:
-        logger.error(f"Failed to generate today's widgets for user {user_id}: {e}")
+        logger.error(f"Failed to get all widgets for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate today's widgets: {str(e)}"
+            detail=f"Failed to get all widgets: {str(e)}"
         )
 
-@router.post("/widget/{widget_id}", response_model=Dict[str, Any])
-async def update_widget_display(
-    widget_id: str,
-    update_data: UpdateWidgetDisplayRequest,
+@router.post("/widget/addnew")
+async def add_new_widget(
+    request: CreateWidgetRequest,
     user_id: str = Depends(get_default_user_id),
     db: Session = Depends(get_db)
 ):
     """
-    Update widget display settings (grid size, visibility)
-    
-    This endpoint updates the display properties of a widget:
-    - Grid size and position
-    - Visibility (show/hide)
-    - Other display-related settings
+    Add new dashboard widget
+    Creates a new widget in DashboardWidgetDetails with basic form data.
     """
     try:
-        # Get the widget
-        widget = db.query(DashboardWidget).filter(
-            DashboardWidget.id == widget_id,
-            DashboardWidget.user_id == user_id
-        ).first()
+        # Create new dashboard widget
+        widget = DashboardWidgetDetails(
+            user_id=user_id,
+            widget_type=request.widget_type,
+            frequency=request.frequency,
+            importance=request.importance,
+            title=request.title,
+            category=request.category,
+            created_by=user_id
+        )
         
-        if not widget:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Widget {widget_id} not found"
-            )
-        
-        # Update fields
-        update_dict = update_data.dict(exclude_unset=True)
-        
-        for field, value in update_dict.items():
-            if hasattr(widget, field):
-                setattr(widget, field, value)
-        
-        widget.updated_at = datetime.utcnow()
-        
+        db.add(widget)
         db.commit()
         db.refresh(widget)
         
-        logger.info(f"Updated widget display settings: {widget_id}")
+        # Create corresponding details table entry based on widget type
+        if request.widget_type == "todo":
+            from models.database import ToDoDetails
+            todo_details = ToDoDetails(
+                widget_id=widget.id,
+                title=request.title,
+                todo_type="task",  # Default to task
+                created_by=user_id
+            )
+            db.add(todo_details)
+        elif request.widget_type == "singleitemtracker":
+            from models.database import SingleItemTrackerDetails
+            tracker_details = SingleItemTrackerDetails(
+                widget_id=widget.id,
+                title=request.title,
+                value_type="number",  # Default to number
+                created_by=user_id
+            )
+            db.add(tracker_details)
+        elif request.widget_type == "websearch":
+            from models.database import WebSearchDetails
+            websearch_details = WebSearchDetails(
+                widget_id=widget.id,
+                title=request.title,
+                created_by=user_id
+            )
+            db.add(websearch_details)
+        elif request.widget_type == "alarm":
+            from models.database import AlarmDetails
+            alarm_details = AlarmDetails(
+                widget_id=widget.id,
+                title=request.title,
+                alarm_times=["09:00"],  # Default time
+                created_by=user_id
+            )
+            db.add(alarm_details)
+        
+        db.commit()
         
         return {
-            "id": widget.id,
-            "title": widget.title,
+            "message": "Widget created successfully",
+            "widget_id": widget.id,
             "widget_type": widget.widget_type,
-            "is_visible": widget.is_visible,
-            "grid_size": widget.grid_size,
-            "updated_at": widget.updated_at,
-            "message": "Widget display settings updated successfully"
+            "title": widget.title
         }
-        
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Failed to update widget display {widget_id}: {e}")
+        logger.error(f"Failed to create widget for user {user_id}: {e}")
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update widget display: {str(e)}"
+            detail=f"Failed to create widget: {str(e)}"
         )
 
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-async def _generate_daily_widgets(db: Session, user_id: str, target_date: date) -> List[DailyWidget]:
+@router.get("/getTodoList/{todo_type}")
+async def get_todo_list_by_type(
+    todo_type: str,
+    user_id: str = Depends(get_default_user_id),
+    db: Session = Depends(get_db)
+):
     """
-    Generate today's daily widgets using AI logic
-    
-    This function implements the AI logic to select which widgets
-    should be shown on today's dashboard based on:
-    - Widget frequency and importance
-    - User patterns and preferences  
-    - Last shown dates
-    - Category balancing
+    Get todo list filtered by type (habit/task)
+    Returns all todo details for the specified type.
     """
     try:
-        # Remove ALL existing daily widgets for this user (across all dates)
-        db.query(DailyWidget).filter(
-            DailyWidget.user_id == user_id
-        ).delete()
-        db.commit()
-
-        # Get all active and visible user widgets
-        available_widgets = db.query(DashboardWidget).filter(
-            DashboardWidget.user_id == user_id,
-            DashboardWidget.is_active == True,
-            DashboardWidget.is_visible == True
-        ).order_by(
-            desc(DashboardWidget.importance),
-            DashboardWidget.frequency,
-            DashboardWidget.created_at
-        ).all()
-
-        if not available_widgets:
-            logger.warning(f"No available widgets for user {user_id}")
-            return []
-
-        # Simple AI logic for now - select top widgets based on criteria
-        selected_widgets = []
-        position = 0
-
-        # Always include todo widget if exists (special case)
-        todo_widget = next((w for w in available_widgets if w.widget_type == "todo"), None)
-        if todo_widget:
-            daily_widget = DailyWidget(
-                user_id=user_id,
-                dashboard_widget_id=todo_widget.id,
-                display_date=target_date,
-                position=position,
-                ai_reasoning="Todo widget is essential for daily productivity",
-                is_pinned=False
-            )
-            db.add(daily_widget)
-            selected_widgets.append(daily_widget)
-            position += 1
-
-        # Select other high-importance widgets (max 5 total for today)
-        max_widgets = 5
-        for widget in available_widgets:
-            if len(selected_widgets) >= max_widgets:
-                break
-            if widget.widget_type == "todo":
-                continue  # Already added
-            # Simple selection criteria
-            should_include = (
-                widget.importance >= 3 or
-                widget.frequency == "daily" or
-                (widget.frequency == "weekly" and target_date.weekday() in [0, 2, 4])  # Mon, Wed, Fri
-            )
-            if should_include:
-                daily_widget = DailyWidget(
-                    user_id=user_id,
-                    dashboard_widget_id=widget.id,
-                    display_date=target_date,
-                    position=position,
-                    ai_reasoning=f"Selected based on {widget.frequency} frequency and importance {widget.importance}",
-                    is_pinned=False
-                )
-                db.add(daily_widget)
-                selected_widgets.append(daily_widget)
-                position += 1
-
-        db.commit()
-
-        # Refresh to get relationships
-        for daily_widget in selected_widgets:
-            db.refresh(daily_widget)
-
-        logger.info(f"Generated {len(selected_widgets)} daily widgets for user {user_id} on {target_date}")
-        return selected_widgets
-
+        from services.todo_service import TodoService
+        service = TodoService(db)
+        todos = service.get_todo_list_by_type(todo_type)
+        
+        return {
+            "todo_type": todo_type,
+            "todos": todos,
+            "total_todos": len(todos)
+        }
     except Exception as e:
-        logger.error(f"Failed to generate daily widgets: {e}")
-        db.rollback()
-        return []
+        logger.error(f"Error getting todo list by type {todo_type}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get todo list: {str(e)}"
+        ) 
