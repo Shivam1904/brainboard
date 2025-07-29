@@ -56,13 +56,20 @@ async def get_today_widget_list(
         widgets_data = []
         for daily_widget in daily_widgets:
             widget_data = {
-                "daily_widget_id": daily_widget.id,
-                "widget_ids": daily_widget.widget_ids,
-                "widget_type": daily_widget.widget_type,
-                "priority": daily_widget.priority,
-                "reasoning": daily_widget.reasoning,
-                "date": daily_widget.date.isoformat(),
-                "created_at": daily_widget.created_at.isoformat()
+                # "id": widget.id,
+                "daily_widget_id": daily_widget.dashboard_widget_id,
+                "title": widget.title,
+                "widget_type": widget.widget_type,
+                "category": widget.category,
+                "importance": widget.importance,
+                "frequency": widget.frequency,
+                "position": daily_widget.position,
+                "grid_position": daily_widget.grid_position or widget.grid_size,
+                "is_pinned": daily_widget.is_pinned,
+                "ai_reasoning": daily_widget.ai_reasoning,
+                "settings": widget.settings,
+                "created_at": widget.created_at,
+                "updated_at": widget.updated_at
             }
             widgets_data.append(widget_data)
         
@@ -98,7 +105,9 @@ async def get_all_widget_list(
         widgets_data = []
         for widget in widgets:
             widget_data = {
-                "id": widget.id,
+                # "id": widget.id,
+                "daily_widget_id": daily_widget.dashboard_widget_id,
+                "title": widget.title,
                 "widget_type": widget.widget_type,
                 "frequency": widget.frequency,
                 "importance": widget.importance,
