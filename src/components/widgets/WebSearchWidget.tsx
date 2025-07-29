@@ -1,156 +1,101 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-// import { buildApiUrl, apiCall } from '../../config/api'; // Uncomment when API is ready
+import { WebSearchAISummaryResponse } from '../../types';
+import { dashboardService } from '../../services/dashboard';
 
-// Types for the web search data
-interface WebSearchResult {
-  id: string;
-  searchTerm: string;
-  heading: string;
-  subheading: string;
-  text: string;
-  images?: string[];
-  chartData?: any;
-  scheduleDate: string;
-}
-
-// interface ScheduledSearch {
-//   id: string;
-//   searchTerm: string;
-//   scheduledTime: string;
-// }
-
-// Dummy data for development (no longer used with new architecture)
-// const DUMMY_SCHEDULED_SEARCHES: ScheduledSearch[] = [
-//   {
-//     id: '1',
-//     searchTerm: 'Latest AI developments',
-//     scheduledTime: '09:00'
-//   },
-//   {
-//     id: '2', 
-//     searchTerm: 'Stock market trends',
-//     scheduledTime: '14:00'
-//   },
-//   {
-//     id: '3',
-//     searchTerm: 'Weather forecast',
-//     scheduledTime: '08:00'
-//   }
-// ];
-
-const getDummyWebSearchResult = (searchQuery: string): WebSearchResult => {
-  switch (searchQuery.toLowerCase()) {
-    case 'latest football news and scores':
-      return {
-        id: 'football',
-        searchTerm: searchQuery,
-        heading: 'Football: Champions League Highlights',
-        subheading: 'All the latest scores and news from Europe',
-        text: 'Manchester United secured a dramatic win in the final minutes. Real Madrid and Barcelona both advanced to the next round. Stay tuned for more updates and analysis.',
-        images: ['https://via.placeholder.com/300x200/2563EB/FFFFFF?text=Football'],
-        chartData: null,
-        scheduleDate: new Date().toISOString().split('T')[0]
-      };
-    case 'artificial intelligence developments today':
-      return {
-        id: 'ai',
-        searchTerm: searchQuery,
-        heading: 'AI: New Breakthroughs in 2024',
-        subheading: 'GPT-5 and robotics lead the way',
-        text: 'Researchers have announced major advances in natural language processing and robotics. AI is now being used in healthcare, finance, and creative industries at an unprecedented scale.',
-        images: ['https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=AI+News'],
-        chartData: null,
-        scheduleDate: new Date().toISOString().split('T')[0]
-      };
-    case 'stock market trends and analysis':
-      return {
-        id: 'stocks',
-        searchTerm: searchQuery,
-        heading: 'Stocks: Market Trends & Analysis',
-        subheading: 'Tech stocks rally, S&P 500 hits new high',
-        text: 'The stock market saw a significant rally today, led by gains in the technology sector. Analysts predict continued growth as earnings season approaches.',
-        images: ['https://via.placeholder.com/300x200/10B981/FFFFFF?text=Stocks'],
-        chartData: null,
-        scheduleDate: new Date().toISOString().split('T')[0]
-      };
-    default:
-      return {
-        id: 'default',
-        searchTerm: searchQuery,
-        heading: `Search Results for: ${searchQuery}`,
-        subheading: `Latest information about ${searchQuery}`,
-        text: `This is a sample result for the search query: "${searchQuery}". In a real implementation, this would contain actual search results from the web.`,
-        images: ['https://via.placeholder.com/300x200/64748B/FFFFFF?text=Web+Search'],
-        chartData: null,
-        scheduleDate: new Date().toISOString().split('T')[0]
-      };
-  }
-};
-
-// const DUMMY_SEARCH_RESULTS: Record<string, WebSearchResult> = {
-//   '1': {
-//     id: '1',
-//     searchTerm: 'Latest AI developments',
-//     heading: 'AI Breakthrough: New Language Model Achieves Human-Level Understanding',
-//     subheading: 'Revolutionary advances in natural language processing',
-//     text: 'Researchers have developed a new AI model that demonstrates unprecedented understanding of human language. The model, called GPT-5, shows remarkable capabilities in reasoning, creativity, and problem-solving tasks that were previously thought to be beyond the reach of artificial intelligence.',
-//     images: ['https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=AI+Breakthrough'],
-//     scheduleDate: '2024-01-15'
-//   },
-//   '2': {
-//     id: '2',
-//     searchTerm: 'Stock market trends',
-//     heading: 'Market Analysis: Tech Stocks Lead Recovery',
-//     subheading: 'S&P 500 reaches new heights as technology sector surges',
-//     text: 'Technology stocks have led a broad market rally, with the S&P 500 reaching new record levels. Major tech companies including Apple, Microsoft, and Google parent Alphabet have all posted strong quarterly results, driving investor confidence.',
-//     images: ['https://via.placeholder.com/300x200/10B981/FFFFFF?text=Market+Trends'],
-//     scheduleDate: '2024-01-15'
-//   },
-//   '3': {
-//     id: '3',
-//     searchTerm: 'Weather forecast',
-//     heading: 'Weather Update: Sunny Skies Expected',
-//     subheading: 'Perfect conditions for outdoor activities this weekend',
-//     text: 'The weather forecast shows clear skies and mild temperatures throughout the weekend. Highs will reach 75°F with light winds, making it ideal for outdoor activities. No precipitation is expected for the next 7 days.',
-//     images: ['https://via.placeholder.com/300x200/F59E0B/FFFFFF?text=Weather+Forecast'],
-//     scheduleDate: '2024-01-15'
-//   }
-// };
-
-interface EverydayWebSearchWidgetProps {
+interface WebSearchWidgetProps {
   onRemove: () => void;
-  config?: Record<string, any>;
-  scheduledItem?: {
-    id: string;
-    title: string;
-    searchQuery?: string;
-    category?: string;
+  widget: {
+    widget_ids: string[];
+    daily_widget_id: string;
+    widget_type: string;
+    priority: string;
+    reasoning: string;
+    date: string;
+    created_at: string;
   };
 }
 
-// Rename component
-const WebSearchWidget = ({ onRemove, config, scheduledItem }: EverydayWebSearchWidgetProps) => {
-  // Use config if provided (e.g., config.maxResults, config.showImages)
-  const showImages = config?.showImages !== false;
-  const searchQuery = scheduledItem?.searchQuery || config?.searchQuery || 'default search';
-  const widgetTitle = scheduledItem?.title || config?.title || 'Web Search';
-  const [searchResults, setSearchResults] = useState<WebSearchResult[]>([]);
+const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
+  const [webSearchData, setWebSearchData] = useState<WebSearchAISummaryResponse | null>(null);
+  const [activityData, setActivityData] = useState<{
+    websearch_details: {
+      id: string;
+      widget_id: string;
+      title: string;
+      created_at: string;
+      updated_at: string;
+    };
+    activity: {
+      id: string;
+      status: 'pending' | 'completed' | 'failed';
+      reaction: string;
+      summary: string;
+      source_json: any;
+      created_at: string;
+      updated_at: string;
+    };
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRead, setIsRead] = useState(false);
 
-  // Fetch search results for this specific search query
-  const fetchSearchResults = async () => {
+  // Fetch web search data for this specific widget
+  const fetchWebSearchData = async () => {
     try {
-      // Use the new dummy function for unique results
-      const dummyResult = getDummyWebSearchResult(searchQuery);
-      setSearchResults([dummyResult]);
+      // Get the widget_id from the widget_ids array (first one for websearch widgets)
+      const widgetId = widget.widget_ids[0];
+      
+      // Call both APIs in parallel
+      const [aiSummaryResponse, activityResponse] = await Promise.all([
+        dashboardService.getWebSearchAISummary(widgetId),
+        dashboardService.getWebSearchSummaryAndActivity(widgetId)
+      ]);
+      
+      setWebSearchData(aiSummaryResponse);
+      setActivityData(activityResponse);
+      
+      // Set initial read status based on activity data
+      setIsRead(activityResponse.activity.status === 'completed');
     } catch (err) {
-      console.error('Failed to fetch search results:', err);
-      setError('Failed to load search results');
-      // Fallback to generic dummy data
-      const dummyResult = getDummyWebSearchResult('default');
-      setSearchResults([dummyResult]);
+      console.error('Failed to fetch web search data:', err);
+      setError('Failed to load web search data');
+      // Fallback to empty state
+      setWebSearchData(null);
+      setActivityData(null);
+    }
+  };
+
+  // Update read status
+  const updateReadStatus = async (read: boolean) => {
+    if (!webSearchData || !activityData) return;
+    
+    try {
+      // Update the activity status using the activity_id we already have
+      await dashboardService.updateWebSearchActivity(activityData.activity.id, {
+        status: read ? 'completed' : 'pending',
+        reaction: read ? 'read' : 'unread',
+        summary: webSearchData.summary,
+        source_json: webSearchData.sources,
+        updated_by: 'user'
+      });
+      
+      // Update local activity data
+      setActivityData(prev => prev ? {
+        ...prev,
+        activity: {
+          ...prev.activity,
+          status: read ? 'completed' : 'pending',
+          reaction: read ? 'read' : 'unread',
+          updated_at: new Date().toISOString()
+        }
+      } : null);
+      
+      setIsRead(read);
+    } catch (err) {
+      console.error('Error updating read status:', err);
+      // Still update local state even if API fails
+      setIsRead(read);
     }
   };
 
@@ -159,25 +104,25 @@ const WebSearchWidget = ({ onRemove, config, scheduledItem }: EverydayWebSearchW
       setLoading(true);
       setError(null);
       
-      await fetchSearchResults();
+      await fetchWebSearchData();
       
       setLoading(false);
     };
 
     loadData();
-  }, [searchQuery]); // Re-fetch when search query changes
+  }, [widget.widget_ids[0]]); // Changed dependency to widget_ids[0]
 
   if (loading) {
     return (
       <BaseWidget 
-        title={widgetTitle} 
+        title="Web Search" 
         icon="🔍" 
         onRemove={onRemove}
       >
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-muted-foreground">Loading web searches...</p>
+            <div className="animate-spin rounded-full h-8 w-8 mx-auto mb-2"></div>
+            <p className="text-muted-foreground">Loading web search...</p>
           </div>
         </div>
       </BaseWidget>
@@ -187,7 +132,7 @@ const WebSearchWidget = ({ onRemove, config, scheduledItem }: EverydayWebSearchW
   if (error) {
     return (
       <BaseWidget 
-        title={widgetTitle} 
+        title="Web Search" 
         icon="🔍" 
         onRemove={onRemove}
       >
@@ -201,74 +146,109 @@ const WebSearchWidget = ({ onRemove, config, scheduledItem }: EverydayWebSearchW
     );
   }
 
+  if (!webSearchData) {
+    return (
+      <BaseWidget 
+        title="Web Search" 
+        icon="🔍" 
+        onRemove={onRemove}
+      >
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-muted-foreground">No web search data available</p>
+          </div>
+        </div>
+      </BaseWidget>
+    );
+  }
+
   return (
     <BaseWidget 
-      title={widgetTitle} 
+      title={webSearchData.query || "Web Search"} 
       icon="🔍" 
       onRemove={onRemove}
     >
       <div className="space-y-4 h-full overflow-y-auto">
-        {searchResults.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No web searches scheduled for today</p>
-          </div>
-        ) : (
-          searchResults.map((result) => (
-            <div 
-              key={result.id} 
-              className="bg-card/50 border border-border rounded-lg p-4 space-y-3"
-            >
-              {/* Search Term */}
+
+        
+        <div className="bg-card/50 border border-border rounded-lg p-4">
+          <div className="space-y-3">
+            {/* Status and Read Checkbox */}
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                  {result.searchTerm}
+                <span className={`text-xs px-2 py-1 rounded ${
+                  webSearchData.search_successful ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {webSearchData.search_successful ? 'Search Successful' : 'Search Failed'}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {result.scheduleDate}
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  {webSearchData.results_count} results
                 </span>
+                {activityData && (
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    activityData.activity.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {activityData.activity.status === 'completed' ? 'Read' : 'Unread'}
+                  </span>
+                )}
               </div>
+              
+              {/* Read Checkbox */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="read-checkbox"
+                  checked={isRead}
+                  onChange={(e) => updateReadStatus(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <label htmlFor="read-checkbox" className="text-xs text-gray-600">
+                  Mark as Read
+                </label>
+              </div>
+            </div>
 
-              {/* Heading */}
-              <h4 className="font-semibold text-card-foreground text-lg">
-                {result.heading}
-              </h4>
+            {/* Summary */}
+            {webSearchData.summary && (
+              <div>
+                <h3 className="font-medium text-sm mb-2">AI Summary</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {webSearchData.summary}
+                </p>
+              </div>
+            )}
 
-              {/* Subheading */}
-              <p className="text-sm text-muted-foreground font-medium">
-                {result.subheading}
-              </p>
-
-              {/* Main Text */}
-              <p className="text-sm text-card-foreground leading-relaxed">
-                {result.text}
-              </p>
-
-              {/* Images */}
-              {showImages && result.images && result.images.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto">
-                  {result.images.map((image, index) => (
-                    <img
-                      key={index}
-                      src={image}
-                      alt={`Search result ${index + 1}`}
-                      className="h-20 w-auto rounded border border-border flex-shrink-0"
-                    />
+            {/* Sources */}
+            {webSearchData.sources && webSearchData.sources.length > 0 && (
+              <div>
+                <h3 className="font-medium text-sm mb-2">Sources</h3>
+                <div className="space-y-1">
+                  {webSearchData.sources.map((source, index) => (
+                    <div key={index} className="text-xs">
+                      <a 
+                        href={source.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline break-all"
+                      >
+                        {source.title}
+                      </a>
+                    </div>
                   ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Chart Data Placeholder */}
-              {result.chartData && (
-                <div className="bg-muted/30 rounded p-3">
-                  <p className="text-xs text-muted-foreground mb-2">Chart Data Available</p>
-                  <div className="h-16 bg-muted rounded flex items-center justify-center">
-                    <span className="text-xs text-muted-foreground">Chart visualization would go here</span>
-                  </div>
-                </div>
+            {/* AI Model Info */}
+            <div className="text-xs text-muted-foreground pt-2 border-t">
+              <div>AI Model: {webSearchData.ai_model_used}</div>
+              <div>Generated: {new Date(webSearchData.created_at).toLocaleDateString()}</div>
+              {activityData && (
+                <div>Last Activity: {new Date(activityData.activity.updated_at).toLocaleDateString()}</div>
               )}
             </div>
-          ))
-        )}
+          </div>
+        </div>
       </div>
     </BaseWidget>
   );

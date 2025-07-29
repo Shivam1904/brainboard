@@ -10,7 +10,7 @@ class DashboardWidgetDetails(Base):
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    widget_type = Column(String, nullable=False)  # 'todo', 'alarm', 'singleitemtracker', 'websearch'
+    widget_type = Column(String, nullable=False)  # 'todo-habit', 'todo-task', 'todo-event', 'alarm', 'singleitemtracker', 'websearch'
     frequency = Column(String, nullable=False)  # 'daily', 'weekly', 'monthly'
     importance = Column(Float, nullable=False)  # 0.0 to 1.0 scale
     title = Column(String, nullable=False)  # Redundant but kept for convenience

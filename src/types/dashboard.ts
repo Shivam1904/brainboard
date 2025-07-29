@@ -1,77 +1,52 @@
-// Types for dashboard widget configuration
+// API Response Types - Single Source of Truth
+// These types match exactly what the backend API returns
 
-export interface ScheduledItem {
-  id: string;
-  title: string;
-  type: string; // 'userTask', 'userHabit', 'itemTracker', 'webSearch', 'aiWebChart', 'weatherWig', 'calendar', 'alarm', 'statsWidget', 'newsWidget'
-  frequency: string; // 'daily', 'weekly-2', 'onGym', 'alternate', 'hourly', 'Jun 20', 'daily-5', etc.
-  category?: string; // 'health', 'self-imp', 'finance', 'awareness', etc.
-  importance?: 'High' | 'Medium' | 'Low';
-  alarm?: string; // '[7am]', '[every 2 hr]', '[list of times]', etc.
-  searchQuery?: string; // For aiWebSearch type
-  config?: Record<string, any>; // Additional configuration
-}
-
-export interface DashboardWidgetConfig {
-  id: string;
-  type: string; // widget type (e.g., 'everydayWebSearch', 'everydayTaskList')
-  layout: {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    minW?: number;
-    minH?: number;
-    maxW?: number;
-    maxH?: number;
-  };
-  config?: Record<string, any>; // Additional widget-specific configuration
-  priority?: number; // Widget priority for positioning
-  enabled?: boolean; // Whether the widget should be shown
-  scheduledItem?: ScheduledItem; // Reference to the original scheduled item
-}
-
+// Main dashboard response from /api/v1/dashboard/getTodayWidgetList
 export interface TodayWidgetsResponse {
-  date: string; // ISO date string
-  widgets: DashboardWidgetConfig[];
-  layout?: {
-    gridCols: number;
-    gridRows: number;
-  };
+  date: string;
+  widgets: DailyWidget[];
+  total_widgets: number;
+  ai_generated: boolean;
+  last_updated: string;
 }
 
-// Widget-specific data types
-export interface WebSearchWidgetData {
-  scheduledSearches: Array<{
-    id: string;
-    searchTerm: string;
-    scheduledTime: string;
-  }>;
+// Daily widget structure from API
+export interface DailyWidget {
+  daily_widget_id: string;
+  widget_ids: string[];
+  widget_type: string;
+  priority: 'HIGH' | 'LOW';
+  reasoning: string;
+  date: string;
+  created_at: string;
 }
 
-export interface TaskListWidgetData {
-  todayTasks: Array<{
-    id: string;
-    title: string;
-    completed: boolean;
-    priority: 'high' | 'medium' | 'low';
-    category: string;
-  }>;
+// All widgets response from /api/v1/dashboard/getAllWidgetList
+export interface AllWidgetsResponse {
+  widgets: DashboardWidget[];
+  total_widgets: number;
 }
 
-export interface CalendarWidgetData {
-  monthData: Array<{
-    date: string;
-    completedTasks: number;
-    totalTasks: number;
-    top3Completed: boolean;
-    milestones: string[];
-  }>;
+// Dashboard widget structure from API
+export interface DashboardWidget {
+  id: string;
+  widget_type: string;
+  frequency: string;
+  importance: number;
+  title: string;
+  category: string;
+  created_at: string;
+  updated_at: string;
 }
 
-// Union type for all widget data
-export type WidgetData = 
-  | { type: 'everydayWebSearch'; data: WebSearchWidgetData }
-  | { type: 'everydayTaskList'; data: TaskListWidgetData }
-  | { type: 'monthlyCalendar'; data: CalendarWidgetData }
-  | { type: string; data: any }; 
+// Widget types supported by the API
+export type ApiWidgetType = 'todo-habit' | 'todo-task' | 'todo-event' | 'alarm' | 'singleitemtracker' | 'websearch';
+
+// Frequency types supported by the API
+export type ApiFrequency = 'daily' | 'weekly' | 'monthly';
+
+// Priority types supported by the API
+export type ApiPriority = 'HIGH' | 'LOW';
+
+// Categories supported by the API
+export type ApiCategory = 'productivity' | 'health' | 'job' | 'information' | 'entertainment' | 'utilities'; 

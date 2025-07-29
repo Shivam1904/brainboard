@@ -2,6 +2,7 @@
 
 This document defines how an AI coding assistant should behave when reading, writing, or modifying code in this project. The goal is to ensure all contributions are thoughtful, accurate, secure, and aligned with the developer’s intentions.
 
+NEVER CREATE TESTS.  NEVER RUN ANYTHING
 Never try to run any script.
 If user asks to install or test something, only then run.
 never run npm run dev. server is already running. only if you need to install something, tell me later to restart the server.

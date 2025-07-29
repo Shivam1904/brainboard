@@ -44,7 +44,7 @@ class TodoService:
                 
                 if todo_details:
                     result.append({
-                        "activity_id": activity.id,
+                        "id": activity.id,
                         "widget_id": activity.widget_id,
                         "daily_widget_id": activity.daily_widget_id,
                         "todo_details_id": activity.tododetails_id,

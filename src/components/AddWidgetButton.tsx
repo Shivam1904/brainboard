@@ -10,9 +10,9 @@ interface AddWidgetButtonProps {
 const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
   const [isOpen, setIsOpen] = useState(false)
   
-  // Get all widgets - implemented ones will be functional, others will show description
-  const allWidgets = getAllWidgets()
-  const implementedWidgets = getImplementedWidgets()
+  // Get all widgets except "All Schedules" since it's automatically included
+  const allWidgets = getAllWidgets().filter(widget => widget.id !== 'allSchedules')
+  const implementedWidgets = getImplementedWidgets().filter(widget => widget.id !== 'allSchedules')
   
   const isImplemented = (widgetId: string) => 
     implementedWidgets.some(widget => widget.id === widgetId)

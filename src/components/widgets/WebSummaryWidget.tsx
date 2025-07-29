@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Search, ExternalLink } from 'lucide-react'
 import BaseWidget from './BaseWidget'
+import { dashboardService } from '../../services/dashboard'
 
 interface Summary {
   id: string
@@ -12,13 +13,41 @@ interface Summary {
 
 interface WebSummaryWidgetProps {
   onRemove: () => void
+  widget: {
+    widget_ids: string[];
+    daily_widget_id: string;
+    widget_type: string;
+    priority: string;
+    reasoning: string;
+    date: string;
+    created_at: string;
+  };
 }
 
-const WebSummaryWidget = ({ onRemove }: WebSummaryWidgetProps) => {
+const WebSummaryWidget = ({ onRemove, widget }: WebSummaryWidgetProps) => {
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [currentSummary, setCurrentSummary] = useState<Summary | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isRead, setIsRead] = useState(false)
+  const [activityData, setActivityData] = useState<{
+    websearch_details: {
+      id: string;
+      widget_id: string;
+      title: string;
+      created_at: string;
+      updated_at: string;
+    };
+    activity: {
+      id: string;
+      status: 'pending' | 'completed' | 'failed';
+      reaction: string;
+      summary: string;
+      source_json: any;
+      created_at: string;
+      updated_at: string;
+    };
+  } | null>(null)
 
   const searchAndSummarize = async () => {
     if (!query.trim()) return
@@ -28,30 +57,37 @@ const WebSummaryWidget = ({ onRemove }: WebSummaryWidgetProps) => {
 
     try {
       // TODO: Replace with actual API call
-      // const response = await fetch('/api/summary', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ query })
-      // })
-      // const data = await response.json()
-
+      // const response = await apiService.getWebSearchAISummary(widget.daily_widget_id, { query });
+      
       // Mock response for now
       await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate API delay
       
+      // Create a mock summary for now
       const mockSummary: Summary = {
         id: Date.now().toString(),
-        query,
-        summary: `Here's a comprehensive summary about "${query}": This topic involves multiple aspects and considerations. Based on recent research and available information, the key findings suggest that this is an evolving area with significant implications for various stakeholders.`,
+        query: query,
+        summary: "This is a mock summary for demonstration purposes. The real API would provide an AI-generated summary based on web search results.",
         sources: [
-          'https://example.com/source1',
-          'https://example.com/source2',
-          'https://example.com/source3'
+          "https://example.com/source1",
+          "https://example.com/source2",
+          "https://example.com/source3"
         ],
         createdAt: new Date().toISOString()
-      }
+      };
 
       setCurrentSummary(mockSummary)
       setQuery('')
+      
+      // Fetch activity data for this widget
+      try {
+        const widgetId = widget.widget_ids[0];
+        const activityResponse = await dashboardService.getWebSearchSummaryAndActivity(widgetId);
+        setActivityData(activityResponse);
+        setIsRead(activityResponse.activity.status === 'completed');
+      } catch (activityErr) {
+        console.error('Failed to fetch activity data:', activityErr);
+        // Don't fail the whole operation if activity fetch fails
+      }
     } catch (error) {
       setError('Failed to generate summary. Please try again.')
       console.error('Summary error:', error)
@@ -63,6 +99,41 @@ const WebSummaryWidget = ({ onRemove }: WebSummaryWidgetProps) => {
   const clearSummary = () => {
     setCurrentSummary(null)
     setError(null)
+    setActivityData(null)
+    setIsRead(false)
+  }
+
+  // Update read status
+  const updateReadStatus = async (read: boolean) => {
+    if (!currentSummary || !activityData) return;
+    
+    try {
+      // Update the activity status using the activity_id we already have
+      await dashboardService.updateWebSearchActivity(activityData.activity.id, {
+        status: read ? 'completed' : 'pending',
+        reaction: read ? 'read' : 'unread',
+        summary: currentSummary.summary,
+        source_json: currentSummary.sources,
+        updated_by: 'user'
+      });
+      
+      // Update local activity data
+      setActivityData(prev => prev ? {
+        ...prev,
+        activity: {
+          ...prev.activity,
+          status: read ? 'completed' : 'pending',
+          reaction: read ? 'read' : 'unread',
+          updated_at: new Date().toISOString()
+        }
+      } : null);
+      
+      setIsRead(read);
+    } catch (err) {
+      console.error('Error updating read status:', err);
+      // Still update local state even if API fails
+      setIsRead(read);
+    }
   }
 
   return (
@@ -91,6 +162,8 @@ const WebSummaryWidget = ({ onRemove }: WebSummaryWidgetProps) => {
           </button>
         </div>
 
+
+
         <div className="flex-1 overflow-y-auto">
           {isLoading && (
             <div className="text-center text-muted-foreground py-8">
@@ -117,12 +190,35 @@ const WebSummaryWidget = ({ onRemove }: WebSummaryWidgetProps) => {
               <div className="bg-muted/50 rounded-md p-3">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-medium text-sm">Query:</h4>
-                  <button
-                    onClick={clearSummary}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Clear
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Activity Status */}
+                    {activityData && (
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        activityData.activity.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {activityData.activity.status === 'completed' ? 'Read' : 'Unread'}
+                      </span>
+                    )}
+                    {/* Read Checkbox */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        id="read-checkbox-summary"
+                        checked={isRead}
+                        onChange={(e) => updateReadStatus(e.target.checked)}
+                        className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-1"
+                      />
+                      <label htmlFor="read-checkbox-summary" className="text-xs text-gray-600">
+                        Read
+                      </label>
+                    </div>
+                    <button
+                      onClick={clearSummary}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground italic">
                   "{currentSummary.query}"

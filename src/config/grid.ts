@@ -2,9 +2,9 @@
 export const GRID_CONFIG = {
   // Grid layout settings
   cols: {
-    lg: 40, // Number of columns for large screens
+    lg: 55, // Number of columns for large screens
   },
-  rowHeight: 40, // Height of each grid row in pixels
+  rowHeight: 32, // Height of each grid row in pixels
   margin: [0, 0] as [number, number], // Margin between grid items [vertical, horizontal]
   containerPadding: [8, 8] as [number, number], // Padding around the grid container
   
@@ -86,4 +86,53 @@ export const gridUtils = {
       h: constrainedH
     }
   }
+} 
+
+// Find empty space for a new widget given the current widgets and grid constraints
+export function findEmptyPosition({
+  widgetId,
+  widgets,
+  getWidgetConfig,
+  gridCols = GRID_CONFIG.cols.lg,
+  maxRows = 100,
+}: {
+  widgetId: string,
+  widgets: Array<{ layout: { x: number; y: number; w: number; h: number } }>,
+  getWidgetConfig: (id: string) => any,
+  gridCols?: number,
+  maxRows?: number,
+}): { x: number; y: number } | null {
+  const config = getWidgetConfig(widgetId)
+  if (!config) return null
+
+  const widgetWidth = config.defaultSize.w
+  const widgetHeight = config.defaultSize.h
+
+  // Create a grid to track occupied spaces
+  const occupiedSpaces = new Set<string>()
+  widgets.forEach((widget) => {
+    for (let x = widget.layout.x; x < widget.layout.x + widget.layout.w; x++) {
+      for (let y = widget.layout.y; y < widget.layout.y + widget.layout.h; y++) {
+        occupiedSpaces.add(`${x},${y}`)
+      }
+    }
+  })
+
+  // Try to find an empty space within boundaries
+  for (let y = 0; y < Math.min(GRID_CONFIG.maxSearchDepth, maxRows - widgetHeight); y++) {
+    for (let x = 0; x <= gridCols - widgetWidth; x++) {
+      let canPlace = true
+      for (let checkX = x; checkX < x + widgetWidth && canPlace; checkX++) {
+        for (let checkY = y; checkY < y + widgetHeight && canPlace; checkY++) {
+          if (occupiedSpaces.has(`${checkX},${checkY}`)) {
+            canPlace = false
+          }
+        }
+      }
+      if (canPlace) {
+        return { x, y }
+      }
+    }
+  }
+  return null
 } 

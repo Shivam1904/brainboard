@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Check, Clock, Trash2 } from 'lucide-react'
 import BaseWidget from './BaseWidget'
+import { getDummyReminders } from '../../data/widgetDummyData'
 
 interface Reminder {
   id: string
@@ -12,44 +13,41 @@ interface Reminder {
 
 interface ReminderWidgetProps {
   onRemove: () => void
+  widget: {
+    daily_widget_id: string;
+    widget_type: string;
+    priority: string;
+    reasoning: string;
+    date: string;
+    created_at: string;
+  };
 }
 
-const ReminderWidget = ({ onRemove }: ReminderWidgetProps) => {
+const ReminderWidget = ({ onRemove, widget }: ReminderWidgetProps) => {
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [newReminderText, setNewReminderText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isUsingDummyData, setIsUsingDummyData] = useState(false)
 
   // Load reminders from API
   useEffect(() => {
     loadReminders()
-  }, [])
+  }, [widget.daily_widget_id])
 
   const loadReminders = async () => {
     setIsLoading(true)
+    setIsUsingDummyData(false)
     try {
       // TODO: Replace with actual API call
-      // const response = await fetch('/api/reminders')
-      // const data = await response.json()
-      // setReminders(data)
+      // const response = await apiService.getReminders(widget.daily_widget_id);
+      // setReminders(response.reminders);
       
-      // Mock data for now
-      setReminders([
-        {
-          id: '1',
-          text: 'Review project proposal',
-          completed: false,
-          dueDate: '2025-07-27',
-          createdAt: '2025-07-26'
-        },
-        {
-          id: '2',
-          text: 'Call dentist for appointment',
-          completed: true,
-          createdAt: '2025-07-26'
-        }
-      ])
+      const dummyReminders = getDummyReminders();
+      setIsUsingDummyData(true);
+      setReminders(dummyReminders);
     } catch (error) {
       console.error('Failed to load reminders:', error)
+      setIsUsingDummyData(true);
     } finally {
       setIsLoading(false)
     }
@@ -124,6 +122,15 @@ const ReminderWidget = ({ onRemove }: ReminderWidgetProps) => {
             <Plus size={16} />
           </button>
         </div>
+
+        {/* Dummy Data Indicator */}
+        {isUsingDummyData && (
+          <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700 text-center">
+              📝 Showing sample data - API not connected
+            </p>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto space-y-2">
           {isLoading ? (

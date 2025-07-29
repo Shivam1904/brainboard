@@ -67,7 +67,7 @@ interface TaskListWidgetProps {
   };
 }
 
-const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
+const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,8 +93,8 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       setLoading(true);
       setError(null);
       
-      // Use real API call
-      const response = await dashboardService.getTodayTodoList('task');
+      // Use real API call for events
+      const response = await dashboardService.getTodayTodoList('event');
       
       // Convert API response to internal Task format
       const convertedTasks: Task[] = response.todos.map((todo: TodoActivity) => ({
@@ -242,7 +242,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
 
   if (error && tasks.length === 0) {
     return (
-      <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
+      <BaseWidget title="Event Tracker" icon="📋" onRemove={onRemove}>
         <div className="flex flex-col items-center justify-center h-32 text-center">
           <p className="text-orange-600 mb-2">{error}</p>
           <button 
@@ -257,7 +257,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
   }
 
   return (
-    <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
+    <BaseWidget title="Event Tracker" icon="📋" onRemove={onRemove}>
       <div className="p-4 h-full overflow-y-auto">
         {/* Offline Indicator */}
         {error && (
@@ -268,31 +268,6 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         
 
         
-        {/* Progress Bar */}
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-700">Progress</span>
-            <span className="text-sm text-gray-500">{completedTasks.length}/{tasks.length} completed</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
-          </div>
-        </div>
-
-        {/* Add Task Button */}
-        <div className="mb-4">
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={16} />
-            Add Mission
-          </button>
-        </div>
-
         {/* Tasks List */}
         <div className="space-y-3 ">
           {tasks.length === 0 ? (
@@ -301,7 +276,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
               <p className="text-sm">Add a mission to get started!</p>
             </div>
           ) : (
-            tasks.map(task => (
+            tasks.slice(0, 1).map(task => (
               <div 
                 key={task.id} 
                 className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
@@ -518,4 +493,4 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
   );
 };
 
-export default TaskListWidget; 
+export default EventTrackerWidget; 

@@ -2,38 +2,49 @@
 export const API_CONFIG = {
   baseUrl: 'http://localhost:8000', // Backend server URL
   dashboard: {
-    getTodayWidgets: '/api/dashboard/today', // Get today's widget configuration
+    getTodayWidgets: '/api/v1/dashboard/widgets/today', // Get today's widget configuration
   },
   webSearch: {
-    getScheduledSearches: '/api/web-search/scheduled',
-    getSearchResult: '/api/web-search/result',
+    getScheduledSearches: '/api/v1/web-search/scheduled',
+    getSearchResult: '/api/v1/web-search/result',
   },
   tasks: {
-    getTodayTasks: '/api/tasks/today', // Get today's tasks
-    updateTask: '/api/tasks/update', // Update task status
-    addMission: '/api/tasks/mission', // Add new mission
+    getTodayTasks: '/api/v1/widgets/todo/tasks/today', // Get today's tasks for todo widget
+    updateTask: '/api/v1/widgets/todo/tasks/update', // Update task status
+    addMission: '/api/v1/widgets/todo/tasks/mission', // Add new mission
+  },
+  singleItemTracker: {
+    getTracker: '/api/v1/widgets/single-item-tracker/{widget_id}', // Get tracker with recent logs
+    updateValue: '/api/v1/widgets/single-item-tracker/{widget_id}/update-value', // Update tracker value
+    getWidgetData: '/api/v1/widgets/single-item-tracker/{widget_id}', // Get complete widget data
+  },
+  alarm: {
+    getAlarms: '/api/v1/widgets/alarm/{widget_id}', // Get all alarms for widget
+    createAlarm: '/api/v1/widgets/alarm/create', // Create new alarm
+    updateAlarmStatus: '/api/v1/widgets/alarm/{widget_id}/updateStatus', // Snooze or activate alarm
+    getWidgetData: '/api/v1/widgets/alarm/{widget_id}', // Get alarm widget data
   },
   reminders: {
-    getReminders: '/api/reminders',
-    createReminder: '/api/reminders/create',
+    getReminders: '/api/v1/reminders',
+    createReminder: '/api/v1/reminders/create',
   },
   calendar: {
-    getMonthlyCalendar: '/api/calendar/monthly',
+    getMonthlyCalendar: '/api/v1/calendar/monthly',
   },
   schedules: {
-    getAllSchedules: '/api/schedules',
-    createSchedule: '/api/schedules',
-    updateSchedule: '/api/schedules/{id}',
-    deleteSchedule: '/api/schedules/{id}',
+    getAllSchedules: '/api/v1/schedules',
+    createSchedule: '/api/v1/schedules',
+    updateSchedule: '/api/v1/schedules/{id}',
+    deleteSchedule: '/api/v1/schedules/{id}',
   },
   weather: {
-    getWeather: '/api/weather/current',
+    getWeather: '/api/v1/weather/current',
   },
   news: {
-    getNews: '/api/news/feed',
+    getNews: '/api/v1/news/feed',
   },
   stats: {
-    getStats: '/api/stats/daily',
+    getStats: '/api/v1/stats/daily',
   },
 };
 

@@ -49,6 +49,63 @@ The widget is automatically created for each `webSearch` type item in the dashbo
 - `alarm` - Time-based alarms
 - `calendar` - Calendar widgets
 - `weatherWig` - Weather information
+
+### Single Item Tracker Widget (`SingleItemTrackerWidget.tsx`)
+
+**Status**: ✅ Fully implemented with API integration
+
+**Features**:
+- **Progress Tracking**: Track single items like weight, steps, pages read, etc.
+- **Value Input**: Dynamic input fields based on value type (number, text, decimal)
+- **Progress Visualization**: Visual progress bar when target values are set
+- **Recent History**: Display recent log entries with notes
+- **API Integration**: Full integration with backend tracker endpoints
+- **Offline Support**: Fallback to dummy data when API is unavailable
+- **Modal Interface**: Clean form for adding new values with optional notes
+
+**API Endpoints Used**:
+- `GET /api/v1/widgets/single-item-tracker/widget/{widget_id}/data` - Get tracker data
+- `PUT /api/v1/widgets/single-item-tracker/{tracker_id}/update-value` - Update tracker value
+
+**Data Structure**:
+- Supports various value types (number, text, decimal)
+- Optional target values for progress tracking
+- Unit display (kg, steps, pages, etc.)
+- Recent log entries with timestamps and notes
+- Statistics including total entries and streak days
+
+### Alarm Widget (`AlarmWidget.tsx`)
+
+**Status**: ✅ Fully implemented with visual alerts and API integration
+
+**Features**:
+- **Time-based Alarms**: Set alarms for specific times with various frequencies
+- **Visual Alerts**: Widget highlights with colors and animations when alarms trigger
+- **Real-time Monitoring**: Checks for triggered alarms every 30 seconds
+- **Alarm Management**: Create, snooze, and dismiss alarms
+- **Next Alarm Display**: Shows upcoming alarm with countdown
+- **API Integration**: Full integration with backend alarm endpoints
+- **Offline Support**: Fallback to dummy data when API is unavailable
+- **Modal Interface**: Clean form for adding new alarms
+
+**Visual Alert System**:
+- **Widget Highlighting**: Entire widget pulses with red background when alarms trigger
+- **Alert Banner**: Prominent notification banner with triggered alarm names
+- **Individual Alarm Highlighting**: Each triggered alarm gets red background and pulsing animation
+- **Icon Animations**: Bell icons bounce and change color for triggered alarms
+- **Action Buttons**: Quick snooze and dismiss buttons for triggered alarms
+
+**API Endpoints Used**:
+- `GET /api/v1/widgets/alarm/widget/{widget_id}/data` - Get alarm widget data
+- `POST /api/v1/widgets/alarm/add` - Create new alarm
+- `POST /api/v1/widgets/alarm/{alarm_id}/updateStatus` - Snooze or dismiss alarm
+
+**Alarm Features**:
+- **Frequency Types**: Daily, weekly, monthly, or one-time alarms
+- **Multiple Times**: Support for multiple alarm times per alarm
+- **Snooze Functionality**: 5-minute snooze option for triggered alarms
+- **Status Tracking**: Active, inactive, and snoozed states
+- **Time Display**: Formatted time display with countdown to next trigger
 - `statsWidget` - Statistics display
 - `newsWidget` - News feeds
 
@@ -116,6 +173,63 @@ The widget displays today's tasks with a progress bar and allows users to:
 - Add new missions through a comprehensive form
 - Track progress visually
 - Organize tasks by priority and category
+
+### Calendar Widget (`CalendarWidget.tsx`)
+
+**Status**: ✅ Fully implemented with monthly calendar functionality
+
+**Features**:
+- **Monthly Calendar View**: Full calendar grid with navigation
+- **Event Display**: Shows events, milestones, reminders, and tasks on calendar days
+- **Event Types**: Color-coded event types (event, milestone, reminder, task)
+- **Priority System**: Visual priority indicators with border colors
+- **Navigation**: Previous/next month navigation and "Today" button
+- **Event Details**: Click events to view detailed information
+- **Upcoming Events**: List of upcoming events below the calendar
+- **Responsive Design**: Large widget (16x12) with comprehensive calendar view
+
+**Calendar Features**:
+- **Month Navigation**: Navigate between months with arrow buttons
+- **Today Highlight**: Current day is highlighted in blue
+- **Event Indicators**: Events shown as colored blocks on calendar days
+- **Event Overflow**: Shows "+X more" for days with many events
+- **Today Button**: Quick navigation to current month
+
+**Event Properties**:
+- **Title** - Event name
+- **Date** - Event date
+- **Time** - Event time (optional)
+- **Location** - Event location (optional)
+- **Type** - Event, milestone, reminder, or task
+- **Priority** - High, Medium, or Low priority
+- **Description** - Detailed event description
+
+**Event Types**:
+- **Event** (Blue) - General events and meetings
+- **Milestone** (Purple) - Important project milestones
+- **Reminder** (Yellow) - Personal reminders and appointments
+- **Task** (Green) - Task-related calendar items
+
+**API Integration**:
+- **Get Monthly Calendar**: `GET /api/calendar/monthly?year={year}&month={month}`
+- Ready for backend integration
+- Currently uses dummy data with realistic calendar events
+- Prepared for real API calls (commented out)
+
+**Dummy Data**:
+- 6 sample events across different types and priorities
+- Events spread across the month for realistic display
+- Various event types (meetings, appointments, milestones, tasks)
+- Different locations and time slots
+
+**Usage**:
+The calendar widget provides comprehensive calendar functionality:
+- View monthly calendar with all events
+- Navigate between months
+- Click events to view detailed information
+- See upcoming events list
+- Track milestones and important dates
+- Manage appointments and meetings
 
 ## 📋 Planned Widgets
 
@@ -293,8 +407,8 @@ interface ScheduledItem {
 
 ## 📊 Widget Statistics
 
-- **Implemented**: 3 widgets
-- **Planned**: 7 widgets
+- **Implemented**: 4 widgets
+- **Planned**: 6 widgets
 - **Total**: 10 widget types
 - **Categories**: Productivity, Information, Entertainment, Utilities
 

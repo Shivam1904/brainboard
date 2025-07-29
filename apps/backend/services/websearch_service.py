@@ -41,6 +41,25 @@ class WebSearchService:
                 WebSearchItemActivity.widget_id == widget_id
             ).first()
             
+            # If no activity exists for today, create one
+            if not today_activity:
+                # Get today's daily widget
+                daily_widget = self.db.query(DailyWidget).filter(
+                    DailyWidget.date == date.today(),
+                    DailyWidget.delete_flag == False
+                ).first()
+                
+                if daily_widget:
+                    today_activity = WebSearchItemActivity(
+                        daily_widget_id=daily_widget.id,
+                        widget_id=widget_id,
+                        websearchdetails_id=websearch_details.id,
+                        created_by="system"
+                    )
+                    self.db.add(today_activity)
+                    self.db.commit()
+                    self.db.refresh(today_activity)
+            
             return {
                 "websearch_details": {
                     "id": websearch_details.id,
@@ -61,32 +80,48 @@ class WebSearchService:
             }
         except Exception as e:
             logger.error(f"Error getting websearch summary and activity for widget {widget_id}: {e}")
+            self.db.rollback()
             return None
     
     def update_activity(self, activity_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update websearch activity"""
         try:
+            logger.info(f"Attempting to update websearch activity with ID: {activity_id}")
+            logger.info(f"Update data: {update_data}")
+            
+            # First, let's check if the activity exists
             activity = self.db.query(WebSearchItemActivity).filter(
                 WebSearchItemActivity.id == activity_id
             ).first()
             
             if not activity:
+                logger.error(f"Websearch activity with ID {activity_id} not found in database")
+                # Let's also log all websearch activities to see what's available
+                all_activities = self.db.query(WebSearchItemActivity).all()
+                logger.info(f"All websearch activities in database: {[{'id': a.id, 'widget_id': a.widget_id, 'created_at': a.created_at} for a in all_activities]}")
                 return None
+            
+            logger.info(f"Found websearch activity: {activity.id}, widget_id: {activity.widget_id}")
             
             # Update fields
             if "status" in update_data:
                 activity.status = update_data["status"]
+                logger.info(f"Updated status to: {update_data['status']}")
             if "reaction" in update_data:
                 activity.reaction = update_data["reaction"]
+                logger.info(f"Updated reaction to: {update_data['reaction']}")
             if "summary" in update_data:
                 activity.summary = update_data["summary"]
+                logger.info(f"Updated summary to: {update_data['summary']}")
             if "source_json" in update_data:
                 activity.source_json = update_data["source_json"]
+                logger.info(f"Updated source_json")
             
             activity.updated_at = datetime.utcnow()
             activity.updated_by = update_data.get("updated_by")
             
             self.db.commit()
+            logger.info(f"Successfully updated websearch activity {activity_id}")
             
             return {
                 "activity_id": activity.id,

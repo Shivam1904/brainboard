@@ -55,19 +55,19 @@ def create_test_data():
         # Create dashboard widgets (as per your example)
         widgets_data = [
             {
-                "id": "id0", "widget_type": "todo", "frequency": "weekly", 
+                "id": "id0", "widget_type": "todo-task", "frequency": "weekly", 
                 "importance": 0.9, "title": "AWS", "category": "Job"
             },
             {
-                "id": "id1", "widget_type": "todo", "frequency": "daily", 
+                "id": "id1", "widget_type": "todo-event", "frequency": "daily", 
                 "importance": 0.5, "title": "Meditation", "category": "Health"
             },
             {
-                "id": "id2", "widget_type": "todo", "frequency": "daily", 
+                "id": "id2", "widget_type": "todo-habit", "frequency": "daily", 
                 "importance": 1.0, "title": "Gym", "category": "Health"
             },
             {
-                "id": "id3", "widget_type": "todo", "frequency": "daily", 
+                "id": "id3", "widget_type": "todo-habit", "frequency": "daily", 
                 "importance": 1.0, "title": "Take meds", "category": "Health"
             },
             {
@@ -104,7 +104,7 @@ def create_test_data():
         # Create todo details
         todo_details_data = [
             {"widget_id": "id0", "title": "AWS", "todo_type": "task"},
-            {"widget_id": "id1", "title": "Meditation", "todo_type": "task"},
+            {"widget_id": "id1", "title": "Meditation", "todo_type": "event"},
             {"widget_id": "id2", "title": "Gym", "todo_type": "habit"},
             {"widget_id": "id3", "title": "Take meds", "todo_type": "habit"}
         ]

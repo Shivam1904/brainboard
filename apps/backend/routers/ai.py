@@ -218,6 +218,8 @@ TASK: Analyze each widget and determine:
 2. Priority level for each selected widget (HIGH/MEDIUM/LOW)
 3. Reasoning for your selection
 
+IMPORTANT: The widget types shown are already determined from the database. Do not change or modify the widget types.
+
 CONSIDERATIONS:
 - Daily widgets should generally be prioritized
 - Higher importance scores (0.8+) should be prioritized
@@ -383,12 +385,13 @@ async def generate_today_plan(
             }
         
         # Create widget context for LLM
+        # Note: widget_type is retrieved from DashboardWidgetDetails table, not determined by AI
         widget_context = []
         for widget in widgets:
             widget_context.append({
                 "id": widget.id,
                 "title": widget.title,
-                "widget_type": widget.widget_type,
+                "widget_type": widget.widget_type,  # From database, not AI-determined
                 "importance": widget.importance,
                 "frequency": widget.frequency,
                 "category": widget.category
@@ -459,6 +462,7 @@ async def generate_today_plan(
                         "importance": widget.importance,
                         "frequency": widget.frequency,
                         "category": widget.category,
+                        "widget_type": widget.widget_type,
                         "fallback_used": True
                     },
                     date=target_date,
@@ -639,6 +643,7 @@ async def generate_activity_from_plan(target_date: date, user_id: str, db: Sessi
         ).all()
         
         # Group widgets by type
+        # IMPORTANT: We get the actual widget_type from DashboardWidgetDetails table, not from AI output
         widgets_by_type = {}
         for ai_output in ai_outputs:
             widget = db.query(DashboardWidgetDetails).filter(
@@ -651,9 +656,10 @@ async def generate_activity_from_plan(target_date: date, user_id: str, db: Sessi
         
         # Create daily widgets
         for widget_type, widget_ids in widgets_by_type.items():
+            # widget_type is retrieved from DashboardWidgetDetails table, ensuring accuracy
             daily_widget = DailyWidget(
                 widget_ids=widget_ids,
-                widget_type=widget_type,
+                widget_type=widget_type,  # From database, not AI-determined
                 priority="HIGH",  # TODO: Get from AI output
                 reasoning=f"AI selected {len(widget_ids)} {widget_type} widgets",
                 date=target_date,
@@ -663,12 +669,14 @@ async def generate_activity_from_plan(target_date: date, user_id: str, db: Sessi
             db.flush()  # Get the ID
             
             # Create activity entries based on widget type
-            if widget_type == "todo":
+            # Compatible with test data: todo-habit, todo-task, todo-event → ToDoItemActivity
+            if widget_type in ["todo-habit", "todo-task", "todo-event"]:
                 for widget_id in widget_ids:
                     todo_details = db.query(ToDoDetails).filter(
                         ToDoDetails.widget_id == widget_id
                     ).first()
                     if todo_details:
+                        logger.info(f"Creating ToDoItemActivity for widget {widget_id} (type: {widget_type}, todo_type: {todo_details.todo_type})")
                         activity = ToDoItemActivity(
                             daily_widget_id=daily_widget.id,
                             widget_id=widget_id,

@@ -10,7 +10,7 @@ class DailyWidget(Base):
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     widget_ids = Column(JSON, nullable=False)  # Array of widget IDs: ["id0", "id1", "id2", "id3"]
-    widget_type = Column(String, nullable=False)  # 'todo', 'alarm', 'singleitemtracker', 'websearch'
+    widget_type = Column(String, nullable=False)  # 'todo-habit', 'todo-task', 'todo-event', 'alarm', 'singleitemtracker', 'websearch'
     priority = Column(String, nullable=False)  # 'HIGH', 'LOW'
     reasoning = Column(Text, nullable=True)  # AI reasoning for selection
     date = Column(Date, nullable=False)  # Date when this widget should be shown
