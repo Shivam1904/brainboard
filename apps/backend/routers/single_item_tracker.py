@@ -1,316 +1,323 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+"""
+Single Item Tracker Widget Router
+6 Core API endpoints for tracking single metrics (weight, pages, steps, etc.)
+
+Endpoints:
+- POST / - Create Tracker Widget
+- GET /{tracker_id} - Get Tracker
+- POST /{tracker_id}/entry - Add Entry
+- POST /{tracker_id}/entry/{entry_id} - Update Entry  
+- DELETE /{tracker_id}/entry/{entry_id} - Delete Entry
+- GET /{tracker_id}/history - Get Tracker History
+
+Examples:
+- Weight Tracker: 75.5 kg
+- Book Pages: 234 pages
+- Daily Steps: 8,500 steps
+"""
+
+from fastapi import APIRouter, HTTPException, Depends, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import Optional, List
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 import logging
 
 from core.database import get_db
 from models.database_models import SingleItemTracker, SingleItemTrackerLog, DashboardWidget
-from models.schemas import (
+from models.schemas.tracker_schemas import (
     CreateSingleItemTrackerRequest,
-    UpdateSingleItemTrackerRequest,
-    UpdateValueRequest,
     SingleItemTrackerResponse,
-    SingleItemTrackerWithLogsResponse,
-    SingleItemTrackerLogResponse,
-    SingleItemTrackerStatsResponse,
-    SingleItemTrackerWidgetDataResponse
+    UpdateValueRequest,
+    SingleItemTrackerLogResponse
 )
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 router = APIRouter(tags=["single-item-tracker"])
 
-def _calculate_progress_percentage(current: str, target: str, value_type: str) -> Optional[float]:
-    """Calculate progress percentage if both values are numeric"""
-    try:
-        if value_type in ["number", "decimal"] and current and target:
-            current_num = float(current)
-            target_num = float(target)
-            if target_num > 0:
-                return min((current_num / target_num) * 100, 100.0)
-    except (ValueError, ZeroDivisionError):
-        pass
-    return None
+# ============================================================================
+# SINGLE ITEM TRACKER API - 6 Core Endpoints Only
+# ============================================================================
 
-def _calculate_streak(tracker_id: str, db: Session) -> int:
-    """Calculate consecutive days with entries"""
-    logs = db.query(SingleItemTrackerLog).filter(
-        SingleItemTrackerLog.tracker_id == tracker_id
-    ).order_by(desc(SingleItemTrackerLog.date)).limit(30).all()
-    
-    if not logs:
-        return 0
-    
-    streak = 0
-    current_date = date.today()
-    
-    for log in logs:
-        if log.date == current_date:
-            streak += 1
-            current_date -= timedelta(days=1)
-        else:
-            break
-    
-    return streak
-
-@router.post("/create", response_model=SingleItemTrackerResponse)
-async def create_tracker(
-    tracker_data: CreateSingleItemTrackerRequest,
+@router.post("/", response_model=SingleItemTrackerResponse)
+async def create_tracker_widget(
+    request: CreateSingleItemTrackerRequest,
     db: Session = Depends(get_db)
 ):
-    """Create a new single item tracker"""
+    """Create a new single item tracker widget"""
     try:
         # Verify widget exists
         widget = db.query(DashboardWidget).filter(
-            DashboardWidget.id == tracker_data.dashboard_widget_id
+            DashboardWidget.id == request.dashboard_widget_id
         ).first()
-        
         if not widget:
-            raise HTTPException(status_code=404, detail="Dashboard widget not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Dashboard widget not found"
+            )
         
         # Check if tracker already exists for this widget
         existing_tracker = db.query(SingleItemTracker).filter(
-            SingleItemTracker.dashboard_widget_id == tracker_data.dashboard_widget_id
+            SingleItemTracker.dashboard_widget_id == request.dashboard_widget_id
         ).first()
-        
         if existing_tracker:
-            raise HTTPException(status_code=409, detail="Tracker already exists for this widget")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Tracker already exists for this widget"
+            )
         
         # Create new tracker
         tracker = SingleItemTracker(
-            dashboard_widget_id=tracker_data.dashboard_widget_id,
-            item_name=tracker_data.item_name,
-            item_unit=tracker_data.item_unit,
-            current_value=tracker_data.current_value,
-            target_value=tracker_data.target_value,
-            value_type=tracker_data.value_type
+            dashboard_widget_id=request.dashboard_widget_id,
+            item_name=request.item_name,
+            item_unit=request.item_unit,
+            current_value=request.current_value,
+            target_value=request.target_value,
+            value_type=request.value_type.value
         )
         
         db.add(tracker)
         db.commit()
         db.refresh(tracker)
         
-        logger.info(f"Created single item tracker: {tracker.id} for item: {tracker.item_name}")
-        return SingleItemTrackerResponse.from_orm(tracker)
+        logger.info(f"Created tracker: {tracker.item_name} (ID: {tracker.id})")
+        return _format_tracker_response(tracker)
         
     except Exception as e:
-        logger.error(f"Error creating single item tracker: {e}")
+        logger.error(f"Error creating tracker: {e}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.put("/{tracker_id}/update-value", response_model=SingleItemTrackerResponse)
-async def update_tracker_value(
-    tracker_id: str,
-    value_data: UpdateValueRequest,
-    db: Session = Depends(get_db)
-):
-    """Update tracker value and create log entry"""
-    try:
-        # Get tracker
-        tracker = db.query(SingleItemTracker).filter(
-            SingleItemTracker.id == tracker_id
-        ).first()
-        
-        if not tracker:
-            raise HTTPException(status_code=404, detail="Tracker not found")
-        
-        # Update current value
-        tracker.current_value = value_data.value
-        tracker.updated_at = datetime.utcnow()
-        
-        # Create log entry
-        log_entry = SingleItemTrackerLog(
-            tracker_id=tracker_id,
-            value=value_data.value,
-            date=date.today(),
-            notes=value_data.notes
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create tracker"
         )
-        
-        db.add(log_entry)
-        db.commit()
-        db.refresh(tracker)
-        
-        logger.info(f"Updated tracker {tracker_id} value to: {value_data.value}")
-        return SingleItemTrackerResponse.from_orm(tracker)
-        
-    except Exception as e:
-        logger.error(f"Error updating tracker value: {e}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/{tracker_id}", response_model=SingleItemTrackerWithLogsResponse)
+@router.get("/{tracker_id}", response_model=SingleItemTrackerResponse)
 async def get_tracker(
     tracker_id: str,
-    limit: int = Query(10, ge=1, le=100, description="Number of recent logs to include"),
     db: Session = Depends(get_db)
 ):
-    """Get tracker with recent logs"""
-    try:
-        # Get tracker
-        tracker = db.query(SingleItemTracker).filter(
-            SingleItemTracker.id == tracker_id
-        ).first()
-        
-        if not tracker:
-            raise HTTPException(status_code=404, detail="Tracker not found")
-        
-        # Get recent logs
-        recent_logs = db.query(SingleItemTrackerLog).filter(
-            SingleItemTrackerLog.tracker_id == tracker_id
-        ).order_by(desc(SingleItemTrackerLog.date)).limit(limit).all()
-        
-        # Convert to response format
-        response = SingleItemTrackerWithLogsResponse.from_orm(tracker)
-        response.recent_logs = [SingleItemTrackerLogResponse.from_orm(log) for log in recent_logs]
-        
-        return response
-        
-    except Exception as e:
-        logger.error(f"Error getting tracker: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """Get tracker details"""
+    tracker = db.query(SingleItemTracker).filter(
+        SingleItemTracker.id == tracker_id
+    ).first()
+    if not tracker:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tracker not found"
+        )
+    
+    return _format_tracker_response(tracker)
 
-@router.get("/widget/{widget_id}/data", response_model=SingleItemTrackerWidgetDataResponse)
-async def get_widget_data(
-    widget_id: str,
-    db: Session = Depends(get_db)
-):
-    """Get complete widget data for dashboard display"""
-    try:
-        # Get tracker for widget
-        tracker = db.query(SingleItemTracker).filter(
-            SingleItemTracker.dashboard_widget_id == widget_id
-        ).first()
-        
-        if not tracker:
-            raise HTTPException(status_code=404, detail="No tracker found for this widget")
-        
-        # Get recent logs (last 7 days)
-        recent_logs = db.query(SingleItemTrackerLog).filter(
-            SingleItemTrackerLog.tracker_id == tracker.id
-        ).order_by(desc(SingleItemTrackerLog.date)).limit(7).all()
-        
-        # Calculate stats
-        total_entries = db.query(SingleItemTrackerLog).filter(
-            SingleItemTrackerLog.tracker_id == tracker.id
-        ).count()
-        
-        progress_percentage = _calculate_progress_percentage(
-            tracker.current_value, tracker.target_value, tracker.value_type
-        )
-        
-        last_updated = recent_logs[0].date if recent_logs else None
-        streak_days = _calculate_streak(tracker.id, db)
-        
-        stats = SingleItemTrackerStatsResponse(
-            total_entries=total_entries,
-            current_value=tracker.current_value,
-            target_value=tracker.target_value,
-            progress_percentage=progress_percentage,
-            last_updated=last_updated,
-            streak_days=streak_days
-        )
-        
-        return SingleItemTrackerWidgetDataResponse(
-            widget_id=widget_id,
-            tracker=SingleItemTrackerResponse.from_orm(tracker),
-            stats=stats,
-            recent_logs=[SingleItemTrackerLogResponse.from_orm(log) for log in recent_logs]
-        )
-        
-    except Exception as e:
-        logger.error(f"Error getting widget data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.put("/{tracker_id}", response_model=SingleItemTrackerResponse)
-async def update_tracker(
+@router.post("/{tracker_id}/entry", response_model=SingleItemTrackerLogResponse)
+async def add_tracker_entry(
     tracker_id: str,
-    update_data: UpdateSingleItemTrackerRequest,
+    request: UpdateValueRequest,
     db: Session = Depends(get_db)
 ):
-    """Update tracker settings (not the value)"""
+    """Add new entry to tracker"""
+    # Verify tracker exists
+    tracker = db.query(SingleItemTracker).filter(
+        SingleItemTracker.id == tracker_id
+    ).first()
+    if not tracker:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tracker not found"
+        )
+    
     try:
-        tracker = db.query(SingleItemTracker).filter(
-            SingleItemTracker.id == tracker_id
-        ).first()
+        # Create log entry
+        entry = SingleItemTrackerLog(
+            tracker_id=tracker_id,
+            value=request.value,
+            date=date.today(),
+            notes=request.notes
+        )
         
-        if not tracker:
-            raise HTTPException(status_code=404, detail="Tracker not found")
-        
-        # Update fields
-        if update_data.item_name is not None:
-            tracker.item_name = update_data.item_name
-        if update_data.item_unit is not None:
-            tracker.item_unit = update_data.item_unit
-        if update_data.target_value is not None:
-            tracker.target_value = update_data.target_value
-        if update_data.value_type is not None:
-            tracker.value_type = update_data.value_type
-        
+        # Update tracker's current value
+        tracker.current_value = request.value
         tracker.updated_at = datetime.utcnow()
         
+        db.add(entry)
         db.commit()
-        db.refresh(tracker)
+        db.refresh(entry)
         
-        logger.info(f"Updated tracker settings: {tracker_id}")
-        return SingleItemTrackerResponse.from_orm(tracker)
+        logger.info(f"Added entry to tracker {tracker_id}: {request.value}")
+        return _format_log_response(entry)
         
     except Exception as e:
-        logger.error(f"Error updating tracker: {e}")
+        logger.error(f"Error adding entry: {e}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to add entry"
+        )
 
-@router.get("/{tracker_id}/logs", response_model=List[SingleItemTrackerLogResponse])
-async def get_tracker_logs(
+@router.post("/{tracker_id}/entry/{entry_id}", response_model=SingleItemTrackerLogResponse)
+async def update_tracker_entry(
     tracker_id: str,
-    limit: int = Query(30, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    entry_id: str,
+    request: UpdateValueRequest,
     db: Session = Depends(get_db)
 ):
-    """Get tracker logs with pagination"""
+    """Update existing entry"""
+    # Verify tracker exists
+    tracker = db.query(SingleItemTracker).filter(
+        SingleItemTracker.id == tracker_id
+    ).first()
+    if not tracker:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tracker not found"
+        )
+    
+    # Get entry
+    entry = db.query(SingleItemTrackerLog).filter(
+        SingleItemTrackerLog.id == entry_id,
+        SingleItemTrackerLog.tracker_id == tracker_id
+    ).first()
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entry not found"
+        )
+    
     try:
-        # Verify tracker exists
-        tracker = db.query(SingleItemTracker).filter(
-            SingleItemTracker.id == tracker_id
-        ).first()
+        # Update entry
+        entry.value = request.value
+        entry.notes = request.notes
         
-        if not tracker:
-            raise HTTPException(status_code=404, detail="Tracker not found")
-        
-        # Get logs
-        logs = db.query(SingleItemTrackerLog).filter(
+        # If this is the most recent entry, update tracker's current value
+        latest_entry = db.query(SingleItemTrackerLog).filter(
             SingleItemTrackerLog.tracker_id == tracker_id
-        ).order_by(desc(SingleItemTrackerLog.date)).offset(offset).limit(limit).all()
+        ).order_by(desc(SingleItemTrackerLog.date)).first()
         
-        return [SingleItemTrackerLogResponse.from_orm(log) for log in logs]
+        if latest_entry and latest_entry.id == entry_id:
+            tracker.current_value = request.value
+            tracker.updated_at = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(entry)
+        
+        logger.info(f"Updated entry {entry_id} in tracker {tracker_id}")
+        return _format_log_response(entry)
         
     except Exception as e:
-        logger.error(f"Error getting tracker logs: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error updating entry: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update entry"
+        )
 
-@router.delete("/{tracker_id}", status_code=204)
-async def delete_tracker(
+@router.delete("/{tracker_id}/entry/{entry_id}")
+async def delete_entry(
     tracker_id: str,
+    entry_id: str,
     db: Session = Depends(get_db)
 ):
-    """Delete tracker and all its logs"""
+    """Delete entry from tracker"""
+    # Verify tracker exists
+    tracker = db.query(SingleItemTracker).filter(
+        SingleItemTracker.id == tracker_id
+    ).first()
+    if not tracker:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tracker not found"
+        )
+    
+    # Get entry
+    entry = db.query(SingleItemTrackerLog).filter(
+        SingleItemTrackerLog.id == entry_id,
+        SingleItemTrackerLog.tracker_id == tracker_id
+    ).first()
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entry not found"
+        )
+    
     try:
-        tracker = db.query(SingleItemTracker).filter(
-            SingleItemTracker.id == tracker_id
-        ).first()
+        # Check if this is the current value entry
+        was_current = (tracker.current_value == entry.value)
         
-        if not tracker:
-            raise HTTPException(status_code=404, detail="Tracker not found")
+        db.delete(entry)
         
-        db.delete(tracker)
+        # If we deleted the current value, update to the most recent remaining entry
+        if was_current:
+            latest_entry = db.query(SingleItemTrackerLog).filter(
+                SingleItemTrackerLog.tracker_id == tracker_id
+            ).order_by(desc(SingleItemTrackerLog.date)).first()
+            
+            if latest_entry:
+                tracker.current_value = latest_entry.value
+            else:
+                tracker.current_value = None
+            tracker.updated_at = datetime.utcnow()
+        
         db.commit()
         
-        logger.info(f"Deleted tracker: {tracker_id}")
+        logger.info(f"Deleted entry {entry_id} from tracker {tracker_id}")
+        return {"message": "Entry deleted successfully"}
         
     except Exception as e:
-        logger.error(f"Error deleting tracker: {e}")
+        logger.error(f"Error deleting entry: {e}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete entry"
+        )
+
+@router.get("/{tracker_id}/history", response_model=List[SingleItemTrackerLogResponse])
+async def get_tracker_history(
+    tracker_id: str,
+    limit: int = Query(30, ge=1, le=100, description="Number of entries to return"),
+    offset: int = Query(0, ge=0, description="Number of entries to skip"),
+    db: Session = Depends(get_db)
+):
+    """Get tracker history with pagination"""
+    # Verify tracker exists
+    tracker = db.query(SingleItemTracker).filter(
+        SingleItemTracker.id == tracker_id
+    ).first()
+    if not tracker:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tracker not found"
+        )
+    
+    # Get history entries
+    entries = db.query(SingleItemTrackerLog).filter(
+        SingleItemTrackerLog.tracker_id == tracker_id
+    ).order_by(desc(SingleItemTrackerLog.date)).offset(offset).limit(limit).all()
+    
+    return [_format_log_response(entry) for entry in entries]
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def _format_tracker_response(tracker: SingleItemTracker) -> SingleItemTrackerResponse:
+    """Format tracker for API response"""
+    return SingleItemTrackerResponse(
+        id=tracker.id,
+        dashboard_widget_id=tracker.dashboard_widget_id,
+        item_name=tracker.item_name,
+        item_unit=tracker.item_unit,
+        current_value=tracker.current_value,
+        target_value=tracker.target_value,
+        value_type=tracker.value_type,
+        created_at=tracker.created_at,
+        updated_at=tracker.updated_at
+    )
+
+def _format_log_response(log: SingleItemTrackerLog) -> SingleItemTrackerLogResponse:
+    """Format log entry for API response"""
+    return SingleItemTrackerLogResponse(
+        id=log.id,
+        value=log.value,
+        date=log.date,
+        notes=log.notes,
+        created_at=log.created_at
+    )

@@ -416,20 +416,20 @@ class APITester:
         
         created_widgets = []
         for config in widget_configs:
-            result = self.request("POST", f"{self.base_url}/api/v1/dashboard/widget", config, f"Create {config['widget_type']} widget")
+            result = self.request("POST", f"{self.base_url}/api/v1/widgets", config, f"Create {config['widget_type']} widget")
             if not self.has_error(result):
                 self.validate_schema(result, f"{config['widget_type']} Widget")
                 created_widgets.append(result)
                 self.test_data["widgets"].append(result)
         
         # Test widget retrieval
-        result = self.request("GET", f"{self.base_url}/api/v1/dashboard/widgets", description="Fetch all widgets")
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets", description="Fetch all widgets")
         if isinstance(result, list) or not self.has_error(result):
             widgets = result if isinstance(result, list) else result.get("widgets", [])
             self.log(f"Retrieved {len(widgets)} widgets", "SUCCESS")
         
         # Test today's dashboard
-        result = self.request("GET", f"{self.base_url}/api/v1/dashboard/today", description="Get AI-generated today's dashboard")
+        result = self.request("GET", f"{self.base_url}/api/v1/dashboard/widgets/today", description="Get AI-generated today's dashboard")
         if not self.has_error(result):
             self.validate_schema(result, "Today's Dashboard")
             
@@ -447,7 +447,7 @@ class APITester:
             widget_id = widget_to_update.get("id")
             
             update_data = {"title": "Updated Daily Task Manager", "importance": 4}
-            result = self.request("PUT", f"{self.base_url}/api/v1/dashboard/widget/{widget_id}", update_data, "Update widget")
+            result = self.request("POST", f"{self.base_url}/api/v1/widgets/{widget_id}", update_data, "Update widget")
             if not self.has_error(result):
                 self.validate_schema(result, "Updated Widget")
         
@@ -457,7 +457,7 @@ class APITester:
             widget_id = widget_to_delete.get("id")
             widget_title = widget_to_delete.get("title", "Unknown")
             
-            result = self.request("DELETE", f"{self.base_url}/api/v1/dashboard/widget/{widget_id}", description="Delete widget")
+            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/{widget_id}", description="Delete widget")
             if not self.has_error(result) or result.get("status") == 204:
                 self.log(f"Deleted widget: {widget_title}", "SUCCESS")
                 # Remove from test_data to avoid double deletion in cleanup
@@ -647,6 +647,242 @@ class APITester:
         self.log("🎯 All 4 core todo endpoints tested successfully!", "SUCCESS")
     
     # ========================================================================
+    # SINGLE ITEM TRACKER API TESTS - 6 Core Endpoints Only
+    # ========================================================================
+    
+    def test_single_item_tracker_endpoints(self):
+        """Test clean SingleItemTracker API with 6 endpoints only"""
+        self.section_header("Single Item Tracker API Tests - 6 Endpoints Only", "📈")
+        
+        # Create a tracker widget first
+        tracker_widget_config = {
+            "title": "Weight Tracker",
+            "widget_type": "singleitemtracker",
+            "frequency": "daily",
+            "category": "health",
+            "importance": 4
+        }
+        
+        widget_result = self.request("POST", f"{self.base_url}/api/v1/widgets", 
+                                   tracker_widget_config, "Create tracker widget")
+        
+        if self.has_error(widget_result):
+            self.log("Failed to create tracker widget", "ERROR")
+            return
+        
+        widget_id = widget_result.get("id")
+        self.log(f"Created tracker widget: {widget_id}", "INFO")
+        
+        # ENDPOINT 1: POST / - Create Tracker Widget
+        tracker_config = {
+            "dashboard_widget_id": widget_id,
+            "item_name": "Weight",
+            "item_unit": "kg",
+            "current_value": "75.5",
+            "target_value": "70.0",
+            "value_type": "decimal"
+        }
+        
+        result = self.request("POST", f"{self.base_url}/api/v1/widgets/single-item-tracker/", 
+                             tracker_config, "Create weight tracker")
+        
+        if self.has_error(result):
+            self.log("Failed to create tracker", "ERROR")
+            return
+        
+        self.validate_schema(result, "Tracker Creation")
+        tracker_id = result.get("id")
+        self.log(f"✅ Created tracker: Weight (ID: {tracker_id})", "SUCCESS")
+        
+        # ENDPOINT 2: GET /{tracker_id} - Get Tracker
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}", 
+                             description="Get tracker details")
+        
+        if not self.has_error(result):
+            self.validate_schema(result, "Tracker Retrieval")
+            self.log(f"✅ Retrieved tracker: {result.get('item_name', 'Unknown')}", "SUCCESS")
+        
+        # ENDPOINT 3: POST /{tracker_id}/entry - Add Entry
+        entry_data = {"value": "74.8", "notes": "Morning weigh-in after workout"}
+        result = self.request("POST", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}/entry", 
+                             entry_data, "Add tracker entry")
+        
+        if not self.has_error(result):
+            self.validate_schema(result, "Entry Addition")
+            entry_id = result.get("id")
+            self.log(f"✅ Added entry: {result.get('value', 'Unknown')} kg", "SUCCESS")
+        
+        # Add another entry for testing
+        entry_data2 = {"value": "74.5", "notes": "Evening weigh-in"}
+        result2 = self.request("POST", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}/entry", 
+                              entry_data2, "Add second tracker entry")
+        
+        if not self.has_error(result2):
+            entry_id2 = result2.get("id")
+            self.log(f"✅ Added second entry: {result2.get('value', 'Unknown')} kg", "SUCCESS")
+        
+        # ENDPOINT 4: POST /{tracker_id}/entry/{entry_id} - Update Entry
+        if 'entry_id' in locals():
+            update_data = {"value": "74.9", "notes": "Corrected morning weight"}
+            result = self.request("POST", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}/entry/{entry_id}", 
+                                 update_data, "Update tracker entry")
+            
+            if not self.has_error(result):
+                self.validate_schema(result, "Entry Update")
+                self.log(f"✅ Updated entry to: {result.get('value', 'Unknown')} kg", "SUCCESS")
+        
+        # ENDPOINT 5: GET /{tracker_id}/history - Get Tracker History
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}/history?limit=10", 
+                             description="Get tracker history")
+        
+        if not self.has_error(result):
+            entries = result if isinstance(result, list) else []
+            self.log(f"✅ Retrieved {len(entries)} history entries", "SUCCESS")
+        
+        # ENDPOINT 6: DELETE /{tracker_id}/entry/{entry_id} - Delete Entry
+        if 'entry_id2' in locals():
+            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/single-item-tracker/{tracker_id}/entry/{entry_id2}", 
+                                 description="Delete tracker entry")
+            
+            if not self.has_error(result):
+                self.log("✅ Deleted tracker entry", "SUCCESS")
+        
+        # Store tracker for cleanup
+        self.test_data["tracker_widgets"] = getattr(self.test_data, "tracker_widgets", [])
+        self.test_data["tracker_widgets"].append({"widget_id": widget_id, "tracker_id": tracker_id})
+        
+        self.log("🎯 All 6 core tracker endpoints tested successfully!", "SUCCESS")
+    
+    # ========================================================================
+    # ALARM API TESTS - 5 Core Endpoints Only
+    # ========================================================================
+    
+    def test_alarm_endpoints(self):
+        """Test clean Alarm API with 5 endpoints only"""
+        self.section_header("Alarm Widget API Tests - 5 Endpoints Only", "⏰")
+        
+        # Create an alarm widget first
+        alarm_widget_config = {
+            "title": "Daily Reminders",
+            "widget_type": "alarm",
+            "frequency": "daily",
+            "category": "productivity",
+            "importance": 4
+        }
+        
+        widget_result = self.request("POST", f"{self.base_url}/api/v1/widgets", 
+                                   alarm_widget_config, "Create alarm widget")
+        
+        if self.has_error(widget_result):
+            self.log("Failed to create alarm widget", "ERROR")
+            return
+        
+        widget_id = widget_result.get("id")
+        self.log(f"Created alarm widget: {widget_id}", "INFO")
+        
+        # ENDPOINT 1: POST /create - Create Alarm
+        alarm_configs = [
+            {
+                "dashboard_widget_id": widget_id,
+                "title": "Daily Standup",
+                "alarm_type": "daily",
+                "alarm_times": ["09:00"]
+            },
+            {
+                "dashboard_widget_id": widget_id,
+                "title": "Meditation Time",
+                "alarm_type": "daily",
+                "alarm_times": ["07:00", "19:00"]
+            },
+            {
+                "dashboard_widget_id": widget_id,
+                "title": "Yogi Birthday",
+                "alarm_type": "once",
+                "alarm_times": ["10:00"],
+                "specific_date": "2025-08-15"
+            }
+        ]
+        
+        created_alarms = []
+        for alarm_config in alarm_configs:
+            result = self.request("POST", f"{self.base_url}/api/v1/widgets/alarm/create", 
+                                 alarm_config, f"Create alarm: {alarm_config['title']}")
+            if not self.has_error(result):
+                self.validate_schema(result, f"Alarm Creation")
+                created_alarms.append(result)
+                self.log(f"✅ Created alarm: {result.get('title', 'Unknown')}", "SUCCESS")
+        
+        if not created_alarms:
+            self.log("No alarms created, skipping remaining tests", "ERROR")
+            return
+        
+        # ENDPOINT 2: GET /{widget_id} - Get Widget Alarms
+        result = self.request("GET", f"{self.base_url}/api/v1/widgets/alarm/{widget_id}", 
+                             description="Get all alarms for widget")
+        
+        if not self.has_error(result):
+            alarms = result if isinstance(result, list) else []
+            self.validate_schema(alarms, "Widget Alarms List")
+            self.log(f"✅ Retrieved {len(alarms)} alarms for widget", "SUCCESS")
+        
+        # ENDPOINT 3: POST /{widget_id} - Add Alarm to Widget
+        new_alarm_data = {
+            "dashboard_widget_id": widget_id,
+            "title": "Lunch Break",
+            "alarm_type": "daily",
+            "alarm_times": ["12:30"]
+        }
+        
+        result = self.request("POST", f"{self.base_url}/api/v1/widgets/alarm/{widget_id}", 
+                             new_alarm_data, "Add new alarm to widget")
+        
+        if not self.has_error(result):
+            self.validate_schema(result, "New Alarm Addition")
+            created_alarms.append(result)
+            self.log(f"✅ Added alarm to widget: {result.get('title', 'Unknown')}", "SUCCESS")
+        
+        # ENDPOINT 4: POST /{widget_id}/{alarm_id} - Update Alarm
+        if created_alarms:
+            alarm_to_update = created_alarms[0]
+            alarm_id = alarm_to_update.get("id")
+            
+            update_data = {
+                "title": "Updated Daily Standup",
+                "alarm_times": ["09:30"],
+                "is_active": True
+            }
+            
+            result = self.request("POST", f"{self.base_url}/api/v1/widgets/alarm/{widget_id}/{alarm_id}", 
+                                 update_data, "Update alarm")
+            
+            if not self.has_error(result):
+                self.validate_schema(result, "Alarm Update")
+                self.log(f"✅ Updated alarm: {result.get('title', 'Unknown')}", "SUCCESS")
+        
+        # ENDPOINT 5: DELETE /{widget_id}/{alarm_id} - Delete Alarm
+        if len(created_alarms) > 1:
+            alarm_to_delete = created_alarms[-1]
+            alarm_id = alarm_to_delete.get("id")
+            alarm_title = alarm_to_delete.get("title", "Unknown")
+            
+            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/alarm/{widget_id}/{alarm_id}", 
+                                 description=f"Delete alarm: {alarm_title}")
+            
+            if not self.has_error(result):
+                self.log(f"✅ Deleted alarm: {alarm_title}", "SUCCESS")
+                # Remove from created_alarms to avoid double deletion in cleanup
+                created_alarms = [a for a in created_alarms if a.get("id") != alarm_id]
+        
+        # Store alarm widget for cleanup
+        self.test_data["alarm_widgets"] = getattr(self.test_data, "alarm_widgets", [])
+        self.test_data["alarm_widgets"].append({
+            "widget_id": widget_id, 
+            "alarms": created_alarms
+        })
+        
+        self.log("🎯 All 5 core alarm endpoints tested successfully!", "SUCCESS")
+    
+    # ========================================================================
     # CLEANUP METHODS
     # ========================================================================
     
@@ -674,12 +910,30 @@ class APITester:
             if not self.has_error(result) or result.get("status") == 200:
                 self.log(f"Deleted todo item: {item_title}", "SUCCESS")
         
+        # Delete tracker widgets
+        for tracker_widget in getattr(self.test_data, "tracker_widgets", []):
+            widget_id = tracker_widget["widget_id"]
+            
+            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/{widget_id}", 
+                                 description=f"Delete tracker widget: {widget_id}")
+            if not self.has_error(result) or result.get("status") == 204:
+                self.log(f"Deleted tracker widget: {widget_id}", "SUCCESS")
+        
+        # Delete alarm widgets
+        for alarm_widget in getattr(self.test_data, "alarm_widgets", []):
+            widget_id = alarm_widget["widget_id"]
+            
+            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/{widget_id}", 
+                                 description=f"Delete alarm widget: {widget_id}")
+            if not self.has_error(result) or result.get("status") == 204:
+                self.log(f"Deleted alarm widget: {widget_id}", "SUCCESS")
+        
         # Delete widgets
         for widget in self.test_data["widgets"]:
             widget_id = widget.get("id")
             widget_title = widget.get("title", "Unknown")
             
-            result = self.request("DELETE", f"{self.base_url}/api/v1/dashboard/widget/{widget_id}", 
+            result = self.request("DELETE", f"{self.base_url}/api/v1/widgets/{widget_id}", 
                                  description=f"Delete widget: {widget_title}")
             if not self.has_error(result) or result.get("status") == 204:
                 self.log(f"Deleted widget: {widget_title}", "SUCCESS")
@@ -715,6 +969,12 @@ class APITester:
             
             self.clear_test_data()
             self.test_todo_endpoints()
+            
+            self.clear_test_data()
+            self.test_single_item_tracker_endpoints()
+            
+            self.clear_test_data()
+            self.test_alarm_endpoints()
             
             # Cleanup
             self.cleanup_test_data()

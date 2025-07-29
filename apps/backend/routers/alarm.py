@@ -1,27 +1,42 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+"""
+Alarm Widget Router
+5 Core API endpoints for alarm management within widgets
+
+Endpoints:
+- POST /create - Create alarm for widget
+- GET /{widget_id} - Get all alarms for widget
+- POST /{widget_id} - Add new alarm to widget
+- POST /{widget_id}/{alarm_id} - Update specific alarm
+- DELETE /{widget_id}/{alarm_id} - Delete specific alarm
+
+Examples:
+- Daily Standup | daily | [09:00] 
+- Yogi Birthday | once | [10:00] | Jun 20
+- Meditation Reminder | daily | [07:00, 19:00]
+"""
+
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
-from typing import Optional, List, Dict, Any
-from datetime import datetime, date, timedelta, time
+from typing import List, Dict, Any, Optional
+from datetime import datetime, date, time, timedelta
 import logging
-import json
 
 from core.database import get_db
 from models.database_models import Alarm, DashboardWidget
-from models.schemas import (
+from models.schemas.alarm_schemas import (
     CreateAlarmRequest,
     UpdateAlarmRequest,
-    UpdateAlarmStatusRequest,
     AlarmResponse,
-    AlarmWidgetDataResponse,
     AlarmType
 )
+from utils.router_utils import RouterUtils
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 router = APIRouter(tags=["alarm"])
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
 
 def _parse_time_string(time_str: str) -> time:
     """Parse time string in HH:MM format"""
@@ -49,147 +64,94 @@ def _calculate_next_trigger(alarm: Alarm) -> Optional[datetime]:
     if alarm.alarm_type == AlarmType.ONCE:
         if not alarm.specific_date:
             return None
-        
-        # Find next occurrence on the specific date
         target_date = alarm.specific_date
         if target_date < today:
-            return None  # Past date, no future trigger
-        
-        # Find next time today or on the specific date
-        for alarm_time in sorted(times):
-            trigger_datetime = datetime.combine(target_date, alarm_time)
-            if trigger_datetime > now:
-                return trigger_datetime
-        return None
+            return None
+    else:
+        target_date = today
     
-    elif alarm.alarm_type == AlarmType.DAILY:
-        # Find next daily occurrence
-        frequency = alarm.frequency_value or 1
-        
-        # Check today first
-        for alarm_time in sorted(times):
-            trigger_datetime = datetime.combine(today, alarm_time)
-            if trigger_datetime > now:
-                return trigger_datetime
-        
-        # If no more times today, find next occurrence based on frequency
-        next_date = today + timedelta(days=frequency)
-        next_time = min(times)  # Earliest time of the day
-        return datetime.combine(next_date, next_time)
+    # Find next trigger time for today
+    next_triggers = []
+    for alarm_time in times:
+        trigger_datetime = datetime.combine(target_date, alarm_time)
+        if trigger_datetime > now:
+            next_triggers.append(trigger_datetime)
     
+    if next_triggers:
+        return min(next_triggers)
+    
+    # No triggers today, calculate for next occurrence
+    if alarm.alarm_type == AlarmType.DAILY:
+        next_date = today + timedelta(days=1)
+        return datetime.combine(next_date, times[0])
     elif alarm.alarm_type == AlarmType.WEEKLY:
-        # Find next weekly occurrence
-        frequency = alarm.frequency_value or 1
-        days_ahead = frequency * 7
-        
-        # Check remaining times today
-        for alarm_time in sorted(times):
-            trigger_datetime = datetime.combine(today, alarm_time)
-            if trigger_datetime > now:
-                return trigger_datetime
-        
-        # Next week
-        next_date = today + timedelta(days=days_ahead)
-        next_time = min(times)
-        return datetime.combine(next_date, next_time)
-    
-    elif alarm.alarm_type == AlarmType.MONTHLY:
-        # Find next monthly occurrence (approximate)
-        frequency = alarm.frequency_value or 1
-        
-        # Check remaining times today
-        for alarm_time in sorted(times):
-            trigger_datetime = datetime.combine(today, alarm_time)
-            if trigger_datetime > now:
-                return trigger_datetime
-        
-        # Next month (approximate)
-        next_date = today + timedelta(days=frequency * 30)
-        next_time = min(times)
-        return datetime.combine(next_date, next_time)
-    
-    elif alarm.alarm_type == AlarmType.YEARLY:
-        # Find next yearly occurrence
-        frequency = alarm.frequency_value or 1
-        
-        # Check remaining times today
-        for alarm_time in sorted(times):
-            trigger_datetime = datetime.combine(today, alarm_time)
-            if trigger_datetime > now:
-                return trigger_datetime
-        
-        # Next year
-        next_date = today + timedelta(days=frequency * 365)
-        next_time = min(times)
-        return datetime.combine(next_date, next_time)
+        next_date = today + timedelta(days=7)
+        return datetime.combine(next_date, times[0])
     
     return None
 
-@router.get("", response_model=List[AlarmResponse])
-async def get_alarms(
-    widget_id: Optional[str] = Query(None, description="Filter by widget ID"),
-    active_only: bool = Query(True, description="Only return active alarms"),
-    db: Session = Depends(get_db)
-):
-    """Get alarms, optionally filtered by widget"""
-    try:
-        query = db.query(Alarm)
-        
-        if widget_id:
-            query = query.filter(Alarm.dashboard_widget_id == widget_id)
-        
-        if active_only:
-            query = query.filter(Alarm.is_active == True)
-        
-        alarms = query.order_by(Alarm.next_trigger_time.asc()).all()
-        
-        # Update next trigger times
-        for alarm in alarms:
-            alarm.next_trigger_time = _calculate_next_trigger(alarm)
-        
-        db.commit()
-        
-        logger.info(f"Retrieved {len(alarms)} alarms")
-        return [AlarmResponse.from_orm(alarm) for alarm in alarms]
-        
-    except Exception as e:
-        logger.error(f"Error getting alarms: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# ============================================================================
+# HELPER FUNCTIONS FOR RESPONSE FORMATTING
+# ============================================================================
 
-@router.post("/add", response_model=AlarmResponse)
-async def create_alarm(
-    alarm_data: CreateAlarmRequest,
+def _format_alarm_response(alarm: Alarm) -> AlarmResponse:
+    """Format Alarm for API response"""
+    return AlarmResponse(
+        id=alarm.id,
+        dashboard_widget_id=alarm.dashboard_widget_id,
+        title=alarm.title,
+        alarm_type=alarm.alarm_type,
+        alarm_times=alarm.alarm_times,
+        frequency_value=alarm.frequency_value,
+        specific_date=alarm.specific_date,
+        is_active=alarm.is_active,
+        is_snoozed=alarm.is_snoozed,
+        snooze_until=alarm.snooze_until,
+        last_triggered=alarm.last_triggered,
+        next_trigger_time=alarm.next_trigger_time,
+        created_at=alarm.created_at,
+        updated_at=alarm.updated_at
+    )
+
+# ============================================================================
+# ALARM WIDGET API - 5 Core Endpoints Only
+# ============================================================================
+
+@router.post("/create", response_model=AlarmResponse)
+async def create_alarm_for_widget(
+    request: CreateAlarmRequest,
     db: Session = Depends(get_db)
 ):
-    """Create a new alarm"""
+    """Create a new alarm for a widget"""
     try:
         # Verify widget exists
-        widget = db.query(DashboardWidget).filter(
-            DashboardWidget.id == alarm_data.dashboard_widget_id
-        ).first()
-        
-        if not widget:
-            raise HTTPException(status_code=404, detail="Dashboard widget not found")
+        widget = RouterUtils.verify_widget_exists(db, request.dashboard_widget_id, "alarm")
         
         # Validate time formats
-        for time_str in alarm_data.alarm_times:
+        for time_str in request.alarm_times:
             try:
                 _parse_time_string(time_str)
             except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e))
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e)
+                )
         
         # Validate specific date for one-time alarms
-        if alarm_data.alarm_type == AlarmType.ONCE and not alarm_data.specific_date:
-            raise HTTPException(status_code=400, detail="Specific date required for one-time alarms")
+        if request.alarm_type == AlarmType.ONCE and not request.specific_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Specific date required for one-time alarms"
+            )
         
         # Create alarm
         alarm = Alarm(
-            dashboard_widget_id=alarm_data.dashboard_widget_id,
-            title=alarm_data.title,
-            alarm_type=alarm_data.alarm_type,
-            alarm_times=alarm_data.alarm_times,
-            frequency_value=alarm_data.frequency_value,
-            specific_date=alarm_data.specific_date
+            dashboard_widget_id=request.dashboard_widget_id,
+            title=request.title,
+            alarm_type=request.alarm_type,
+            alarm_times=request.alarm_times,
+            frequency_value=request.frequency_value,
+            specific_date=request.specific_date
         )
         
         # Calculate next trigger time
@@ -200,65 +162,100 @@ async def create_alarm(
         db.refresh(alarm)
         
         logger.info(f"Created alarm: {alarm.id} - {alarm.title}")
-        return AlarmResponse.from_orm(alarm)
+        return _format_alarm_response(alarm)
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating alarm: {e}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create alarm: {str(e)}"
+        )
 
-@router.post("/{alarm_id}/updateStatus", response_model=AlarmResponse)
-async def update_alarm_status(
-    alarm_id: str,
-    status_data: UpdateAlarmStatusRequest,
+@router.get("/{widget_id}", response_model=List[AlarmResponse])
+async def get_widget_alarms(
+    widget_id: str,
     db: Session = Depends(get_db)
 ):
-    """Update alarm status (active, snoozed, etc.)"""
+    """Get all alarms for a specific widget"""
     try:
-        alarm = db.query(Alarm).filter(Alarm.id == alarm_id).first()
+        # Verify widget exists
+        widget = RouterUtils.verify_widget_exists(db, widget_id, "alarm")
         
-        if not alarm:
-            raise HTTPException(status_code=404, detail="Alarm not found")
+        # Get all alarms for this widget
+        alarms = db.query(Alarm).filter(
+            Alarm.dashboard_widget_id == widget_id
+        ).order_by(Alarm.next_trigger_time.asc()).all()
         
-        # Update status fields
-        if status_data.is_active is not None:
-            alarm.is_active = status_data.is_active
-        
-        if status_data.is_snoozed is not None:
-            alarm.is_snoozed = status_data.is_snoozed
-            
-            if status_data.is_snoozed and status_data.snooze_minutes:
-                alarm.snooze_until = datetime.now() + timedelta(minutes=status_data.snooze_minutes)
-            elif not status_data.is_snoozed:
-                alarm.snooze_until = None
-        
-        # Recalculate next trigger time
-        alarm.next_trigger_time = _calculate_next_trigger(alarm)
-        alarm.updated_at = datetime.utcnow()
+        # Update next trigger times
+        for alarm in alarms:
+            alarm.next_trigger_time = _calculate_next_trigger(alarm)
         
         db.commit()
-        db.refresh(alarm)
         
-        logger.info(f"Updated alarm status: {alarm_id}")
-        return AlarmResponse.from_orm(alarm)
+        logger.info(f"Retrieved {len(alarms)} alarms for widget {widget_id}")
+        return [_format_alarm_response(alarm) for alarm in alarms]
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error updating alarm status: {e}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting alarms for widget {widget_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get alarms: {str(e)}"
+        )
 
-@router.put("/{alarm_id}", response_model=AlarmResponse)
+@router.post("/{widget_id}", response_model=AlarmResponse)
+async def add_alarm_to_widget(
+    widget_id: str,
+    alarm_data: CreateAlarmRequest,
+    db: Session = Depends(get_db)
+):
+    """Add a new alarm to a widget"""
+    try:
+        # Verify widget exists
+        widget = RouterUtils.verify_widget_exists(db, widget_id, "alarm")
+        
+        # Override widget_id from URL
+        alarm_data.dashboard_widget_id = widget_id
+        
+        # Use the create endpoint logic
+        return await create_alarm_for_widget(alarm_data, db)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding alarm to widget {widget_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add alarm: {str(e)}"
+        )
+
+@router.post("/{widget_id}/{alarm_id}", response_model=AlarmResponse)
 async def update_alarm(
+    widget_id: str,
     alarm_id: str,
     update_data: UpdateAlarmRequest,
     db: Session = Depends(get_db)
 ):
-    """Update alarm details"""
+    """Update a specific alarm"""
     try:
-        alarm = db.query(Alarm).filter(Alarm.id == alarm_id).first()
+        # Verify widget exists
+        widget = RouterUtils.verify_widget_exists(db, widget_id, "alarm")
+        
+        # Get alarm
+        alarm = db.query(Alarm).filter(
+            Alarm.id == alarm_id,
+            Alarm.dashboard_widget_id == widget_id
+        ).first()
         
         if not alarm:
-            raise HTTPException(status_code=404, detail="Alarm not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Alarm not found"
+            )
         
         # Update fields
         if update_data.title is not None:
@@ -273,7 +270,10 @@ async def update_alarm(
                 try:
                     _parse_time_string(time_str)
                 except ValueError as e:
-                    raise HTTPException(status_code=400, detail=str(e))
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(e)
+                    )
             alarm.alarm_times = update_data.alarm_times
         
         if update_data.frequency_value is not None:
@@ -293,93 +293,54 @@ async def update_alarm(
         db.refresh(alarm)
         
         logger.info(f"Updated alarm: {alarm_id}")
-        return AlarmResponse.from_orm(alarm)
+        return _format_alarm_response(alarm)
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error updating alarm: {e}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/widget/{widget_id}/data", response_model=AlarmWidgetDataResponse)
-async def get_widget_data(
-    widget_id: str,
-    db: Session = Depends(get_db)
-):
-    """Get complete alarm widget data for dashboard display"""
-    try:
-        # Get all alarms for this widget
-        alarms = db.query(Alarm).filter(
-            Alarm.dashboard_widget_id == widget_id
-        ).order_by(Alarm.next_trigger_time.asc()).all()
-        
-        # Update next trigger times
-        for alarm in alarms:
-            alarm.next_trigger_time = _calculate_next_trigger(alarm)
-        
-        db.commit()
-        
-        # Calculate stats
-        total_alarms = len(alarms)
-        active_alarms = sum(1 for a in alarms if a.is_active)
-        next_alarm = next((a for a in alarms if a.is_active and a.next_trigger_time), None)
-        
-        stats = {
-            "total_alarms": total_alarms,
-            "active_alarms": active_alarms,
-            "next_alarm_time": next_alarm.next_trigger_time.isoformat() if next_alarm and next_alarm.next_trigger_time else None,
-            "next_alarm_title": next_alarm.title if next_alarm else None
-        }
-        
-        return AlarmWidgetDataResponse(
-            widget_id=widget_id,
-            alarms=[AlarmResponse.from_orm(alarm) for alarm in alarms],
-            stats=stats
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update alarm: {str(e)}"
         )
-        
-    except Exception as e:
-        logger.error(f"Error getting widget data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/{alarm_id}", status_code=204)
+@router.delete("/{widget_id}/{alarm_id}")
 async def delete_alarm(
+    widget_id: str,
     alarm_id: str,
     db: Session = Depends(get_db)
 ):
-    """Delete an alarm"""
+    """Delete a specific alarm"""
     try:
-        alarm = db.query(Alarm).filter(Alarm.id == alarm_id).first()
+        # Verify widget exists
+        widget = RouterUtils.verify_widget_exists(db, widget_id, "alarm")
+        
+        # Get alarm
+        alarm = db.query(Alarm).filter(
+            Alarm.id == alarm_id,
+            Alarm.dashboard_widget_id == widget_id
+        ).first()
         
         if not alarm:
-            raise HTTPException(status_code=404, detail="Alarm not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Alarm not found"
+            )
         
+        alarm_title = alarm.title
         db.delete(alarm)
         db.commit()
         
-        logger.info(f"Deleted alarm: {alarm_id}")
+        logger.info(f"Deleted alarm: {alarm_id} - {alarm_title}")
+        return {"message": f"Alarm '{alarm_title}' deleted successfully"}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting alarm: {e}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/{alarm_id}", response_model=AlarmResponse)
-async def get_alarm(
-    alarm_id: str,
-    db: Session = Depends(get_db)
-):
-    """Get specific alarm details"""
-    try:
-        alarm = db.query(Alarm).filter(Alarm.id == alarm_id).first()
-        
-        if not alarm:
-            raise HTTPException(status_code=404, detail="Alarm not found")
-        
-        # Update next trigger time
-        alarm.next_trigger_time = _calculate_next_trigger(alarm)
-        db.commit()
-        
-        return AlarmResponse.from_orm(alarm)
-        
-    except Exception as e:
-        logger.error(f"Error getting alarm: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete alarm: {str(e)}"
+        )

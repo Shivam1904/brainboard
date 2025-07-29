@@ -54,7 +54,15 @@ python main.py
 - 📖 **Alternative Docs**: `http://localhost:8000/redoc`
 - 🔧 **Health Check**: `http://localhost:8000/api/health`
 
-### Step 3: Test the API
+### Step 3: Populate Database with Test Data
+
+```bash
+# Populate database with realistic test data (recommended for development)
+python populate_db_direct.py
+
+```
+
+### Step 4: Test the API
 
 Visit `http://localhost:8000/docs` to see all available endpoints and test them directly in your browser!
 
@@ -96,7 +104,8 @@ apps/backend/
 │   └── router_utils.py    # Common router operations
 └── data/                  # 📊 Data utilities & sample data
     ├── base_data.py       # Database initialization
-    └── widget_data.py     # Widget data helpers
+    ├── widget_data.py     # Widget data helpers
+    └── populate_db_direct.py # Direct database population script
 ```
 
 ### 🔑 **Key Architecture Principles**
@@ -158,13 +167,12 @@ DELETE /api/v1/widgets/alarm/{id}                   # 🗑️ Delete alarm
 
 ### **Single Item Tracker** (Habit & Goal Tracking)
 ```http
-POST   /api/v1/widgets/single-item-tracker/create           # ➕ Create tracker
-PUT    /api/v1/widgets/single-item-tracker/{id}/update-value # 📈 Log progress
-GET    /api/v1/widgets/single-item-tracker/{id}             # 👁️ Get tracker + logs
-PUT    /api/v1/widgets/single-item-tracker/{id}             # ✏️ Update settings
-GET    /api/v1/widgets/single-item-tracker/{id}/logs        # 📜 Get log history
-GET    /api/v1/widgets/single-item-tracker/widget/{id}/data # 📊 Get widget data
-DELETE /api/v1/widgets/single-item-tracker/{id}             # 🗑️ Delete tracker
+POST   /api/v1/widgets/single-item-tracker/                 # ➕ Create tracker
+GET    /api/v1/widgets/single-item-tracker/{id}             # 👁️ Get tracker details
+POST   /api/v1/widgets/single-item-tracker/{id}/entry       # 📈 Log new entry
+POST   /api/v1/widgets/single-item-tracker/{id}/entry/{entry_id} # ✏️ Update entry
+DELETE /api/v1/widgets/single-item-tracker/{id}/entry/{entry_id} # �️ Delete entry
+GET    /api/v1/widgets/single-item-tracker/{id}/history     # � Get log history
 ```
 
 ## � Widget Types & Data Examples
@@ -300,9 +308,33 @@ The database is **automatically created** on first run with these tables:
 - ✅ **Automatic Schema Creation**: No manual setup required
 - ✅ **Foreign Key Relationships**: Proper data integrity
 - ✅ **Default Data**: Test user automatically created
+- ✅ **Direct Population**: Use `populate_db_direct.py` for comprehensive test data
 - ✅ **Clean Architecture**: No legacy tables (removed during cleanup)
 
-## 🧪 Testing & Validation
+## 🧪 Testing & Data Population
+
+### **Database Population Script**
+
+For development and testing, use our comprehensive database population script:
+
+```bash
+# Direct database population (faster than API calls)
+python populate_db_direct.py
+
+# This creates realistic test data:
+# ✅ 15 dashboard widgets across all types
+# ✅ 5 websearch queries with AI-generated summaries
+# ✅ 16 todo items (tasks, events, habits) with realistic data
+# ✅ 4 tracker instances with 28 historical log entries
+# ✅ 13 alarm configurations with various schedules
+# ✅ Proper user associations and foreign key relationships
+```
+
+**Benefits of Direct Population:**
+- **Performance**: ~0.1 seconds vs several seconds for API calls
+- **Reliability**: No dependency on running API server
+- **Comprehensive**: Covers all widget types with realistic relationships
+- **Development Ready**: Immediate testing environment with rich data
 
 ### **Comprehensive Test Suite**
 

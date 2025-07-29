@@ -19,6 +19,7 @@ class User(Base):
     
     # Relationships
     dashboard_widgets = relationship("DashboardWidget", back_populates="user", cascade="all, delete-orphan")
+    daily_widgets = relationship("DailyWidget", cascade="all, delete-orphan")
 
 class DashboardWidget(Base):
     """Dashboard Widget database model (master widget configurations)"""
@@ -33,6 +34,8 @@ class DashboardWidget(Base):
     importance = Column(Integer, nullable=True)  # 1-5 scale
     settings = Column(JSON, nullable=True)  # Widget-specific settings
     is_active = Column(Boolean, default=True)
+    is_visible = Column(Boolean, default=True)  # User can hide/show widgets
+    grid_size = Column(JSON, nullable=True)  # Grid layout: {"width": 2, "height": 1}
     last_shown_date = Column(Date, nullable=True)  # Track when last shown
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -46,6 +49,24 @@ class DashboardWidget(Base):
     alarms = relationship("Alarm", back_populates="dashboard_widget", cascade="all, delete-orphan")
     habits = relationship("Habit", back_populates="dashboard_widget", cascade="all, delete-orphan")
     single_item_trackers = relationship("SingleItemTracker", back_populates="dashboard_widget", cascade="all, delete-orphan")
+
+class DailyWidget(Base):
+    """Daily Widget database model - AI-generated daily widget selections"""
+    __tablename__ = "daily_widgets"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    dashboard_widget_id = Column(String, ForeignKey("dashboard_widgets.id"), nullable=False)
+    display_date = Column(Date, nullable=False)  # Date when this widget should be shown
+    position = Column(Integer, nullable=False)  # Display order on dashboard
+    grid_position = Column(JSON, nullable=True)  # Grid layout: {"x": 0, "y": 0, "width": 2, "height": 1}
+    ai_reasoning = Column(Text, nullable=True)  # Why AI selected this widget for today
+    is_pinned = Column(Boolean, default=False)  # User manually pinned this widget for today
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", overlaps="daily_widgets")
+    dashboard_widget = relationship("DashboardWidget")
 
 # ============================================================================
 # LEGACY MODELS (for backward compatibility during migration)
@@ -247,5 +268,5 @@ class Summary(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships (support both systems)
-    widget = relationship("Widget", foreign_keys=[widget_id])  # Legacy
+    widget = relationship("Widget", foreign_keys=[widget_id], overlaps="summaries")  # Legacy
     dashboard_widget = relationship("DashboardWidget", back_populates="summaries")  # New

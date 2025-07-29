@@ -30,6 +30,11 @@ class UpdateDashboardWidgetRequest(BaseModel):
     settings: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = None
 
+class UpdateWidgetDisplayRequest(BaseModel):
+    """Request schema for updating widget display settings"""
+    is_visible: Optional[bool] = None
+    grid_size: Optional[Dict[str, Any]] = None  # {"width": 2, "height": 1}
+
 class DashboardWidgetResponse(DashboardWidgetBase):
     """Response schema for dashboard widgets"""
     id: str
