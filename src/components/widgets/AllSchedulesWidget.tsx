@@ -1,36 +1,40 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { BaseWidget as WidgetData, WidgetType } from '../../types';
-import { dashboardService } from '../../services/api';
-import { Widget } from '../../utils/dashboardUtils';
+import { DashboardWidget, ApiWidgetType, ApiCategory } from '../../types';
+import { dashboardService } from '../../services/dashboard';
 import { getDummyAllSchedulesWidgets } from '../../data/widgetDummyData';
 
 interface AllSchedulesWidgetProps {
   onRemove: () => void;
-  widget: Widget
+  widget: any; // Using the UIWidget type from Dashboard
 }
 
 const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
-  const [widgets, setWidgets] = useState<WidgetData[]>([]);
+  const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load widgets from API
+  // Load widgets from API using getAllWidgetList
   useEffect(() => {
     const loadWidgets = async () => {
       try {
         setLoading(true);
-        const response = await dashboardService.getTodayWidgets();
+        setError(null);
+        
+        const response = await dashboardService.getAllWidgets();
+        console.log('All widgets response:', response);
         
         // If no widgets from API, use dummy data
         if (response.widgets.length === 0) {
+          console.log('No widgets found, using dummy data');
           const dummyWidgets = getDummyAllSchedulesWidgets();
           setWidgets(dummyWidgets as any);
         } else {
-          setWidgets(response.widgets as any);
+          setWidgets(response.widgets);
         }
       } catch (err) {
         console.error('Failed to load widgets:', err);
+        setError('Failed to load widget schedules');
         // Use dummy data on error
         const dummyWidgets = getDummyAllSchedulesWidgets();
         setWidgets(dummyWidgets as any);
@@ -42,16 +46,34 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
     loadWidgets();
   }, []);
 
+  // Update widget details
+  const updateWidgetDetails = async (widgetId: string, updateData: {
+    title?: string;
+    frequency?: string;
+    importance?: number;
+    category?: string;
+  }) => {
+    try {
+      // Call the updateDetails API endpoint
+      const response = await dashboardService.updateWidgetDetails(widgetId, updateData);
+      console.log('Widget updated:', response);
+      
+      // Refresh the widget list
+      const refreshResponse = await dashboardService.getAllWidgets();
+      setWidgets(refreshResponse.widgets);
+    } catch (err) {
+      console.error('Failed to update widget:', err);
+      setError('Failed to update widget');
+    }
+  };
+
   // Get widget type display name
-  const getWidgetTypeDisplayName = (type: WidgetType): string => {
-    const typeNames: Record<string, string> = {
+  const getWidgetTypeDisplayName = (type: ApiWidgetType): string => {
+    const typeNames: Record<ApiWidgetType, string> = {
       'todo': 'Todo',
-      'habittracker': 'Habit Tracker',
-      'websearch': 'Web Search',
-      'websummary': 'Web Summary',
-      'calendar': 'Calendar',
-      'reminder': 'Reminder',
-      'allSchedules': 'All Schedules'
+      'alarm': 'Alarm',
+      'singleitemtracker': 'Item Tracker',
+      'websearch': 'Web Search'
     };
     return typeNames[type] || type;
   };
@@ -60,11 +82,23 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
   const getCategoryColor = (category?: string | null): string => {
     const colors: Record<string, string> = {
       'health': 'bg-red-100 text-red-800',
-      'self-imp': 'bg-blue-100 text-blue-800',
-      'finance': 'bg-green-100 text-green-800',
-      'awareness': 'bg-purple-100 text-purple-800'
+      'productivity': 'bg-blue-100 text-blue-800',
+      'job': 'bg-green-100 text-green-800',
+      'information': 'bg-purple-100 text-purple-800',
+      'entertainment': 'bg-yellow-100 text-yellow-800',
+      'utilities': 'bg-gray-100 text-gray-800'
     };
     return colors[category || ''] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Get frequency display name
+  const getFrequencyDisplayName = (frequency: string): string => {
+    const frequencyNames: Record<string, string> = {
+      'daily': 'Daily',
+      'weekly': 'Weekly',
+      'monthly': 'Monthly'
+    };
+    return frequencyNames[frequency] || frequency;
   };
 
   if (loading) {
@@ -120,7 +154,7 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium truncate">{widget.title}</span>
                       <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(widget.category)}`}>
-                        {getWidgetTypeDisplayName(widget.type)}
+                        {getWidgetTypeDisplayName(widget.widget_type as ApiWidgetType)}
                       </span>
                       {widget.category && (
                         <span className="text-xs text-muted-foreground">
@@ -130,9 +164,23 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
                     </div>
                     
                     <div className="text-xs text-muted-foreground space-y-1">
-                      Frequency: {widget.frequency} Size: {widget.size} Importance: {widget.importance}/5
+                      <div>Frequency: {getFrequencyDisplayName(widget.frequency)}</div>
+                      <div>Importance: {widget.importance}/1.0</div>
+                      <div>Created: {new Date(widget.created_at).toLocaleDateString()}</div>
                     </div>
                   </div>
+                  
+                  {/* Edit button */}
+                  <button
+                    onClick={() => {
+                      // For now, just log the widget ID for editing
+                      console.log('Edit widget:', widget.id);
+                      // TODO: Implement edit modal/form
+                    }}
+                    className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80"
+                  >
+                    Edit
+                  </button>
                 </div>
               </div>
             ))

@@ -1,121 +1,46 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { Widget } from '../../utils/dashboardUtils'
-import { WebSearchWidgetData, WidgetData } from '@/types/widgets';
-import { API_CONFIG, apiCall, buildApiUrl } from '@/config/api';
-// import { buildApiUrl, apiCall } from '../../config/api'; // Uncomment when API is ready
+import { getDummyWebSearchSummaryAndActivity } from '../../data/widgetDummyData';
+import { WebSearchAISummaryResponse } from '../../types';
+import { apiService } from '../../services/api';
 
-// Types for the web search data
-interface WebSearchResult {
-  id: string;
-  searchTerm: string;
-  heading: string;
-  subheading: string;
-  text: string;
-  images?: string[];
-  chartData?: any;
-  scheduleDate: string;
-}
-
-// interface ScheduledSearch {
-//   id: string;
-//   searchTerm: string;
-//   scheduledTime: string;
-// }
-
-// Dummy data for development (no longer used with new architecture)
-// const DUMMY_SCHEDULED_SEARCHES: ScheduledSearch[] = [
-//   {
-//     id: '1',
-//     searchTerm: 'Latest AI developments',
-//     scheduledTime: '09:00'
-//   },
-//   {
-//     id: '2', 
-//     searchTerm: 'Stock market trends',
-//     scheduledTime: '14:00'
-//   },
-//   {
-//     id: '3',
-//     searchTerm: 'Weather forecast',
-//     scheduledTime: '08:00'
-//   }
-// ];
-
-import { getDummyWebSearchResult } from '../../data/widgetDummyData';
-
-// const DUMMY_SEARCH_RESULTS: Record<string, WebSearchResult> = {
-//   '1': {
-//     id: '1',
-//     searchTerm: 'Latest AI developments',
-//     heading: 'AI Breakthrough: New Language Model Achieves Human-Level Understanding',
-//     subheading: 'Revolutionary advances in natural language processing',
-//     text: 'Researchers have developed a new AI model that demonstrates unprecedented understanding of human language. The model, called GPT-5, shows remarkable capabilities in reasoning, creativity, and problem-solving tasks that were previously thought to be beyond the reach of artificial intelligence.',
-//     images: ['https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=AI+Breakthrough'],
-//     scheduleDate: '2024-01-15'
-//   },
-//   '2': {
-//     id: '2',
-//     searchTerm: 'Stock market trends',
-//     heading: 'Market Analysis: Tech Stocks Lead Recovery',
-//     subheading: 'S&P 500 reaches new heights as technology sector surges',
-//     text: 'Technology stocks have led a broad market rally, with the S&P 500 reaching new record levels. Major tech companies including Apple, Microsoft, and Google parent Alphabet have all posted strong quarterly results, driving investor confidence.',
-//     images: ['https://via.placeholder.com/300x200/10B981/FFFFFF?text=Market+Trends'],
-//     scheduleDate: '2024-01-15'
-//   },
-//   '3': {
-//     id: '3',
-//     searchTerm: 'Weather forecast',
-//     heading: 'Weather Update: Sunny Skies Expected',
-//     subheading: 'Perfect conditions for outdoor activities this weekend',
-//     text: 'The weather forecast shows clear skies and mild temperatures throughout the weekend. Highs will reach 75°F with light winds, making it ideal for outdoor activities. No precipitation is expected for the next 7 days.',
-//     images: ['https://via.placeholder.com/300x200/F59E0B/FFFFFF?text=Weather+Forecast'],
-//     scheduleDate: '2024-01-15'
-//   }
-// };
-
-interface EverydayWebSearchWidgetProps {
+interface WebSearchWidgetProps {
   onRemove: () => void;
-  widget: Widget
+  widget: {
+    widget_ids: string[];
+    daily_widget_id: string;
+    widget_type: string;
+    priority: string;
+    reasoning: string;
+    date: string;
+    created_at: string;
+  };
 }
 
-// Rename component
-const WebSearchWidget = ({ onRemove, widget }: EverydayWebSearchWidgetProps) => {
-  // Use config if provided (e.g., config.maxResults, config.showImages)
-  const showImages = true;
-  const searchQuery = (widget.widgetData as unknown as WebSearchWidgetData).searches?.[0]?.query;
-  // const widgetTitle = (widget.widgetData as unknown as WebSearchWidgetData).searches?.[0]?.query;
-  const widgetTitle = (widget as unknown as Widget).widgetData.title;
-  const [searchResults, setSearchResults] = useState<WebSearchResult[]>([]);
+const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
+  const [webSearchData, setWebSearchData] = useState<WebSearchAISummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUsingDummyData, setIsUsingDummyData] = useState(false);
 
-  // Fetch search results for this specific search query
-  const fetchSearchResults = async () => {
+  // Fetch web search data for this specific widget
+  const fetchWebSearchData = async () => {
     try {
-      // Get widget_id from config or use the centralized mapping
-      const widgetId = widget.daily_widget_id;
-      const targetDate = new Date().toISOString().split('T')[0];
+      setIsUsingDummyData(false);
       
-      // const response = await apiCall<WebSearchResponse>(
-      //   buildApiUrl(API_CONFIG.webSearch.getSearchResult, {
-      //     widget_id: widgetId,
-      //     target_date: targetDate
-      //   })
-      // );
+      // Get the widget_id from the widget_ids array (first one for websearch widgets)
+      const widgetId = widget.widget_ids[0];
       
-      // setSearchResults([response]);
-
-      const dummyResult = getDummyWebSearchResult('default');
-      setSearchResults([dummyResult]);
-      
-      throw new Error('Not implemented');
+      // Call the real API
+      const response = await apiService.getWebSearchAISummary(widgetId);
+      setWebSearchData(response);
     } catch (err) {
-      // console.error('Failed to fetch search results:', err);
-      // setError('Failed to load search results');
-      // Fallback to generic dummy data
-      const dummyResult = getDummyWebSearchResult('default');
-      setSearchResults([dummyResult]);
+      console.error('Failed to fetch web search data:', err);
+      setError('Failed to load web search data');
+      setIsUsingDummyData(true);
+      // Fallback to dummy data
+      const dummyData = getDummyWebSearchSummaryAndActivity(widget.daily_widget_id);
+      setWebSearchData(dummyData as any); // Type assertion for fallback
     }
   };
 
@@ -124,25 +49,25 @@ const WebSearchWidget = ({ onRemove, widget }: EverydayWebSearchWidgetProps) => 
       setLoading(true);
       setError(null);
       
-      await fetchSearchResults();
+      await fetchWebSearchData();
       
       setLoading(false);
     };
 
     loadData();
-  }, [searchQuery]); // Re-fetch when search query changes
+  }, [widget.widget_ids[0]]); // Changed dependency to widget_ids[0]
 
   if (loading) {
     return (
       <BaseWidget 
-        title={widgetTitle} 
+        title="Web Search" 
         icon="🔍" 
         onRemove={onRemove}
       >
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 mx-auto mb-2"></div>
-            <p className="text-muted-foreground">Loading web searches...</p>
+            <p className="text-muted-foreground">Loading web search...</p>
           </div>
         </div>
       </BaseWidget>
@@ -152,7 +77,7 @@ const WebSearchWidget = ({ onRemove, widget }: EverydayWebSearchWidgetProps) => 
   if (error) {
     return (
       <BaseWidget 
-        title={widgetTitle} 
+        title="Web Search" 
         icon="🔍" 
         onRemove={onRemove}
       >
@@ -166,58 +91,90 @@ const WebSearchWidget = ({ onRemove, widget }: EverydayWebSearchWidgetProps) => 
     );
   }
 
+  if (!webSearchData) {
+    return (
+      <BaseWidget 
+        title="Web Search" 
+        icon="🔍" 
+        onRemove={onRemove}
+      >
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-muted-foreground">No web search data available</p>
+          </div>
+        </div>
+      </BaseWidget>
+    );
+  }
+
   return (
     <BaseWidget 
-      title={widgetTitle} 
+      title={webSearchData.query || "Web Search"} 
       icon="🔍" 
       onRemove={onRemove}
     >
       <div className="space-y-4 h-full overflow-y-auto">
-        {searchResults.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No web searches scheduled for today</p>
+        {/* Dummy Data Indicator */}
+        {isUsingDummyData && (
+          <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700 text-center">
+              🔍 Showing sample data - API not connected
+            </p>
           </div>
-        ) : (
-          searchResults.map((result) => (
-            <div 
-              key={result.id} 
-              className="bg-card/50 rounded-lg p-2 space-y-3"
-            >
-                <span className="text-xs text-muted-foreground">
-                  {result.scheduleDate}
-                </span>
+        )}
+        
+        <div className="bg-card/50 border border-border rounded-lg p-4">
+          <div className="space-y-3">
+            {/* Status */}
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2 py-1 rounded ${
+                webSearchData.search_successful ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {webSearchData.search_successful ? 'Search Successful' : 'Search Failed'}
+              </span>
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                {webSearchData.results_count} results
+              </span>
+            </div>
 
-              {/* Main Text */}
-              <p className="text-sm text-card-foreground leading-relaxed">
-                {result.text}
-              </p>
+            {/* Summary */}
+            {webSearchData.summary && (
+              <div>
+                <h3 className="font-medium text-sm mb-2">AI Summary</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {webSearchData.summary}
+                </p>
+              </div>
+            )}
 
-              {/* Images */}
-              {showImages && result.images && result.images.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto">
-                  {result.images.map((image, index) => (
-                    <img
-                      key={index}
-                      src={image}
-                      alt={`Search result ${index + 1}`}
-                      className="h-20 w-auto rounded border border-border flex-shrink-0"
-                    />
+            {/* Sources */}
+            {webSearchData.sources && webSearchData.sources.length > 0 && (
+              <div>
+                <h3 className="font-medium text-sm mb-2">Sources</h3>
+                <div className="space-y-1">
+                  {webSearchData.sources.map((source, index) => (
+                    <div key={index} className="text-xs">
+                      <a 
+                        href={source.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline break-all"
+                      >
+                        {source.title}
+                      </a>
+                    </div>
                   ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Chart Data Placeholder */}
-              {result.chartData && (
-                <div className="bg-muted/30 rounded p-3">
-                  <p className="text-xs text-muted-foreground mb-2">Chart Data Available</p>
-                  <div className="h-16 bg-muted rounded flex items-center justify-center">
-                    <span className="text-xs text-muted-foreground">Chart visualization would go here</span>
-                  </div>
-                </div>
-              )}
+            {/* AI Model Info */}
+            <div className="text-xs text-muted-foreground pt-2 border-t">
+              <div>AI Model: {webSearchData.ai_model_used}</div>
+              <div>Generated: {new Date(webSearchData.created_at).toLocaleDateString()}</div>
             </div>
-          ))
-        )}
+          </div>
+        </div>
       </div>
     </BaseWidget>
   );

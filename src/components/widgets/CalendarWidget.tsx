@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
-import { Widget } from '../../utils/dashboardUtils'
-// import { buildApiUrl, apiCall } from '../../config/api'; // Uncomment when API is ready
+import { getDummyCalendarData } from '../../data/widgetDummyData';
 
 interface CalendarEvent {
   id: string;
@@ -30,8 +29,6 @@ interface CalendarData {
   events: CalendarEvent[];
   milestones: CalendarEvent[];
 }
-
-import { getDummyCalendarData } from '../../data/widgetDummyData';
 
 const getEventTypeColor = (type: string) => {
   switch (type) {
@@ -61,7 +58,14 @@ const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface CalendarWidgetProps {
   onRemove: () => void;
-  widget: Widget
+  widget: {
+    daily_widget_id: string;
+    widget_type: string;
+    priority: string;
+    reasoning: string;
+    date: string;
+    created_at: string;
+  };
 }
 
 const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
@@ -70,21 +74,25 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isUsingDummyData, setIsUsingDummyData] = useState(false);
 
   const fetchCalendarData = async (year: number, month: number) => {
     try {
       setLoading(true);
       setError(null);
+      setIsUsingDummyData(false);
       
       // TODO: Replace with real API call
-      // const response = await apiCall<CalendarData>(buildApiUrl(`/api/calendar/monthly?year=${year}&month=${month}`));
+      // const response = await apiService.getCalendarData(widget.daily_widget_id, { year, month });
       // setCalendarData(response);
       
       // Using dummy data for now
       const dummyData = getDummyCalendarData(year, month);
+      setIsUsingDummyData(true);
       setCalendarData(dummyData);
     } catch (err) {
       setError('Failed to load calendar data');
+      setIsUsingDummyData(true);
       console.error('Error fetching calendar data:', err);
     } finally {
       setLoading(false);
@@ -177,6 +185,15 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
             Today
           </button>
         </div>
+
+        {/* Dummy Data Indicator */}
+        {isUsingDummyData && (
+          <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700 text-center">
+              📅 Showing sample data - API not connected
+            </p>
+          </div>
+        )}
 
         {/* Day Headers */}
         <div className="grid grid-cols-7 mb-1">

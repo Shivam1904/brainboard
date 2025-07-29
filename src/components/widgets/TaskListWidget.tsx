@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { CheckCircle, Circle, Plus, X } from 'lucide-react';
 import FrequencySection from './FrequencySection';
-import { buildApiUrl, apiCall, API_CONFIG } from '../../config/api';
-import { TodoTask, TodoTodayResponse } from '../../types/widgets';
-import { Widget } from '../../utils/dashboardUtils'
+import { TodoTodayResponse, TodoActivity } from '../../types';
+import { dashboardService } from '../../services/dashboard';
+import { getDummyTodoTodayResponse } from '../../data/widgetDummyData';
 
 interface Task {
   id: string;
@@ -27,8 +27,6 @@ interface MissionFormData {
   dueDate: string;
   frequency: FrequencySettings;
 }
-
-import { getDummyTasks } from '../../data/widgetDummyData';
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
@@ -60,7 +58,14 @@ const getPriorityFromNumber = (priority: number): 'High' | 'Medium' | 'Low' => {
 
 interface TaskListWidgetProps {
   onRemove: () => void;
-  widget: Widget
+  widget: {
+    daily_widget_id: string;
+    widget_type: string;
+    priority: string;
+    reasoning: string;
+    date: string;
+    created_at: string;
+  };
 }
 
 const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
@@ -68,6 +73,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isUsingDummyData, setIsUsingDummyData] = useState(false);
   const [formData, setFormData] = useState<MissionFormData>({
     title: '',
     description: '',
@@ -88,37 +94,45 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
     try {
       setLoading(true);
       setError(null);
+      setIsUsingDummyData(false);
       
-      // Get widget_id from config or use the centralized mapping
-      const widgetId = widget.daily_widget_id;
-      const targetDate = new Date().toISOString().split('T')[0];
+      // TODO: Implement actual API call when backend is ready
+      // const response = await dashboardService.getTodoList('task');
       
-      const response = await apiCall<TodoTodayResponse>(
-        buildApiUrl(API_CONFIG.tasks.getTodayTasks, {
-          widget_id: widgetId,
-          target_date: targetDate
-        })
-      );
+      // For now, use dummy data
+      const dummyResponse = getDummyTodoTodayResponse('task');
+      setIsUsingDummyData(true);
       
-      // Transform API response to local Task format
-      const transformedTasks: Task[] = response.tasks.map((apiTask: TodoTask) => ({
-        id: apiTask.id,
-        title: apiTask.content,
-        description: '', // API doesn't provide description field
-        completed: apiTask.is_done,
-        priority: getPriorityFromNumber(apiTask.priority),
-        category: apiTask.category,
-        dueDate: apiTask.due_date || undefined,
-        createdAt: apiTask.created_at
+      // Convert API response to internal Task format
+      const convertedTasks: Task[] = dummyResponse.todos.map((todo: TodoActivity) => ({
+        id: todo.id,
+        title: todo.title,
+        description: todo.description,
+        completed: todo.status === 'completed',
+        priority: getPriorityFromNumber(todo.progress / 25), // Convert progress to priority
+        category: 'personal', // Default category
+        dueDate: todo.due_date,
+        createdAt: todo.created_at
       }));
       
-      setTasks(transformedTasks);
+      setTasks(convertedTasks);
     } catch (err) {
-      console.error('Error fetching tasks:', err);
-      // Fallback to dummy data on error
-      const dummyTasks = getDummyTasks();
-      setTasks(dummyTasks);
-      setError('Using offline data - API unavailable');
+      console.error('Failed to fetch tasks:', err);
+      setError('Failed to load tasks');
+      setIsUsingDummyData(true);
+      // Fallback to dummy data
+      const dummyResponse = getDummyTodoTodayResponse('task');
+      const convertedTasks: Task[] = dummyResponse.todos.map((todo: TodoActivity) => ({
+        id: todo.id,
+        title: todo.title,
+        description: todo.description,
+        completed: todo.status === 'completed',
+        priority: getPriorityFromNumber(todo.progress / 25),
+        category: 'personal',
+        dueDate: todo.due_date,
+        createdAt: todo.created_at
+      }));
+      setTasks(convertedTasks);
     } finally {
       setLoading(false);
     }
@@ -267,6 +281,15 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         {error && (
           <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
             <p className="text-xs text-orange-700 text-center">{error}</p>
+          </div>
+        )}
+        
+        {/* Dummy Data Indicator */}
+        {isUsingDummyData && (
+          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700 text-center">
+              📋 Showing sample data - API not connected
+            </p>
           </div>
         )}
         

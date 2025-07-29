@@ -19,9 +19,7 @@ import {
   ApiPriority,
   ApiCategory,
   TodoStatus,
-  AlarmStatus,
-  WebSearchStatus,
-  ReactionType
+  WebSearchStatus
 } from '../types';
 
 const API_BASE_URL = 'http://localhost:8000/api/v1';
@@ -73,6 +71,24 @@ class ApiService {
     title: string;
   }> {
     return this.request('/dashboard/widget/addnew', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // POST /api/v1/dashboard/widget/updateDetails/{widget_id}
+  async updateWidgetDetails(widgetId: string, data: {
+    title?: string;
+    frequency?: ApiFrequency;
+    importance?: number;
+    category?: ApiCategory;
+  }): Promise<{
+    message: string;
+    widget_id: string;
+    widget_type: string;
+    title: string;
+  }> {
+    return this.request(`/dashboard/widget/updateDetails/${widgetId}`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -154,13 +170,13 @@ class ApiService {
 
   // POST /api/v1/widgets/alarm/updateActivity/{activity_id}
   async updateAlarmActivity(activityId: string, data: {
-    status: AlarmStatus;
-    snooze_count: number;
+    started_at?: string;
+    snoozed_at?: string;
     updated_by: string;
   }): Promise<{
     activity_id: string;
-    status: AlarmStatus;
-    snooze_count: number;
+    started_at?: string;
+    snoozed_at?: string;
     updated_at: string;
   }> {
     return this.request(`/widgets/alarm/updateActivity/${activityId}`, {
@@ -177,8 +193,10 @@ class ApiService {
   // POST /api/v1/widgets/alarm/updateDetails/{alarm_details_id}
   async updateAlarmDetails(alarmDetailsId: string, data: {
     title: string;
+    description: string;
     alarm_times: string[];
-    enabled: boolean;
+    target_value?: string;
+    is_snoozable?: boolean;
   }): Promise<AlarmDetailsResponse> {
     return this.request(`/widgets/alarm/updateDetails/${alarmDetailsId}`, {
       method: 'POST',
@@ -197,11 +215,13 @@ class ApiService {
 
   // POST /api/v1/widgets/single-item-tracker/updateActivity/{activity_id}
   async updateTrackerActivity(activityId: string, data: {
-    current_value: number;
+    value: string;
+    time_added?: string;
     updated_by: string;
   }): Promise<{
     activity_id: string;
-    current_value: number;
+    value: string;
+    time_added?: string;
     updated_at: string;
   }> {
     return this.request(`/widgets/single-item-tracker/updateActivity/${activityId}`, {
@@ -218,8 +238,9 @@ class ApiService {
   // POST /api/v1/widgets/single-item-tracker/updateDetails/{tracker_details_id}
   async updateTrackerDetails(trackerDetailsId: string, data: {
     title: string;
-    target_value: number;
-    unit: string;
+    value_type: string;
+    value_unit: string;
+    target_value: string;
   }): Promise<TrackerDetailsResponse> {
     return this.request(`/widgets/single-item-tracker/updateDetails/${trackerDetailsId}`, {
       method: 'POST',
@@ -239,16 +260,16 @@ class ApiService {
   // POST /api/v1/widgets/websearch/updateActivity/{activity_id}
   async updateWebSearchActivity(activityId: string, data: {
     status: WebSearchStatus;
-    reaction: ReactionType;
-    summary: string;
-    sources: string[];
+    reaction?: string;
+    summary?: string;
+    source_json?: any;
     updated_by: string;
   }): Promise<{
     activity_id: string;
     status: WebSearchStatus;
-    reaction: ReactionType;
-    summary: string;
-    sources: string[];
+    reaction?: string;
+    summary?: string;
+    source_json?: any;
     updated_at: string;
   }> {
     return this.request(`/widgets/websearch/updateActivity/${activityId}`, {
@@ -265,7 +286,6 @@ class ApiService {
   // POST /api/v1/widgets/websearch/updateDetails/{websearch_details_id}
   async updateWebSearchDetails(webSearchDetailsId: string, data: {
     title: string;
-    search_query: string;
   }): Promise<WebSearchDetailsResponse> {
     return this.request(`/widgets/websearch/updateDetails/${webSearchDetailsId}`, {
       method: 'POST',

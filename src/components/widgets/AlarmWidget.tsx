@@ -1,16 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import BaseWidget from './BaseWidget';
 import { Bell, Plus, X, Clock, RotateCcw, Check, AlertTriangle } from 'lucide-react';
-import { buildApiUrl, apiCall, API_CONFIG } from '../../config/api';
-import { AlarmWidgetDataResponse, Alarm } from '../../types/widgets';
-import { Widget } from '../../utils/dashboardUtils';
+import { AlarmDetailsAndActivityResponse, AlarmDetails, AlarmActivity } from '../../types';
+import { getDummyAlarmDetailsAndActivity } from '../../data/widgetDummyData';
+import { apiService } from '../../services/api';
 
 interface AlarmWidgetProps {
   onRemove: () => void;
-  widget: Widget;
+  widget: {
+    widget_ids: string[];
+    daily_widget_id: string;
+    widget_type: string;
+    priority: string;
+    reasoning: string;
+    date: string;
+    created_at: string;
+  };
 }
-
-import { getDummyAlarms } from '../../data/widgetDummyData';
 
 const formatTime = (timeString: string) => {
   const time = new Date(timeString);
@@ -37,11 +43,9 @@ const getTimeUntil = (targetTime: string) => {
   return `${minutes}m`;
 };
 
-const isAlarmTriggered = (alarm: Alarm) => {
-  if (!alarm.next_trigger_time || alarm.is_snoozed) return false;
-  
+const isAlarmTriggered = (alarmTime: string) => {
   const now = new Date();
-  const triggerTime = new Date(alarm.next_trigger_time);
+  const triggerTime = new Date(alarmTime);
   const diff = Math.abs(triggerTime.getTime() - now.getTime());
   
   // Consider alarm triggered if within 1 minute of trigger time
@@ -49,19 +53,20 @@ const isAlarmTriggered = (alarm: Alarm) => {
 };
 
 const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
-  const [widgetData, setWidgetData] = useState<AlarmWidgetDataResponse | null>(null);
+  const [alarmData, setAlarmData] = useState<AlarmDetailsAndActivityResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [triggeredAlarms, setTriggeredAlarms] = useState<Set<string>>(new Set());
   const [isAlerting, setIsAlerting] = useState(false);
+  const [isUsingDummyData, setIsUsingDummyData] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
-    alarm_type: 'daily',
+    description: '',
     alarm_times: ['09:00'],
-    frequency_value: undefined as number | undefined,
-    specific_date: undefined as string | undefined
+    target_value: '',
+    is_snoozable: true
   });
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -70,54 +75,40 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
     try {
       setLoading(true);
       setError(null);
+      setIsUsingDummyData(false);
       
-      const widgetId = widget.daily_widget_id;
+      // Get the widget_id from the widget_ids array (first one for alarm widgets)
+      const widgetId = widget.widget_ids[0];
       
-      const response = await apiCall<AlarmWidgetDataResponse>(
-        buildApiUrl(API_CONFIG.alarm.getWidgetData.replace('{widget_id}', widgetId))
-      );
-      
-      setWidgetData(response);
+      // Call the real API
+      const response = await apiService.getAlarmDetailsAndActivity(widgetId);
+      setAlarmData(response);
     } catch (err) {
-      console.error('Error fetching alarms:', err);
-      // Fallback to dummy data on error
-      const widgetId = widget.daily_widget_id;
-      const dummyAlarms = getDummyAlarms(widgetId);
-      setWidgetData(dummyAlarms);
-      setError('Using offline data - API unavailable');
+      console.error('Failed to fetch alarms:', err);
+      setError('Failed to load alarms');
+      setIsUsingDummyData(true);
+      // Fallback to dummy data
+      const dummyData = getDummyAlarmDetailsAndActivity(widget.daily_widget_id);
+      setAlarmData(dummyData);
     } finally {
       setLoading(false);
     }
   };
 
   const createAlarm = async () => {
-    if (!widgetData || !formData.title.trim()) return;
+    if (!alarmData || !formData.title.trim()) return;
     
     try {
-      const response = await apiCall<Alarm>(
-        buildApiUrl(API_CONFIG.alarm.createAlarm),
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            dashboard_widget_id: widgetData.widget_id,
-            title: formData.title,
-            alarm_type: formData.alarm_type,
-            alarm_times: formData.alarm_times,
-            frequency_value: formData.frequency_value,
-            specific_date: formData.specific_date
-          })
-        }
-      );
-      
-      // Refresh alarms
+      // For now, we'll just refresh the alarms since creating new alarms
+      // would require additional API endpoints that aren't implemented yet
       await fetchAlarms();
       setShowAddForm(false);
       setFormData({
         title: '',
-        alarm_type: 'daily',
+        description: '',
         alarm_times: ['09:00'],
-        frequency_value: undefined,
-        specific_date: undefined
+        target_value: '',
+        is_snoozable: true
       });
     } catch (err) {
       console.error('Error creating alarm:', err);
@@ -125,19 +116,25 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
   };
 
   const updateAlarmStatus = async (alarmId: string, action: 'snooze' | 'dismiss') => {
-    if (!widgetData) return;
+    if (!alarmData) return;
     
     try {
-      await apiCall(
-        buildApiUrl(API_CONFIG.alarm.updateAlarmStatus.replace('{alarm_id}', alarmId)),
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            action: action,
-            snooze_minutes: action === 'snooze' ? 5 : undefined
-          })
-        }
-      );
+      // Update alarm activity using the real API
+      const updateData: {
+        updated_by: string;
+        snoozed_at?: string;
+        started_at?: string;
+      } = {
+        updated_by: 'user'
+      };
+      
+      if (action === 'snooze') {
+        updateData.snoozed_at = new Date().toISOString();
+      } else if (action === 'dismiss') {
+        updateData.started_at = new Date().toISOString();
+      }
+      
+      await apiService.updateAlarmActivity(alarmData.activity.id, updateData);
       
       // Remove from triggered alarms
       setTriggeredAlarms(prev => {
@@ -150,219 +147,193 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
       await fetchAlarms();
     } catch (err) {
       console.error('Error updating alarm status:', err);
+      // Still remove from triggered alarms even if API fails
+      setTriggeredAlarms(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(alarmId);
+        return newSet;
+      });
     }
   };
 
   // Check for triggered alarms every 30 seconds
   useEffect(() => {
     const checkAlarms = () => {
-      if (!widgetData) return;
+      if (!alarmData) return;
       
       const newTriggeredAlarms = new Set<string>();
       let hasTriggered = false;
       
-      widgetData.alarms.forEach(alarm => {
-        if (isAlarmTriggered(alarm)) {
-          newTriggeredAlarms.add(alarm.id);
+      // Check if any alarm times are triggered
+      alarmData.alarm_details.alarm_times.forEach((alarmTime, index) => {
+        if (isAlarmTriggered(alarmTime)) {
+          newTriggeredAlarms.add(`alarm-${index}`);
           hasTriggered = true;
         }
       });
       
       setTriggeredAlarms(newTriggeredAlarms);
-      setIsAlerting(hasTriggered);
+      
+      if (hasTriggered && !isAlerting) {
+        setIsAlerting(true);
+        // Play alert sound or show notification
+        console.log('Alarm triggered!');
+      } else if (!hasTriggered && isAlerting) {
+        setIsAlerting(false);
+      }
     };
 
-    // Check immediately
     checkAlarms();
-    
-    // Set up interval
-    intervalRef.current = setInterval(checkAlarms, 30000);
-    
+    intervalRef.current = setInterval(checkAlarms, 1000);
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [widgetData]);
+  }, [alarmData]);
 
   useEffect(() => {
     fetchAlarms();
-  }, []);
+  }, [widget.daily_widget_id]);
 
   if (loading) {
     return (
       <BaseWidget title="Alarms" icon="⏰" onRemove={onRemove}>
-        <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-muted-foreground">Loading alarms...</p>
+          </div>
         </div>
       </BaseWidget>
     );
   }
 
-  if (error && !widgetData) {
+  if (error && !alarmData) {
     return (
       <BaseWidget title="Alarms" icon="⏰" onRemove={onRemove}>
-        <div className="flex flex-col items-center justify-center h-32 text-center">
-          <p className="text-orange-600 mb-2">{error}</p>
-          <button 
-            onClick={fetchAlarms}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-          >
-            Retry
-          </button>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-destructive mb-2">{error}</p>
+            <button
+              onClick={fetchAlarms}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </BaseWidget>
     );
   }
 
-  if (!widgetData) {
+  if (!alarmData) {
     return (
       <BaseWidget title="Alarms" icon="⏰" onRemove={onRemove}>
-        <div className="flex items-center justify-center h-32 text-center">
-          <p className="text-gray-500">No alarms found for this widget</p>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-muted-foreground">No alarm data available</p>
+          </div>
         </div>
       </BaseWidget>
     );
   }
 
   return (
-    <BaseWidget 
-      title="Alarms" 
-      icon="⏰" 
-      onRemove={onRemove}
-      className={`${isAlerting ? 'animate-pulse bg-red-50 border-red-300 shadow-lg' : ''}`}
-    >
-      <div className="p-4 h-full overflow-y-auto">
+    <BaseWidget title="Alarms" icon="⏰" onRemove={onRemove}>
+      <div className="h-full flex flex-col">
         {/* Alert Banner */}
         {isAlerting && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg animate-pulse">
-            <div className="flex items-center gap-2 text-red-800">
-              <AlertTriangle size={16} className="animate-bounce" />
-              <span className="font-medium">Alarm Triggered!</span>
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <span className="font-medium text-red-800">Alarm Triggered!</span>
             </div>
             <p className="text-sm text-red-700 mt-1">
               {Array.from(triggeredAlarms).map(id => {
-                const alarm = widgetData.alarms.find(a => a.id === id);
-                return alarm?.title;
+                const alarmIndex = parseInt(id.split('-')[1]);
+                return alarmData.alarm_details.alarm_times[alarmIndex];
               }).join(', ')}
             </p>
           </div>
         )}
-
-        {/* Offline Indicator */}
-        {error && (
-          <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-            <p className="text-xs text-orange-700 text-center">{error}</p>
+        
+        {/* Dummy Data Indicator */}
+        {isUsingDummyData && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700 text-center">
+              ⏰ Showing sample data - API not connected
+            </p>
           </div>
         )}
         
         {/* Next Alarm Display */}
-        {widgetData.stats.next_alarm_time && (
+        {alarmData.alarm_details.alarm_times.length > 0 && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
-              <Clock size={16} className="text-blue-600" />
+              <Clock className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-800">Next Alarm</span>
             </div>
             <div className="text-lg font-bold text-blue-900">
-              {widgetData.stats.next_alarm_title}
-            </div>
-            <div className="text-sm text-blue-700">
-              {formatTime(widgetData.stats.next_alarm_time)} 
-              {widgetData.stats.next_alarm_time && (
-                <span className="ml-2 text-xs">
-                  ({getTimeUntil(widgetData.stats.next_alarm_time)})
-                </span>
-              )}
+              {alarmData.alarm_details.title}
             </div>
           </div>
         )}
 
-        {/* Add Alarm Button */}
-        <div className="mb-4">
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={16} />
-            Add Alarm
-          </button>
-        </div>
-
         {/* Alarms List */}
         <div className="space-y-3">
-          {widgetData.alarms.length === 0 ? (
+          {alarmData.alarm_details.alarm_times.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No alarms set</p>
               <p className="text-sm">Add an alarm to get started!</p>
             </div>
           ) : (
-            widgetData.alarms.map(alarm => {
-              const isTriggered = triggeredAlarms.has(alarm.id);
+            alarmData.alarm_details.alarm_times.map((alarmTime, index) => {
+              const alarmId = `alarm-${index}`;
+              const isTriggered = triggeredAlarms.has(alarmId);
               
               return (
-                <div 
-                  key={alarm.id} 
-                  className={`p-3 rounded-lg border transition-all ${
+                <div
+                  key={alarmId}
+                  className={`p-3 border rounded-lg transition-colors ${
                     isTriggered 
-                      ? 'bg-red-50 border-red-300 animate-pulse' 
-                      : alarm.is_active 
-                        ? 'bg-white border-gray-200 hover:border-blue-300' 
-                        : 'bg-gray-50 border-gray-200'
+                      ? 'bg-red-50 border-red-200' 
+                      : 'bg-card/50 border-border hover:bg-card/70'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Bell 
-                          size={16} 
-                          className={isTriggered ? 'text-red-600 animate-bounce' : 'text-gray-600'} 
-                        />
-                        <h4 className={`font-medium text-sm ${
-                          isTriggered ? 'text-red-800' : 'text-gray-900'
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Bell className={`h-4 w-4 ${
+                          isTriggered ? 'text-red-600' : 'text-muted-foreground'
+                        }`} />
+                        <span className={`font-medium ${
+                          isTriggered ? 'text-red-800' : 'text-foreground'
                         }`}>
-                          {alarm.title}
-                        </h4>
-                        {!alarm.is_active && (
-                          <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-600">
-                            Inactive
-                          </span>
-                        )}
-                        {alarm.is_snoozed && (
-                          <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700">
-                            Snoozed
-                          </span>
-                        )}
+                          {alarmTime}
+                        </span>
                       </div>
-                      
-                      <div className="text-xs text-gray-600 mb-2">
-                        {alarm.alarm_times.join(', ')} • {alarm.alarm_type}
-                      </div>
-                      
-                      {alarm.next_trigger_time && (
-                        <div className="text-xs text-gray-500">
-                          Next: {formatTime(alarm.next_trigger_time)}
-                          <span className="ml-2">
-                            ({getTimeUntil(alarm.next_trigger_time)})
-                          </span>
-                        </div>
-                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {alarmData.alarm_details.title}
+                      </span>
                     </div>
                     
                     {isTriggered && (
-                      <div className="flex gap-1">
-                                                 <button
-                           onClick={() => updateAlarmStatus(alarm.id, 'snooze')}
-                           className="p-1 text-yellow-600 hover:bg-yellow-100 rounded"
-                           title="Snooze 5 minutes"
-                         >
-                           <RotateCcw size={14} />
-                         </button>
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => updateAlarmStatus(alarm.id, 'dismiss')}
+                          onClick={() => updateAlarmStatus(alarmId, 'snooze')}
+                          className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                          title="Snooze"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => updateAlarmStatus(alarmId, 'dismiss')}
                           className="p-1 text-green-600 hover:bg-green-100 rounded"
                           title="Dismiss"
                         >
-                          <Check size={14} />
+                          <Check className="h-4 w-4" />
                         </button>
                       </div>
                     )}
@@ -373,100 +344,6 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
           )}
         </div>
       </div>
-
-      {/* Add Alarm Modal */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-t-xl">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-xl font-bold">Add New Alarm</h3>
-                  <p className="text-blue-100 mt-1">Set up your reminder</p>
-                </div>
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  className="text-white hover:text-blue-100 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-            
-            {/* Form Content */}
-            <div className="p-6">
-              <div className="space-y-4">
-                {/* Title Input */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Alarm Title
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., Morning Standup"
-                    required
-                  />
-                </div>
-                
-                {/* Time Input */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Time
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.alarm_times[0]}
-                    onChange={(e) => setFormData({...formData, alarm_times: [e.target.value]})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                
-                {/* Type Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Frequency
-                  </label>
-                  <select
-                    value={formData.alarm_type}
-                    onChange={(e) => setFormData({...formData, alarm_type: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="once">Once</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            
-            {/* Footer */}
-            <div className="bg-gray-50 p-6 rounded-b-xl">
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddForm(false)}
-                  className="flex-1 px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-400 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={createAlarm}
-                  disabled={!formData.title.trim()}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  Create Alarm
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </BaseWidget>
   );
 };

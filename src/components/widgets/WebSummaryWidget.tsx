@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Search, ExternalLink } from 'lucide-react'
 import BaseWidget from './BaseWidget'
-import { Widget } from '../../utils/dashboardUtils'
 import { getDummyWebSummary } from '../../data/widgetDummyData'
+import { apiService } from '../../services/api'
 
 interface Summary {
   id: string
@@ -14,7 +14,15 @@ interface Summary {
 
 interface WebSummaryWidgetProps {
   onRemove: () => void
-  widget: Widget
+  widget: {
+    widget_ids: string[];
+    daily_widget_id: string;
+    widget_type: string;
+    priority: string;
+    reasoning: string;
+    date: string;
+    created_at: string;
+  };
 }
 
 const WebSummaryWidget = ({ onRemove, widget }: WebSummaryWidgetProps) => {
@@ -22,31 +30,39 @@ const WebSummaryWidget = ({ onRemove, widget }: WebSummaryWidgetProps) => {
   const [isLoading, setIsLoading] = useState(false)
   const [currentSummary, setCurrentSummary] = useState<Summary | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isUsingDummyData, setIsUsingDummyData] = useState(false)
 
   const searchAndSummarize = async () => {
     if (!query.trim()) return
 
     setIsLoading(true)
     setError(null)
+    setIsUsingDummyData(false)
 
     try {
       // TODO: Replace with actual API call
-      // const response = await fetch('/api/summary', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ query })
-      // })
-      // const data = await response.json()
-
+      // const response = await apiService.getWebSearchAISummary(widget.daily_widget_id, { query });
+      
       // Mock response for now
       await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate API delay
       
-      const mockSummary = getDummyWebSummary(query);
+      const mockResponse = getDummyWebSummary(query);
+      setIsUsingDummyData(true);
+      
+      // Convert API response to component's Summary type
+      const mockSummary: Summary = {
+        id: Date.now().toString(),
+        query: query,
+        summary: mockResponse.summary,
+        sources: mockResponse.sources,
+        createdAt: mockResponse.generated_at
+      };
 
       setCurrentSummary(mockSummary)
       setQuery('')
     } catch (error) {
       setError('Failed to generate summary. Please try again.')
+      setIsUsingDummyData(true);
       console.error('Summary error:', error)
     } finally {
       setIsLoading(false)
@@ -83,6 +99,15 @@ const WebSummaryWidget = ({ onRemove, widget }: WebSummaryWidgetProps) => {
             <Search size={16} />
           </button>
         </div>
+
+        {/* Dummy Data Indicator */}
+        {isUsingDummyData && (
+          <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700 text-center">
+              🔍 Showing sample data - API not connected
+            </p>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto">
           {isLoading && (

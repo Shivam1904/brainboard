@@ -12,17 +12,17 @@ export interface TodoTodayResponse {
   total_todos: number;
 }
 
-// Todo activity structure from API
+// Todo activity structure from API (matches backend ToDoItemActivity)
 export interface TodoActivity {
-  activity_id: string;
+  id: string;
   widget_id: string;
   daily_widget_id: string;
-  todo_details_id: string;
+  todo_details_id: string; // Backend: tododetails_id
   title: string;
   todo_type: 'habit' | 'task';
   description: string;
   due_date: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'in progress' | 'completed' | 'cancelled'; // Backend: 'in progress'
   progress: number;
   created_at: string;
   updated_at: string;
@@ -34,31 +34,37 @@ export interface TodoDetailsAndActivityResponse {
   activity: TodoActivityStatus;
 }
 
-// Todo details structure from API
+// Todo details structure from API (matches backend ToDoDetails)
 export interface TodoDetails {
   id: string;
+  widget_id: string;
   title: string;
   todo_type: 'habit' | 'task';
   description: string;
   due_date: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Todo activity status from API
 export interface TodoActivityStatus {
   id: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'in progress' | 'completed' | 'cancelled';
   progress: number;
   created_at: string;
+  updated_at: string;
 }
 
 // Response from /api/v1/widgets/todo/getTodoDetails/{widget_id}
 export interface TodoDetailsResponse {
   id: string;
+  widget_id: string;
   title: string;
   todo_type: 'habit' | 'task';
   description: string;
   due_date: string;
   created_at: string;
+  updated_at: string;
 }
 
 // ============================================================================
@@ -71,29 +77,39 @@ export interface AlarmDetailsAndActivityResponse {
   activity: AlarmActivity;
 }
 
-// Alarm details structure from API
+// Alarm details structure from API (matches backend AlarmDetails)
 export interface AlarmDetails {
   id: string;
+  widget_id: string;
   title: string;
+  description: string;
   alarm_times: string[];
-  enabled: boolean;
+  target_value: string;
+  is_snoozable: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-// Alarm activity structure from API
+// Alarm activity structure from API (matches backend AlarmItemActivity)
 export interface AlarmActivity {
   id: string;
-  status: 'pending' | 'triggered' | 'started' | 'snoozed' | 'dismissed';
-  snooze_count: number;
-  last_triggered: string;
+  started_at: string;
+  snoozed_at: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Response from /api/v1/widgets/alarm/getAlarmDetails/{widget_id}
 export interface AlarmDetailsResponse {
   id: string;
+  widget_id: string;
   title: string;
+  description: string;
   alarm_times: string[];
-  enabled: boolean;
+  target_value: string;
+  is_snoozable: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 // ============================================================================
@@ -106,30 +122,37 @@ export interface TrackerDetailsAndActivityResponse {
   activity: TrackerActivity;
 }
 
-// Tracker details structure from API
+// Tracker details structure from API (matches backend SingleItemTrackerDetails)
 export interface TrackerDetails {
   id: string;
+  widget_id: string;
   title: string;
   value_type: string;
-  unit: string;
-  target_value: number;
+  value_unit: string;
+  target_value: string;
+  created_at: string;
+  updated_at: string;
 }
 
-// Tracker activity structure from API
+// Tracker activity structure from API (matches backend SingleItemTrackerItemActivity)
 export interface TrackerActivity {
   id: string;
-  current_value: number;
-  last_updated: string;
+  value: string;
+  time_added: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Response from /api/v1/widgets/single-item-tracker/getTrackerDetails/{widget_id}
 export interface TrackerDetailsResponse {
   id: string;
+  widget_id: string;
   title: string;
   value_type: string;
-  unit: string;
-  target_value: number;
+  value_unit: string;
+  target_value: string;
   created_at: string;
+  updated_at: string;
 }
 
 // ============================================================================
@@ -142,47 +165,60 @@ export interface WebSearchSummaryAndActivityResponse {
   activity: WebSearchActivity;
 }
 
-// WebSearch details structure from API
+// WebSearch details structure from API (matches backend WebSearchDetails)
 export interface WebSearchDetails {
   id: string;
+  widget_id: string;
   title: string;
-  search_query: string;
+  created_at: string;
+  updated_at: string;
 }
 
-// WebSearch activity structure from API
+// WebSearch activity structure from API (matches backend WebSearchItemActivity)
 export interface WebSearchActivity {
   id: string;
-  status: 'pending' | 'searching' | 'summarizing' | 'completed' | 'failed';
-  reaction: 'positive' | 'negative' | 'neutral';
+  status: 'pending' | 'completed' | 'failed';
+  reaction: string;
   summary: string;
-  sources: string[];
+  source_json: any; // Backend: source_json (JSON field)
+  created_at: string;
+  updated_at: string;
 }
 
 // Response from /api/v1/widgets/websearch/getWebsearchDetails/{widget_id}
 export interface WebSearchDetailsResponse {
   id: string;
+  widget_id: string;
   title: string;
-  search_query: string;
   created_at: string;
+  updated_at: string;
 }
 
 // Response from /api/v1/widgets/websearch/getaisummary/{widget_id}
 export interface WebSearchAISummaryResponse {
+  ai_summary_id: string;
+  widget_id: string;
+  query: string;
   summary: string;
-  sources: string[];
-  generated_at: string;
-  confidence_score: number;
+  sources: Array<{
+    title: string;
+    url: string;
+  }>;
+  search_successful: boolean;
+  results_count: number;
+  ai_model_used: string;
+  generation_type: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================================================
 // COMMON API TYPES
 // ============================================================================
 
-// Status types used across widgets
-export type TodoStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
-export type AlarmStatus = 'pending' | 'triggered' | 'started' | 'snoozed' | 'dismissed';
-export type WebSearchStatus = 'pending' | 'searching' | 'summarizing' | 'completed' | 'failed';
-export type ReactionType = 'positive' | 'negative' | 'neutral';
+// Status types used across widgets (matching backend exactly)
+export type TodoStatus = 'pending' | 'in progress' | 'completed' | 'cancelled';
+export type WebSearchStatus = 'pending' | 'completed' | 'failed';
 
 // Widget types supported by the API
 export type ApiWidgetType = 'todo' | 'alarm' | 'singleitemtracker' | 'websearch';

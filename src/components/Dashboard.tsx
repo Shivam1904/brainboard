@@ -7,11 +7,14 @@ import AlarmWidget from './widgets/AlarmWidget'
 import BaseWidget from './widgets/BaseWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { getWidgetConfig } from '../config/widgets'
-import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
+import { GRID_CONFIG, getGridCSSProperties, findEmptyPosition } from '../config/grid'
 import { dashboardService } from '../services/dashboard'
 import { 
   TodayWidgetsResponse,
-  DailyWidget
+  DailyWidget,
+  ApiWidgetType,
+  ApiFrequency,
+  ApiCategory
 } from '../types'
 import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
@@ -20,7 +23,6 @@ const ResponsiveGridLayout = WidthProvider(Responsive)
 
 // Simple widget interface for UI layout
 interface UIWidget {
-  id: string;
   daily_widget_id: string;
   widget_ids: string[];
   widget_type: string;
@@ -45,7 +47,48 @@ const Dashboard = () => {
     })
   }, [])
 
-  // Fetch today's widget configuration
+  // Find optimal position for a new widget
+  const findOptimalPosition = (widgetType: string, existingWidgets: UIWidget[]): { x: number; y: number } => {
+    const config = getWidgetConfig(widgetType);
+    if (!config) return { x: 0, y: 0 };
+
+    // Try to find empty space using the existing function
+    const emptyPosition = findEmptyPosition({
+      widgetId: widgetType,
+      widgets: existingWidgets,
+      getWidgetConfig,
+      gridCols: GRID_CONFIG.cols.lg,
+      maxRows: 100
+    });
+
+    if (emptyPosition) {
+      return emptyPosition;
+    }
+
+    // Fallback: simple horizontal placement with wrapping
+    let currentX = 0;
+    let currentY = 0;
+    const maxX = GRID_CONFIG.cols.lg - config.defaultSize.w;
+
+    // Find the rightmost widget to start from
+    if (existingWidgets.length > 0) {
+      const rightmostWidget = existingWidgets.reduce((rightmost, widget) => {
+        return widget.layout.x + widget.layout.w > rightmost.layout.x + rightmost.layout.w ? widget : rightmost;
+      });
+      currentX = rightmostWidget.layout.x + rightmostWidget.layout.w;
+      currentY = rightmostWidget.layout.y;
+    }
+
+    // If we can't fit horizontally, move to next row
+    if (currentX + config.defaultSize.w > maxX) {
+      currentX = 0;
+      currentY += 2; // Add some spacing between rows
+    }
+
+    return { x: currentX, y: currentY };
+  };
+
+  // Fetch today's widget configuration using getTodayWidgetList
   const fetchTodayWidgets = async () => {
     try {
       setDashboardLoading(true)
@@ -70,17 +113,22 @@ const Dashboard = () => {
         }
       }
       
-      // Convert API widgets to UI widgets with layout
-      const uiWidgets: UIWidget[] = data.widgets.map((widget: DailyWidget, index: number) => {
+      // Convert API widgets to UI widgets with proper placement
+      const uiWidgets: UIWidget[] = [];
+      
+      data.widgets.forEach((widget: DailyWidget) => {
         const config = getWidgetConfig(widget.widget_type);
         const defaultSize = config?.defaultSize || { w: 10, h: 10 };
         
-        return {
+        // Find optimal position for this widget
+        const position = findOptimalPosition(widget.widget_type, uiWidgets);
+        
+        const uiWidget: UIWidget = {
           ...widget,
           layout: {
             i: widget.daily_widget_id,
-            x: (index * 2) % 12, // Simple grid positioning
-            y: Math.floor(index / 6) * 2,
+            x: position.x,
+            y: position.y,
             w: defaultSize.w,
             h: defaultSize.h,
             minW: config?.minSize?.w || 4,
@@ -89,7 +137,37 @@ const Dashboard = () => {
             maxH: config?.maxSize?.h || 20,
           }
         };
+        
+        uiWidgets.push(uiWidget);
       });
+      
+      // Automatically add the "All Schedules" widget
+      const allSchedulesConfig = getWidgetConfig('allSchedules');
+      if (allSchedulesConfig) {
+        const position = findOptimalPosition('allSchedules', uiWidgets);
+        const allSchedulesWidget: UIWidget = {
+          daily_widget_id: 'auto-all-schedules',
+          widget_ids: [],
+          widget_type: 'allSchedules',
+          priority: 'LOW',
+          reasoning: 'Automatically included for widget management',
+          date: new Date().toISOString().split('T')[0],
+          created_at: new Date().toISOString(),
+          layout: {
+            i: 'auto-all-schedules',
+            x: position.x,
+            y: position.y,
+            w: allSchedulesConfig.defaultSize.w,
+            h: allSchedulesConfig.defaultSize.h,
+            minW: allSchedulesConfig.minSize.w,
+            minH: allSchedulesConfig.minSize.h,
+            maxW: allSchedulesConfig.maxSize.w,
+            maxH: allSchedulesConfig.maxSize.h,
+          }
+        };
+        
+        uiWidgets.push(allSchedulesWidget);
+      }
       
       setWidgets(uiWidgets);
     } catch (err) {
@@ -180,7 +258,8 @@ const Dashboard = () => {
     })
   }
 
-  const addWidget = (widgetId: string) => {
+  // Add new widget using addNewWidget API
+  const addWidget = async (widgetId: string) => {
     const config = getWidgetConfig(widgetId);
     
     if (!config) {
@@ -188,34 +267,65 @@ const Dashboard = () => {
       return
     }
     
-    const newWidget: UIWidget = {
-      id: `new-${Date.now()}`,
-      daily_widget_id: `daily-${widgetId}-${Date.now()}`,
-      widget_ids: [],
-      widget_type: widgetId,
-      priority: 'LOW',
-      reasoning: 'Manually added widget',
-      date: new Date().toISOString().split('T')[0],
-      created_at: new Date().toISOString(),
-      layout: {
-        i: `daily-${widgetId}-${Date.now()}`,
-        x: (widgets.length * 2) % 12,
-        y: Math.floor(widgets.length / 6) * 2,
-        w: config.defaultSize.w,
-        h: config.defaultSize.h,
-        minW: config.minSize.w,
-        minH: config.minSize.h,
-        maxW: config.maxSize.w,
-        maxH: config.maxSize.h,
+    try {
+      // Call the API to add a new widget
+      const response = await dashboardService.addNewWidget({
+        widget_type: config.apiWidgetType as ApiWidgetType,
+        frequency: 'daily' as ApiFrequency, // Default to daily
+        importance: 0.5, // Default importance
+        title: config.title,
+        category: config.category as ApiCategory
+      });
+      
+      console.log('Widget added successfully:', response);
+      
+      // Refresh the dashboard to show the new widget
+      await fetchTodayWidgets();
+      
+    } catch (error) {
+      console.error('Failed to add widget:', error);
+      
+      // Add widget locally even if API fails
+      const position = findOptimalPosition(widgetId, widgets);
+      const newWidget: UIWidget = {
+        daily_widget_id: `temp-${Date.now()}`,
+        widget_ids: [],
+        widget_type: widgetId,
+        priority: 'LOW',
+        reasoning: 'Manually added widget',
+        date: new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString(),
+        layout: {
+          i: `temp-${Date.now()}`,
+          x: position.x,
+          y: position.y,
+          w: config.defaultSize.w,
+          h: config.defaultSize.h,
+          minW: config.minSize.w,
+          minH: config.minSize.h,
+          maxW: config.maxSize.w,
+          maxH: config.maxSize.h,
+        }
+      };
+      
+      setWidgets(prev => [...prev, newWidget]);
+      
+      // Show a subtle notification that we're using local data
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Widget added locally - API server may not be running');
       }
-    };
-    
-    setWidgets([...widgets, newWidget]);
+    }
   }
 
   const removeWidget = (dailyWidgetId: string) => {
     const widget = widgets.find(w => w.daily_widget_id === dailyWidgetId)
     const widgetType = widget?.widget_type || 'widget'
+    
+    // Prevent removal of the automatically included "All Schedules" widget
+    if (dailyWidgetId === 'auto-all-schedules') {
+      alert('The "All Schedules" widget cannot be removed as it is automatically included for widget management.');
+      return;
+    }
     
     if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
       const updatedWidgets = widgets.filter((widget: UIWidget) => widget.daily_widget_id !== dailyWidgetId);

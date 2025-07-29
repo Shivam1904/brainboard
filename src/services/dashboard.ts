@@ -37,6 +37,21 @@ export class DashboardService {
     return apiService.addNewWidget(data);
   }
 
+  // Update widget details
+  async updateWidgetDetails(widgetId: string, data: {
+    title?: string;
+    frequency?: ApiFrequency;
+    importance?: number;
+    category?: ApiCategory;
+  }): Promise<{
+    message: string;
+    widget_id: string;
+    widget_type: string;
+    title: string;
+  }> {
+    return apiService.updateWidgetDetails(widgetId, data);
+  }
+
   // Get todo list by type
   async getTodoList(todoType: 'habit' | 'task'): Promise<{
     todo_type: 'habit' | 'task';

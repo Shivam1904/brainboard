@@ -48,7 +48,7 @@ export const getDummyTodayWidgets = (): TodayWidgetsResponse => {
         daily_widget_id: "daily-tracker-001",
         widget_ids: ["widget-tracker-001"],
         widget_type: "singleitemtracker",
-        priority: "MEDIUM",
+        priority: "LOW",
         reasoning: "Tracker widget for health monitoring",
         date: new Date().toISOString().split('T')[0],
         created_at: "2024-01-15T10:00:00Z"
@@ -78,7 +78,7 @@ export const getDummyTodoTodayResponse = (todoType: 'habit' | 'task'): TodoToday
     todo_type: todoType,
     todos: [
       {
-        activity_id: "activity-001",
+        id: "activity-001",
         widget_id: "widget-todo-001",
         daily_widget_id: "daily-todo-001",
         todo_details_id: "todo-details-001",
@@ -87,12 +87,12 @@ export const getDummyTodoTodayResponse = (todoType: 'habit' | 'task'): TodoToday
         description: todoType === 'task' ? "Finish the project documentation by end of day" : "Practice mindfulness for 10 minutes",
         due_date: "2024-01-20",
         status: "pending",
-        progress: 0.0,
+        progress: 0,
         created_at: "2024-01-15T10:00:00Z",
         updated_at: "2024-01-15T10:00:00Z"
       },
       {
-        activity_id: "activity-002",
+        id: "activity-002",
         widget_id: "widget-todo-002",
         daily_widget_id: "daily-todo-001",
         todo_details_id: "todo-details-002",
@@ -100,8 +100,8 @@ export const getDummyTodoTodayResponse = (todoType: 'habit' | 'task'): TodoToday
         todo_type: todoType,
         description: todoType === 'task' ? "Review and approve pending code changes" : "Stay hydrated throughout the day",
         due_date: "2024-01-16",
-        status: "in_progress",
-        progress: 0.5,
+        status: "in progress",
+        progress: 50,
         created_at: "2024-01-15T10:00:00Z",
         updated_at: "2024-01-15T10:00:00Z"
       }
@@ -118,15 +118,21 @@ export const getDummyAlarmDetailsAndActivity = (widgetId: string): AlarmDetailsA
   return {
     alarm_details: {
       id: "alarm-details-001",
+      widget_id: widgetId,
       title: "Morning Workout Alarm",
+      description: "Alarm for morning workout routine",
       alarm_times: ["06:00", "06:15"],
-      enabled: true
+      target_value: "workout",
+      is_snoozable: true,
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
     },
     activity: {
       id: "alarm-activity-001",
-      status: "pending",
-      snooze_count: 0,
-      last_triggered: "2024-01-15T06:00:00Z"
+      started_at: "",
+      snoozed_at: "",
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
     }
   };
 };
@@ -139,15 +145,20 @@ export const getDummyTrackerDetailsAndActivity = (widgetId: string): TrackerDeta
   return {
     tracker_details: {
       id: "tracker-details-001",
+      widget_id: widgetId,
       title: "Weight Tracker",
       value_type: "number",
-      unit: "kg",
-      target_value: 70
+      value_unit: "kg",
+      target_value: "70",
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
     },
     activity: {
       id: "tracker-activity-001",
-      current_value: 72.5,
-      last_updated: "2024-01-15T08:00:00Z"
+      value: "72.5",
+      time_added: "2024-01-15T08:00:00Z",
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
     }
   };
 };
@@ -160,19 +171,25 @@ export const getDummyWebSearchSummaryAndActivity = (widgetId: string): WebSearch
   return {
     websearch_details: {
       id: "websearch-details-001",
+      widget_id: widgetId,
       title: "AI Research",
-      search_query: "latest artificial intelligence developments 2024"
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
     },
     activity: {
       id: "websearch-activity-001",
       status: "completed",
       reaction: "positive",
       summary: "Recent AI developments show significant progress in large language models, with new breakthroughs in multimodal AI and improved reasoning capabilities. Key areas include GPT-4 advancements, Claude 3 improvements, and emerging open-source alternatives.",
-      sources: [
-        "https://example.com/ai-news-1",
-        "https://example.com/ai-news-2",
-        "https://example.com/ai-news-3"
-      ]
+      source_json: {
+        sources: [
+          "https://example.com/ai-news-1",
+          "https://example.com/ai-news-2",
+          "https://example.com/ai-news-3"
+        ]
+      },
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
     }
   };
 };
