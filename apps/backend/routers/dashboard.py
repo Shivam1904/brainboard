@@ -64,8 +64,8 @@ async def get_today_widgets(
         for daily_widget in daily_widgets:
             widget = daily_widget.dashboard_widget
             widget_data = {
-                "id": widget.id,
-                "daily_widget_id": daily_widget.id,
+                # "id": widget.id,
+                "daily_widget_id": daily_widget.dashboard_widget_id,
                 "title": widget.title,
                 "widget_type": widget.widget_type,
                 "category": widget.category,
@@ -112,8 +112,8 @@ async def generate_today_widgets(
         for daily_widget in daily_widgets:
             widget = daily_widget.dashboard_widget
             widget_data = {
-                "id": widget.id,
-                "daily_widget_id": daily_widget.id,
+                # "id": widget.id,
+                "daily_widget_id": daily_widget.dashboard_widget_id,
                 "title": widget.title,
                 "widget_type": widget.widget_type,
                 "category": widget.category,

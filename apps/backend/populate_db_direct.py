@@ -5,6 +5,7 @@ Directly inserts realistic test data into SQLite database using SQL/ORM
 
 This script bypasses the API and directly populates the database tables with:
 - Dashboard Widgets (WebSearch, Todo, SingleItemTracker, Alarm)
+- Daily Widget Selections (AI-curated daily dashboard layouts)
 - WebSearch Queries and AI Summaries  
 - Todo Items (Tasks, Events, Habits)
 - SingleItemTracker instances and historical entries
@@ -19,6 +20,8 @@ import os
 import sys
 import json
 import uuid
+import random
+import traceback
 from datetime import datetime, date, timedelta
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
@@ -30,7 +33,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from core.database import get_db, engine, SessionLocal
 from core.config import settings
 from models.database import (
-    User, DashboardWidget, Summary,
+    User, DashboardWidget, DailyWidget, Summary,
     TodoItem, WebSearchQuery, 
     Alarm,
     SingleItemTracker, SingleItemTrackerLog
@@ -42,6 +45,7 @@ class DirectDatabasePopulator:
         self.created_data = {
             "users": [],
             "dashboard_widgets": [],
+            "daily_widgets": [],
             "websearch_queries": [],
             "summaries": [],
             "todo_items": [],
@@ -75,6 +79,7 @@ class DirectDatabasePopulator:
             
             # Only delete from tables that exist
             tables_to_clean = [
+                "daily_widgets",
                 "alarms",
                 "single_item_tracker_logs",
                 "single_item_trackers",
@@ -107,7 +112,7 @@ class DirectDatabasePopulator:
         try:
             # Check if default user already exists
             existing_user = self.session.query(User).filter(
-                User.email == "test@example.com"
+                User.email == "default@brainboard.com"
             ).first()
             
             if existing_user:
@@ -118,8 +123,8 @@ class DirectDatabasePopulator:
             # Create new default user
             user = User(
                 id=str(uuid.uuid4()),
-                email="test@example.com",
-                name="Default Test User",
+                email="default@brainboard.com",
+                name="Brainboard Default User",
                 created_at=datetime.utcnow()
             )
             
@@ -137,34 +142,28 @@ class DirectDatabasePopulator:
             raise
     
     def create_dashboard_widgets(self):
-        """Create dashboard widgets for all widget types"""
+        """Create a simple set of dashboard widgets for testing"""
         self.section_header("Creating Dashboard Widgets", "📊")
         
         user = self.created_data["users"][0]
         
+        # Simple, realistic widget configurations
         widget_configs = [
-            # WebSearch Widgets
-            {"title": "AI & ML Research", "widget_type": "websearch", "category": "technology", "importance": 5, "frequency": "weekly"},
-            {"title": "Web Dev Trends", "widget_type": "websearch", "category": "development", "importance": 4, "frequency": "daily"},
-            {"title": "Startup News", "widget_type": "websearch", "category": "business", "importance": 3, "frequency": "daily"},
-            {"title": "Health Updates", "widget_type": "websearch", "category": "health", "importance": 3, "frequency": "weekly"},
-            {"title": "Climate News", "widget_type": "websearch", "category": "environment", "importance": 4, "frequency": "weekly"},
+            # 2 Todo Widgets
+            {"title": "Daily Tasks", "widget_type": "todo", "category": "productivity", "importance": 5, "frequency": "daily"},
+            {"title": "Health Goals", "widget_type": "todo", "category": "health", "importance": 4, "frequency": "daily"},
             
-            # Todo Widgets
-            {"title": "Daily Task Planner", "widget_type": "todo", "category": "productivity", "importance": 5, "frequency": "daily"},
-            {"title": "Health & Fitness Goals", "widget_type": "todo", "category": "health", "importance": 4, "frequency": "daily"},
-            {"title": "Work Projects", "widget_type": "todo", "category": "work", "importance": 5, "frequency": "daily"},
+            # 2 WebSearch Widgets  
+            {"title": "Tech News", "widget_type": "websearch", "category": "technology", "importance": 4, "frequency": "daily"},
+            {"title": "Health Tips", "widget_type": "websearch", "category": "health", "importance": 3, "frequency": "weekly"},
             
-            # Tracker Widgets
-            {"title": "Fitness Metrics", "widget_type": "singleitemtracker", "category": "health", "importance": 4, "frequency": "daily"},
-            {"title": "Weight Monitor", "widget_type": "singleitemtracker", "category": "health", "importance": 4, "frequency": "daily"},
-            {"title": "Reading Progress", "widget_type": "singleitemtracker", "category": "education", "importance": 3, "frequency": "daily"},
-            {"title": "Water Intake", "widget_type": "singleitemtracker", "category": "health", "importance": 4, "frequency": "daily"},
+            # 2 Tracker Widgets
+            {"title": "Step Counter", "widget_type": "singleitemtracker", "category": "health", "importance": 4, "frequency": "daily"},
+            {"title": "Water Intake", "widget_type": "singleitemtracker", "category": "health", "importance": 3, "frequency": "daily"},
             
-            # Alarm Widgets
-            {"title": "Morning Routine", "widget_type": "alarm", "category": "reminders", "importance": 4, "frequency": "daily"},
-            {"title": "Work Schedule", "widget_type": "alarm", "category": "work", "importance": 5, "frequency": "weekly"},
-            {"title": "Health Reminders", "widget_type": "alarm", "category": "health", "importance": 4, "frequency": "daily"},
+            # 2 Alarm Widgets
+            {"title": "Morning Routine", "widget_type": "alarm", "category": "reminders", "importance": 5, "frequency": "daily"},
+            {"title": "Work Schedule", "widget_type": "alarm", "category": "work", "importance": 4, "frequency": "weekly"},
         ]
         
         created_widgets = []
@@ -208,16 +207,22 @@ class DirectDatabasePopulator:
         
         websearch_widgets = [w for w in self.created_data["dashboard_widgets"] if w.widget_type == "websearch"]
         
+        if not websearch_widgets:
+            self.log("No websearch widgets found, skipping websearch data creation", "WARNING")
+            return
+        
         search_terms = {
-            "AI & ML Research": "latest machine learning algorithms and AI breakthroughs 2025",
-            "Web Dev Trends": "React Next.js TypeScript best practices modern web development",
-            "Startup News": "startup funding rounds venture capital tech news",
-            "Health Updates": "nutrition fitness workout health research studies",
-            "Climate News": "climate change environmental sustainability renewable energy"
+            "Tech News": "latest technology trends and software development news",
+            "Health Tips": "nutrition wellness fitness tips and health advice"
         }
         
         for widget in websearch_widgets:
             try:
+                # Validate widget exists and is correct type
+                if not widget.id or widget.widget_type != "websearch":
+                    self.log(f"Invalid widget for websearch: {widget.title}", "ERROR")
+                    continue
+                
                 # Create WebSearchQuery
                 search_term = search_terms.get(widget.title, f"search for {widget.title}")
                 
@@ -312,9 +317,16 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
             ]
         }
         
-        import random
+        if not todo_widgets:
+            self.log("No todo widgets found, skipping todo data creation", "WARNING")
+            return
         
         for widget in todo_widgets:
+            # Validate widget exists and is correct type
+            if not widget.id or widget.widget_type != "todo":
+                self.log(f"Invalid widget for todo: {widget.title}", "ERROR")
+                continue
+                
             # Get templates based on widget category
             templates = todo_templates.get(widget.category, todo_templates["productivity"])
             
@@ -359,11 +371,13 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
         
         tracker_widgets = [w for w in self.created_data["dashboard_widgets"] if w.widget_type == "singleitemtracker"]
         
+        if not tracker_widgets:
+            self.log("No tracker widgets found, skipping tracker data creation", "WARNING")
+            return
+        
         # Define tracker configurations
         tracker_configs = {
-            "Fitness Metrics": {"item_name": "Steps", "item_unit": "steps", "current_value": "8500", "target_value": "10000", "value_type": "number"},
-            "Weight Monitor": {"item_name": "Weight", "item_unit": "kg", "current_value": "72.5", "target_value": "70.0", "value_type": "decimal"},
-            "Reading Progress": {"item_name": "Pages Read", "item_unit": "pages", "current_value": "35", "target_value": "50", "value_type": "number"},
+            "Step Counter": {"item_name": "Steps", "item_unit": "steps", "current_value": "8500", "target_value": "10000", "value_type": "number"},
             "Water Intake": {"item_name": "Water", "item_unit": "glasses", "current_value": "6", "target_value": "8", "value_type": "number"}
         }
         
@@ -374,40 +388,23 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
                 {"value": "9200", "notes": "Good morning walk"},
                 {"value": "12500", "notes": "Hiking day! Exceeded goal"},
                 {"value": "8100", "notes": "Regular office day"},
-                {"value": "10300", "notes": "Evening gym session"},
-                {"value": "9800", "notes": "Weekend stroll"},
-                {"value": "11200", "notes": "Active day at work"}
-            ],
-            "Weight": [
-                {"value": "73.2", "notes": "Morning weigh-in"},
-                {"value": "72.8", "notes": "After workout"},
-                {"value": "72.5", "notes": "Good progress this week"},
-                {"value": "73.0", "notes": "Weekend indulgence"},
-                {"value": "72.3", "notes": "Back on track"},
-                {"value": "72.1", "notes": "New personal best"},
-                {"value": "72.6", "notes": "Slight increase"}
-            ],
-            "Pages Read": [
-                {"value": "25", "notes": "Started new book on productivity"},
-                {"value": "40", "notes": "Really engaging chapter"},
-                {"value": "15", "notes": "Busy day, quick read"},
-                {"value": "60", "notes": "Weekend reading session"},
-                {"value": "35", "notes": "Daily reading habit"},
-                {"value": "50", "notes": "Reached daily goal"},
-                {"value": "20", "notes": "Short reading break"}
+                {"value": "10300", "notes": "Evening gym session"}
             ],
             "Water": [
                 {"value": "5", "notes": "Need to drink more"},
                 {"value": "8", "notes": "Perfect hydration day"},
                 {"value": "6", "notes": "Good progress"},
-                {"value": "4", "notes": "Forgot to track properly"},
-                {"value": "9", "notes": "Extra hydration after workout"},
                 {"value": "7", "notes": "Almost reached goal"},
                 {"value": "8", "notes": "Consistent hydration"}
             ]
         }
         
         for widget in tracker_widgets:
+            # Validate widget exists and is correct type
+            if not widget.id or widget.widget_type != "singleitemtracker":
+                self.log(f"Invalid widget for tracker: {widget.title}", "ERROR")
+                continue
+                
             # Get config based on widget title (fallback to first config)
             config_key = next((k for k in tracker_configs.keys() if k in widget.title), list(tracker_configs.keys())[0])
             config = tracker_configs[config_key]
@@ -468,32 +465,30 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
         
         alarm_widgets = [w for w in self.created_data["dashboard_widgets"] if w.widget_type == "alarm"]
         
+        if not alarm_widgets:
+            self.log("No alarm widgets found, skipping alarm data creation", "WARNING")
+            return
+        
         # Define alarm templates by category
         alarm_templates = {
             "reminders": [
                 {"title": "Morning Routine Start", "alarm_type": "daily", "alarm_times": ["06:30"]},
-                {"title": "Take Vitamins", "alarm_type": "daily", "alarm_times": ["08:00", "20:00"]},
-                {"title": "Hydration Check", "alarm_type": "daily", "alarm_times": ["10:00", "14:00", "18:00"]},
+                {"title": "Take Vitamins", "alarm_type": "daily", "alarm_times": ["08:00"]},
                 {"title": "Evening Wind Down", "alarm_type": "daily", "alarm_times": ["21:30"]},
             ],
             "work": [
-                {"title": "Daily Standup", "alarm_type": "weekly", "alarm_times": ["09:00"], "frequency_value": 5},
+                {"title": "Daily Standup", "alarm_type": "daily", "alarm_times": ["09:00"]},
                 {"title": "Lunch Break", "alarm_type": "daily", "alarm_times": ["12:30"]},
                 {"title": "End of Workday", "alarm_type": "daily", "alarm_times": ["17:30"]},
-                {"title": "Weekly Review", "alarm_type": "weekly", "alarm_times": ["16:00"], "frequency_value": 1},
-                {"title": "Project Deadline", "alarm_type": "once", "alarm_times": ["09:00"], "specific_date": date(2025, 8, 15)},
-            ],
-            "health": [
-                {"title": "Workout Time", "alarm_type": "daily", "alarm_times": ["07:00"]},
-                {"title": "Medication Reminder", "alarm_type": "daily", "alarm_times": ["08:00", "14:00", "20:00"]},
-                {"title": "Posture Check", "alarm_type": "daily", "alarm_times": ["11:00", "15:00", "17:00"]},
-                {"title": "Sleep Time", "alarm_type": "daily", "alarm_times": ["22:00"]},
             ]
         }
         
-        import random
-        
         for widget in alarm_widgets:
+            # Validate widget exists and is correct type
+            if not widget.id or widget.widget_type != "alarm":
+                self.log(f"Invalid widget for alarm: {widget.title}", "ERROR")
+                continue
+                
             # Get templates based on widget category
             templates = alarm_templates.get(widget.category, alarm_templates["reminders"])
             
@@ -529,6 +524,93 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
         self.session.commit()
         self.log(f"Created {len(self.created_data['alarms'])} total alarms", "SUCCESS")
     
+    def create_daily_widgets(self):
+        """Create simple daily widget selections for today and yesterday"""
+        self.section_header("Creating Daily Widget Selections", "📅")
+        
+        if not self.created_data["dashboard_widgets"]:
+            self.log("No dashboard widgets found, skipping daily widget creation", "WARNING")
+            return
+            
+        user = self.created_data["users"][0]
+        all_widgets = self.created_data["dashboard_widgets"]
+        
+        # Simple approach: Create daily widgets for yesterday, today, and tomorrow
+        dates_to_create = [
+            date.today() - timedelta(days=1),  # Yesterday
+            date.today(),                       # Today  
+            date.today() + timedelta(days=1)    # Tomorrow
+        ]
+        
+        total_created = 0
+        
+        for target_date in dates_to_create:
+            # Simple selection: Pick 3-4 widgets per day with variety
+            selected_widgets = self._simple_widget_selection(all_widgets, target_date)
+            
+            created_count = 0
+            for position, widget in enumerate(selected_widgets):
+                try:
+                    # Simple grid positioning
+                    grid_position = {"x": 0 if position % 2 == 0 else 6, "y": position * 2, "width": 6, "height": 3}
+                    
+                    # Simple AI reasoning
+                    reasoning = f"Selected {widget.title} for {target_date.strftime('%A')} based on {widget.frequency} frequency and {widget.importance}/5 importance."
+                    
+                    daily_widget = DailyWidget(
+                        id=str(uuid.uuid4()),
+                        user_id=user.id,
+                        dashboard_widget_id=widget.id,
+                        display_date=target_date,
+                        position=position,
+                        grid_position=grid_position,
+                        ai_reasoning=reasoning,
+                        is_pinned=position == 0,  # Pin the first widget only
+                        created_at=datetime.utcnow()
+                    )
+                    
+                    self.session.add(daily_widget)
+                    self.created_data["daily_widgets"].append(daily_widget)
+                    created_count += 1
+                    
+                except Exception as e:
+                    self.log(f"✗ Failed to create daily widget for {widget.title}: {e}", "ERROR")
+            
+            self.log(f"✓ Created {created_count} daily widgets for {target_date}", "SUCCESS")
+            total_created += created_count
+        
+        self.session.commit()
+        self.log(f"Created {total_created} total daily widget selections", "SUCCESS")
+    
+    def _simple_widget_selection(self, all_widgets, target_date):
+        """Simple widget selection - pick top 3-4 widgets ensuring variety"""
+        # Group widgets by type for variety
+        by_type = {}
+        for widget in all_widgets:
+            widget_type = widget.widget_type
+            if widget_type not in by_type:
+                by_type[widget_type] = []
+            by_type[widget_type].append(widget)
+        
+        selected = []
+        
+        # Pick one widget from each type, prioritizing by importance
+        for widget_type in ["todo", "websearch", "singleitemtracker", "alarm"]:
+            if widget_type in by_type and len(selected) < 4:
+                # Pick the highest importance widget of this type
+                best_widget = max(by_type[widget_type], key=lambda w: w.importance)
+                selected.append(best_widget)
+        
+        # If we still need more widgets, add the remaining highest importance ones
+        while len(selected) < 3:
+            remaining = [w for w in all_widgets if w not in selected]
+            if not remaining:
+                break
+            best_remaining = max(remaining, key=lambda w: w.importance)
+            selected.append(best_remaining)
+        
+        return selected
+    
     def verify_data_creation(self):
         """Verify that all data was created successfully"""
         self.section_header("Data Verification", "✅")
@@ -538,6 +620,7 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
             counts = {
                 "users": self.session.query(User).count(),
                 "dashboard_widgets": self.session.query(DashboardWidget).count(),
+                "daily_widgets": self.session.query(DailyWidget).count(),
                 "websearch_queries": self.session.query(WebSearchQuery).count(),
                 "summaries": self.session.query(Summary).count(),
                 "todo_items": self.session.query(TodoItem).count(),
@@ -554,6 +637,66 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
                 ORDER BY widget_type
             """)).fetchall()
             
+            # Verify foreign key relationships
+            self.log("Verifying foreign key relationships:", "INFO")
+            
+            # Check WebSearch queries have valid widget IDs
+            orphaned_queries = self.session.execute(text("""
+                SELECT COUNT(*) FROM websearch_queries wq 
+                LEFT JOIN dashboard_widgets dw ON wq.dashboard_widget_id = dw.id 
+                WHERE dw.id IS NULL
+            """)).scalar()
+            
+            # Check Summaries have valid widget IDs
+            orphaned_summaries = self.session.execute(text("""
+                SELECT COUNT(*) FROM summaries s 
+                LEFT JOIN dashboard_widgets dw ON s.dashboard_widget_id = dw.id 
+                WHERE dw.id IS NULL
+            """)).scalar()
+            
+            # Check Todo items have valid widget IDs
+            orphaned_todos = self.session.execute(text("""
+                SELECT COUNT(*) FROM todo_items t 
+                LEFT JOIN dashboard_widgets dw ON t.dashboard_widget_id = dw.id 
+                WHERE dw.id IS NULL
+            """)).scalar()
+            
+            # Check Trackers have valid widget IDs
+            orphaned_trackers = self.session.execute(text("""
+                SELECT COUNT(*) FROM single_item_trackers sit 
+                LEFT JOIN dashboard_widgets dw ON sit.dashboard_widget_id = dw.id 
+                WHERE dw.id IS NULL
+            """)).scalar()
+            
+            # Check Tracker logs have valid tracker IDs
+            orphaned_logs = self.session.execute(text("""
+                SELECT COUNT(*) FROM single_item_tracker_logs sitl 
+                LEFT JOIN single_item_trackers sit ON sitl.tracker_id = sit.id 
+                WHERE sit.id IS NULL
+            """)).scalar()
+            
+            # Check Alarms have valid widget IDs
+            orphaned_alarms = self.session.execute(text("""
+                SELECT COUNT(*) FROM alarms a 
+                LEFT JOIN dashboard_widgets dw ON a.dashboard_widget_id = dw.id 
+                WHERE dw.id IS NULL
+            """)).scalar()
+            
+            # Check Daily Widgets have valid widget IDs
+            orphaned_daily_widgets = self.session.execute(text("""
+                SELECT COUNT(*) FROM daily_widgets dw_daily 
+                LEFT JOIN dashboard_widgets dw ON dw_daily.dashboard_widget_id = dw.id 
+                WHERE dw.id IS NULL
+            """)).scalar()
+            
+            # Report relationship integrity
+            if (orphaned_queries == 0 and orphaned_summaries == 0 and orphaned_todos == 0 and 
+                orphaned_trackers == 0 and orphaned_logs == 0 and orphaned_alarms == 0 and 
+                orphaned_daily_widgets == 0):
+                self.log("✅ All foreign key relationships are valid", "SUCCESS")
+            else:
+                self.log(f"❌ Found orphaned records: queries={orphaned_queries}, summaries={orphaned_summaries}, todos={orphaned_todos}, trackers={orphaned_trackers}, logs={orphaned_logs}, alarms={orphaned_alarms}, daily_widgets={orphaned_daily_widgets}", "ERROR")
+            
             self.log("Database verification results:", "SUCCESS")
             for table, count in counts.items():
                 self.log(f"  {table}: {count} records", "SUCCESS")
@@ -566,6 +709,7 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
             print(f"\n📊 Database Population Summary:")
             print(f"   👤 Users: {counts['users']}")
             print(f"   📊 Dashboard Widgets: {counts['dashboard_widgets']}")
+            print(f"   📅 Daily Widget Selections: {counts['daily_widgets']}")
             print(f"   🌐 WebSearch Queries: {counts['websearch_queries']}")
             print(f"   🤖 AI Summaries: {counts['summaries']}")
             print(f"   📝 Todo Items: {counts['todo_items']}")
@@ -614,7 +758,10 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
             # Step 7: Create Alarm data
             self.create_alarm_data()
             
-            # Step 8: Verify data creation
+            # Step 8: Create Daily Widget Selections (AI-curated)
+            self.create_daily_widgets()
+            
+            # Step 9: Verify data creation
             success = self.verify_data_creation()
             
             # Final results
@@ -623,6 +770,7 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
             
             print(f"⏱️  Total Duration: {duration:.1f} seconds")
             print(f"📊 Dashboard Widgets: {len(self.created_data['dashboard_widgets'])} created")
+            print(f"📅 Daily Widget Selections: {len(self.created_data['daily_widgets'])} created")
             print(f"🌐 WebSearch Queries: {len(self.created_data['websearch_queries'])} created")
             print(f"🤖 AI Summaries: {len(self.created_data['summaries'])} generated")
             print(f"📝 Todo Items: {len(self.created_data['todo_items'])} created")
@@ -636,7 +784,6 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
             
         except Exception as e:
             self.log(f"Population failed: {e}", "ERROR")
-            import traceback
             traceback.print_exc()
             return False
         finally:
