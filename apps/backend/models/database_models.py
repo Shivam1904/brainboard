@@ -44,10 +44,8 @@ class DashboardWidget(Base):
     user = relationship("User", back_populates="dashboard_widgets")
     summaries = relationship("Summary", back_populates="dashboard_widget", cascade="all, delete-orphan")
     todo_items = relationship("TodoItem", back_populates="dashboard_widget", cascade="all, delete-orphan")
-    todo_tasks = relationship("TodoTask", back_populates="dashboard_widget", cascade="all, delete-orphan")  # Legacy
     websearch_queries = relationship("WebSearchQuery", back_populates="dashboard_widget", cascade="all, delete-orphan")
     alarms = relationship("Alarm", back_populates="dashboard_widget", cascade="all, delete-orphan")
-    habits = relationship("Habit", back_populates="dashboard_widget", cascade="all, delete-orphan")
     single_item_trackers = relationship("SingleItemTracker", back_populates="dashboard_widget", cascade="all, delete-orphan")
 
 class DailyWidget(Base):
@@ -72,20 +70,6 @@ class DailyWidget(Base):
 # LEGACY MODELS (for backward compatibility during migration)
 # ============================================================================
 
-class Widget(Base):
-    """Legacy Widget database model - will be deprecated"""
-    __tablename__ = "widgets"
-    
-    widget_id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, nullable=False, default="default_user")
-    widget_type = Column(String, nullable=False)  # e.g., "web-summary"
-    current_query = Column(String, nullable=True)
-    settings = Column(JSON, nullable=True)  # JSON field for widget settings
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationship with summaries (legacy)
-    summaries = relationship("Summary", foreign_keys="Summary.widget_id", cascade="all, delete-orphan")
 
 # ============================================================================
 # WIDGET-SPECIFIC DATA MODELS
@@ -132,26 +116,6 @@ class TodoItem(Base):
     # Relationships
     dashboard_widget = relationship("DashboardWidget", back_populates="todo_items")
 
-# Keep the old TodoTask model for backward compatibility during migration
-class TodoTask(Base):
-    """DEPRECATED: Todo Task database model - Use TodoItem instead"""
-    __tablename__ = "todo_tasks"
-    
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    dashboard_widget_id = Column(String, ForeignKey("dashboard_widgets.id"), nullable=False)
-    content = Column(String, nullable=False)
-    due_date = Column(Date, nullable=True)
-    frequency = Column(String, nullable=False, default="daily")  # 'daily', 'weekly', 'monthly', 'once'
-    priority = Column(Integer, nullable=True, default=3)  # 1-5 scale (1=low, 5=high)
-    category = Column(String, nullable=True)  # 'work', 'personal', 'health', etc.
-    is_done = Column(Boolean, default=False)
-    is_recurring = Column(Boolean, default=True)  # Whether task repeats
-    last_completed_date = Column(Date, nullable=True)  # Track completion for recurring tasks
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    dashboard_widget = relationship("DashboardWidget", back_populates="todo_tasks")
 
 class WebSearchQuery(Base):
     """Web Search Query database model"""
@@ -187,31 +151,6 @@ class Alarm(Base):
     # Relationships
     dashboard_widget = relationship("DashboardWidget", back_populates="alarms")
 
-class Habit(Base):
-    """Habit database model"""
-    __tablename__ = "habits"
-    
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    dashboard_widget_id = Column(String, ForeignKey("dashboard_widgets.id"), nullable=False)
-    streak = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    dashboard_widget = relationship("DashboardWidget", back_populates="habits")
-    habit_logs = relationship("HabitLog", back_populates="habit", cascade="all, delete-orphan")
-
-class HabitLog(Base):
-    """Habit Log database model"""
-    __tablename__ = "habit_logs"
-    
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    habit_id = Column(String, ForeignKey("habits.id"), nullable=False)
-    date = Column(Date, nullable=False)
-    status = Column(String, nullable=False)  # 'completed', 'missed', 'partial'
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    habit = relationship("Habit", back_populates="habit_logs")
 
 # ============================================================================
 # SINGLE ITEM TRACKER MODEL
@@ -258,15 +197,10 @@ class Summary(Base):
     __tablename__ = "summaries"
     
     summary_id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    # Support both legacy and new system during migration
-    widget_id = Column(String, ForeignKey("widgets.widget_id"), nullable=True)  # Legacy FK
-    dashboard_widget_id = Column(String, ForeignKey("dashboard_widgets.id"), nullable=True)  # New FK
+    dashboard_widget_id = Column(String, ForeignKey("dashboard_widgets.id"), nullable=True)
     query = Column(String, nullable=False)
     summary_text = Column(Text, nullable=False)
-    sources_json = Column(JSON, nullable=True)  # Store list of source URLs as JSON
-    search_results_json = Column(JSON, nullable=True)  # NEW: Store full search results for widgets
+    sources_json = Column(JSON, nullable=True)
+    search_results_json = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships (support both systems)
-    widget = relationship("Widget", foreign_keys=[widget_id], overlaps="summaries")  # Legacy
-    dashboard_widget = relationship("DashboardWidget", back_populates="summaries")  # New
+    dashboard_widget = relationship("DashboardWidget", back_populates="summaries")

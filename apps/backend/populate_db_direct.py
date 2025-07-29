@@ -30,9 +30,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from core.database import get_db, engine, SessionLocal
 from core.config import settings
 from models.database_models import (
-    User, DashboardWidget, Widget, Summary,
-    TodoTask, TodoItem, WebSearchQuery, 
-    Alarm, Habit, HabitLog,
+    User, DashboardWidget, Summary,
+    TodoItem, WebSearchQuery, 
+    Alarm,
     SingleItemTracker, SingleItemTrackerLog
 )
 
@@ -42,15 +42,12 @@ class DirectDatabasePopulator:
         self.created_data = {
             "users": [],
             "dashboard_widgets": [],
-            "widgets": [],
             "websearch_queries": [],
             "summaries": [],
             "todo_items": [],
             "tracker_instances": [],
             "tracker_logs": [],
-            "alarms": [],
-            "habits": [],
-            "habit_logs": []
+            "alarms": []
         }
         
     def log(self, message: str, level: str = "INFO"):
@@ -78,16 +75,12 @@ class DirectDatabasePopulator:
             
             # Only delete from tables that exist
             tables_to_clean = [
-                "habit_logs",
-                "habits", 
                 "alarms",
                 "single_item_tracker_logs",
                 "single_item_trackers",
                 "todo_items",
-                "todo_tasks",
                 "summaries",
                 "websearch_queries",
-                "widgets",
                 "dashboard_widgets"
                 # Don't delete users - they might be needed for auth
             ]
@@ -595,6 +588,10 @@ Based on the latest research and developments in {widget.title.lower()}, here ar
         
         start_time = datetime.now()
         
+        # Ensure tables are created before cleaning and populating
+        from core.database import init_db
+        init_db()
+
         try:
             # Step 1: Clean existing data
             self.cleanup_existing_data()

@@ -108,9 +108,8 @@ class TestDatabaseManager:
             
             # Import all models to ensure they're registered
             from models.database_models import (
-                Widget, Summary,  # Legacy models
-                User, DashboardWidget,  # Core new models
-                TodoTask, TodoItem, WebSearchQuery, Alarm, Habit, HabitLog  # Widget-specific models
+                User, DashboardWidget, TodoItem, WebSearchQuery, Alarm,
+                SingleItemTracker, SingleItemTrackerLog, Summary
             )
             
             # Create all tables in test database
@@ -157,22 +156,21 @@ class TestDatabaseManager:
         try:
             # Import all models
             from models.database_models import (
-                Widget, Summary, User, DashboardWidget,
-                TodoItem, TodoTask, WebSearchQuery, Alarm, Habit, HabitLog
+                Summary, User, DashboardWidget,
+                TodoItem, WebSearchQuery, Alarm,
+                SingleItemTracker, SingleItemTrackerLog
             )
             
             session = self.SessionLocal()
             try:
                 # Delete all data in reverse dependency order
                 session.query(Summary).delete()
-                session.query(HabitLog).delete()
-                session.query(TodoItem).delete()  # New TodoItem table
-                session.query(TodoTask).delete()
+                session.query(TodoItem).delete()
                 session.query(WebSearchQuery).delete()
                 session.query(Alarm).delete()
-                session.query(Habit).delete()
+                session.query(SingleItemTrackerLog).delete()
+                session.query(SingleItemTracker).delete()
                 session.query(DashboardWidget).delete()
-                session.query(Widget).delete()
                 # Keep the test user
                 
                 session.commit()

@@ -31,9 +31,11 @@ def init_db():
     try:
         # Import all models to ensure they are registered with Base
         from models.database_models import (
-            Widget, Summary,  # Legacy models
-            User, DashboardWidget,  # Core new models
-            TodoItem, TodoTask, WebSearchQuery, Alarm, Habit, HabitLog  # Widget-specific models
+            Summary,
+            User, DashboardWidget,
+            TodoItem, WebSearchQuery, Alarm,
+            SingleItemTracker, SingleItemTrackerLog,
+            DailyWidget
         )
         
         # Create all tables
