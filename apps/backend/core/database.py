@@ -31,11 +31,14 @@ def init_db():
     try:
         # Import all models to ensure they are registered with Base
         from models.database import (
-            Summary,
-            User, DashboardWidget,
-            TodoItem, WebSearchQuery, Alarm,
-            SingleItemTracker, SingleItemTrackerLog,
-            DailyWidget
+            # User input tables
+            User, DashboardWidgetDetails, ToDoDetails, SingleItemTrackerDetails,
+            WebSearchDetails, AlarmDetails,
+            # AI-generated daily activity tables
+            DailyWidget, ToDoItemActivity, SingleItemTrackerItemActivity,
+            AlarmItemActivity, WebSearchItemActivity,
+            # AI output tables
+            DailyWidgetsAIOutput, WebSearchSummaryAIOutput
         )
         
         # Create all tables

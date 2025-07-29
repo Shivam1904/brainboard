@@ -1,195 +1,171 @@
 """
-Todo Widget Router
-4 Core API endpoints for todo item management (Task/Event/Habit)
-
-Endpoints:
-- POST /items - Create Task/Event/Habit
-- GET /items/{item_id} - Get Item
-- POST /items/{item_id} - Update Item Value/Status
-- DELETE /items/{item_id} - Delete Item
-
-Examples:
-- India Shopping | Task | daily | health | High
-- Gym | Habit | weekly-2 | health | Low | [7am]
-- Drink Water | Habit | daily-8 | health | High | [every 2 hr]
+Todo Router - API endpoints for todo operations
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import Optional
-from datetime import date, datetime
+from typing import Optional, Dict, Any
 import logging
-import json
 
 from core.database import get_db
-from models.database import TodoItem, DashboardWidget
-from models.schemas.todo_schemas import (
-    CreateTodoItemRequest,
-    UpdateTodoItemRequest,
-    TodoItemResponse,
-    TodoItemType,
-    TodoPriority
-)
+from services.todo_service import TodoService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["todo"])
 
+def get_default_user_id(db: Session = Depends(get_db)) -> str:
+    """Get default user ID for development"""
+    from models.database import User
+    default_user = db.query(User).filter(User.email == "default@brainboard.com").first()
+    if not default_user:
+        default_user = User(
+            email="default@brainboard.com",
+            name="Default User"
+        )
+        db.add(default_user)
+        db.commit()
+        db.refresh(default_user)
+    return default_user.id
+
 # ============================================================================
-# TODO ITEM API - 4 Core Endpoints Only
+# TODO ENDPOINTS
 # ============================================================================
 
-@router.post("/items", response_model=TodoItemResponse)
-async def create_todo_item(
-    request: CreateTodoItemRequest,
+@router.get("/getTodayTodoList/{todo_type}")
+async def get_today_todo_list(
+    todo_type: str,
     db: Session = Depends(get_db)
 ):
-    """Create a new todo item (Task, Event, or Habit)"""
+    """
+    Get today's todo activities filtered by type (habit/task)
+    """
     try:
-        # Verify widget exists
-        widget = db.query(DashboardWidget).filter(
-            DashboardWidget.id == request.dashboard_widget_id
-        ).first()
-        if not widget:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Dashboard widget not found"
-            )
+        service = TodoService(db)
+        todos = service.get_today_todo_list(todo_type)
         
-        # Create new todo item
-        todo_item = TodoItem(
-            dashboard_widget_id=request.dashboard_widget_id,
-            title=request.title,
-            item_type=request.item_type.value,
-            category=request.category,
-            priority=request.priority.value,
-            frequency=request.frequency,
-            frequency_times=json.dumps(request.frequency_times) if request.frequency_times else None,
-            due_date=request.due_date,
-            scheduled_time=request.scheduled_time,
-            notes=request.notes,
-            is_completed=False,
-            is_active=True
-        )
-        
-        db.add(todo_item)
-        db.commit()
-        db.refresh(todo_item)
-        
-        logger.info(f"Created {request.item_type} todo item: {todo_item.id}")
-        return _format_todo_item_response(todo_item)
-        
+        return {
+            "todo_type": todo_type,
+            "todos": todos,
+            "total_todos": len(todos)
+        }
     except Exception as e:
-        logger.error(f"Error creating todo item: {e}")
-        db.rollback()
+        logger.error(f"Error getting today's todo list: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create todo item"
+            detail=f"Failed to get today's todo list: {str(e)}"
         )
 
-@router.get("/items/{item_id}", response_model=TodoItemResponse)
-async def get_todo_item(
-    item_id: str,
+@router.post("/updateActivity/{activity_id}")
+async def update_todo_activity(
+    activity_id: str,
+    update_data: Dict[str, Any],
     db: Session = Depends(get_db)
 ):
-    """Get a specific todo item"""
-    item = db.query(TodoItem).filter(TodoItem.id == item_id).first()
-    if not item:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Todo item not found"
-        )
-    
-    return _format_todo_item_response(item)
-
-@router.post("/items/{item_id}", response_model=TodoItemResponse)
-async def update_todo_item_status(
-    item_id: str,
-    completed: Optional[bool] = Query(None, description="Mark as completed or not"),
-    active: Optional[bool] = Query(None, description="Mark as active or not"),
-    db: Session = Depends(get_db)
-):
-    """Update todo item status (completion/active state)"""
-    item = db.query(TodoItem).filter(TodoItem.id == item_id).first()
-    if not item:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Todo item not found"
-        )
-    
-    updated = False
-    
-    if completed is not None:
-        item.is_completed = completed
-        if completed:
-            item.last_completed_date = date.today()
-        updated = True
-    
-    if active is not None:
-        item.is_active = active
-        updated = True
-    
-    if updated:
-        item.updated_at = datetime.utcnow()
-        db.commit()
-        db.refresh(item)
+    """
+    Update todo activity status and progress
+    """
+    try:
+        service = TodoService(db)
+        result = service.update_activity(activity_id, update_data)
         
-        status_msg = []
-        if completed is not None:
-            status_msg.append("completed" if completed else "incomplete")
-        if active is not None:
-            status_msg.append("active" if active else "inactive")
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Todo activity not found"
+            )
         
-        logger.info(f"Todo item {item_id} marked as {', '.join(status_msg)}")
-    
-    return _format_todo_item_response(item)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating todo activity: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update todo activity: {str(e)}"
+        )
 
-@router.delete("/items/{item_id}")
-async def delete_todo_item(
-    item_id: str,
+@router.get("/getTodoItemDetailsAndActivity/{daily_widget_id}/{widget_id}")
+async def get_todo_item_details_and_activity(
+    daily_widget_id: str,
+    widget_id: str,
     db: Session = Depends(get_db)
 ):
-    """Delete a todo item"""
-    item = db.query(TodoItem).filter(TodoItem.id == item_id).first()
-    if not item:
+    """
+    Get todo item details and activity for a specific widget
+    """
+    try:
+        service = TodoService(db)
+        result = service.get_todo_details_and_activity(daily_widget_id, widget_id)
+        
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Todo item not found"
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting todo item details and activity: {e}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Todo item not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get todo item details and activity: {str(e)}"
         )
-    
-    db.delete(item)
-    db.commit()
-    
-    logger.info(f"Deleted todo item: {item_id}")
-    return {"message": "Todo item deleted successfully"}
 
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
+@router.get("/getTodoDetails/{widget_id}")
+async def get_todo_details(
+    widget_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get todo details for a specific widget
+    """
+    try:
+        service = TodoService(db)
+        result = service.get_todo_details(widget_id)
+        
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Todo details not found"
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting todo details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get todo details: {str(e)}"
+        )
 
-def _format_todo_item_response(item: TodoItem) -> TodoItemResponse:
-    """Format TodoItem for API response"""
-    frequency_times = None
-    if item.frequency_times:
-        try:
-            frequency_times = json.loads(item.frequency_times)
-        except (json.JSONDecodeError, TypeError):
-            frequency_times = None
-    
-    return TodoItemResponse(
-        id=item.id,
-        dashboard_widget_id=item.dashboard_widget_id,
-        title=item.title,
-        item_type=TodoItemType(item.item_type),
-        category=item.category,
-        priority=TodoPriority(item.priority),
-        frequency=item.frequency,
-        frequency_times=frequency_times,
-        is_completed=item.is_completed,
-        is_active=item.is_active,
-        due_date=item.due_date,
-        scheduled_time=item.scheduled_time,
-        last_completed_date=item.last_completed_date,
-        notes=item.notes,
-        created_at=item.created_at,
-        updated_at=item.updated_at
-    )
+@router.post("/updateDetails/{todo_details_id}")
+async def update_todo_details(
+    todo_details_id: str,
+    update_data: Dict[str, Any],
+    db: Session = Depends(get_db)
+):
+    """
+    Update todo details
+    """
+    try:
+        service = TodoService(db)
+        result = service.update_todo_details(todo_details_id, update_data)
+        
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Todo details not found"
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating todo details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update todo details: {str(e)}"
+        ) 
