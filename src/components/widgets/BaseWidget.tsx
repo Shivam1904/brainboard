@@ -27,9 +27,9 @@ const BaseWidget = ({
     }}
     >
       {/* Header with title and delete button */}
-      <div className="flex items-center px-2 pt-1  bg-card/50 rounded-t-lg">
+      <div className="flex items-center m-1 px-2 py-1 bg-gray-100 bg-card/50 rounded-t-lg">
         <div className="widget-drag-handle flex items-center justify-between w-full">
-          <h3 className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+          <h3 className="text-md font-semibold text-card-foreground flex items-center gap-2">
             {icon && <span>{icon}</span>}
             {title}
           </h3>

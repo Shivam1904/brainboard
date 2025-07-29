@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { BaseWidget as WidgetData, WidgetType } from '../../types';
 import { dashboardService } from '../../services/api';
+import { Widget } from '../../utils/dashboardUtils'
 
 interface AllSchedulesWidgetProps {
   onRemove: () => void;
-  config?: Record<string, any>;
+  widget: Widget
 }
 
-const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
+const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
   const [widgets, setWidgets] = useState<WidgetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -198,12 +199,8 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
   }
 
   return (
-    <BaseWidget title="All Widgets" icon="⚙️" onRemove={onRemove}>
+    <BaseWidget title={`Widget Schedules (${widgets.length})`} icon="⚙️" onRemove={onRemove}>
       <div className="h-full flex flex-col">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4 pb-2 border-b">
-          <h3 className="font-semibold">Widget Schedules ({widgets.length})</h3>
-        </div>
 
         {/* Widget list */}
         <div className="flex-1 overflow-y-auto space-y-2">
@@ -233,11 +230,7 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
                     </div>
                     
                     <div className="text-xs text-muted-foreground space-y-1">
-                      <div>Frequency: {widget.frequency}</div>
-                      <div>Size: {widget.size}</div>
-                      {widget.importance && (
-                        <div>Importance: {widget.importance}/5</div>
-                      )}
+                      Frequency: {widget.frequency} Size: {widget.size} Importance: {widget.importance}/5
                     </div>
                   </div>
                 </div>

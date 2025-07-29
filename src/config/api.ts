@@ -9,9 +9,20 @@ export const API_CONFIG = {
     getSearchResult: '/api/v1/web-search/result',
   },
   tasks: {
-    getTodayTasks: '/api/v1/tasks/today', // Get today's tasks
-    updateTask: '/api/v1/tasks/update', // Update task status
-    addMission: '/api/v1/tasks/mission', // Add new mission
+    getTodayTasks: '/api/v1/widgets/todo/tasks/today', // Get today's tasks for todo widget
+    updateTask: '/api/v1/widgets/todo/tasks/update', // Update task status
+    addMission: '/api/v1/widgets/todo/tasks/mission', // Add new mission
+  },
+  singleItemTracker: {
+    getTracker: '/api/v1/widgets/single-item-tracker/{widget_id}', // Get tracker with recent logs
+    updateValue: '/api/v1/widgets/single-item-tracker/{widget_id}/update-value', // Update tracker value
+    getWidgetData: '/api/v1/widgets/single-item-tracker/{widget_id}', // Get complete widget data
+  },
+  alarm: {
+    getAlarms: '/api/v1/widgets/alarm', // Get all alarms for widget
+    createAlarm: '/api/v1/widgets/alarm/add', // Create new alarm
+    updateAlarmStatus: '/api/v1/widgets/alarm/{widget_id}/updateStatus', // Snooze or activate alarm
+    getWidgetData: '/api/v1/widgets/alarm/widget/{widget_id}/data', // Get alarm widget data
   },
   reminders: {
     getReminders: '/api/v1/reminders',
