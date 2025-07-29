@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Check, Clock, Trash2 } from 'lucide-react'
 import BaseWidget from './BaseWidget'
+import { Widget } from '../../utils/dashboardUtils'
 
 interface Reminder {
   id: string
@@ -12,9 +13,10 @@ interface Reminder {
 
 interface ReminderWidgetProps {
   onRemove: () => void
+  widget: Widget
 }
 
-const ReminderWidget = ({ onRemove }: ReminderWidgetProps) => {
+const ReminderWidget = ({ onRemove, widget }: ReminderWidgetProps) => {
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [newReminderText, setNewReminderText] = useState('')
   const [isLoading, setIsLoading] = useState(false)

@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
+import { Widget } from '../../utils/dashboardUtils'
+import { WebSearchWidgetData, WidgetData } from '@/types/widgets';
+import { API_CONFIG, apiCall, buildApiUrl } from '@/config/api';
 // import { buildApiUrl, apiCall } from '../../config/api'; // Uncomment when API is ready
 
 // Types for the web search data
@@ -120,21 +123,16 @@ const getDummyWebSearchResult = (searchQuery: string): WebSearchResult => {
 
 interface EverydayWebSearchWidgetProps {
   onRemove: () => void;
-  config?: Record<string, any>;
-  scheduledItem?: {
-    id: string;
-    title: string;
-    searchQuery?: string;
-    category?: string;
-  };
+  widget: Widget
 }
 
 // Rename component
-const WebSearchWidget = ({ onRemove, config, scheduledItem }: EverydayWebSearchWidgetProps) => {
+const WebSearchWidget = ({ onRemove, widget }: EverydayWebSearchWidgetProps) => {
   // Use config if provided (e.g., config.maxResults, config.showImages)
-  const showImages = config?.showImages !== false;
-  const searchQuery = scheduledItem?.searchQuery || config?.searchQuery || 'default search';
-  const widgetTitle = scheduledItem?.title || config?.title || 'Web Search';
+  const showImages = true;
+  const searchQuery = (widget.widgetData as unknown as WebSearchWidgetData).searches?.[0]?.query;
+  // const widgetTitle = (widget.widgetData as unknown as WebSearchWidgetData).searches?.[0]?.query;
+  const widgetTitle = (widget as unknown as Widget).widgetData.title;
   const [searchResults, setSearchResults] = useState<WebSearchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,12 +140,26 @@ const WebSearchWidget = ({ onRemove, config, scheduledItem }: EverydayWebSearchW
   // Fetch search results for this specific search query
   const fetchSearchResults = async () => {
     try {
-      // Use the new dummy function for unique results
-      const dummyResult = getDummyWebSearchResult(searchQuery);
+      // Get widget_id from config or use the centralized mapping
+      const widgetId = widget.id;
+      const targetDate = new Date().toISOString().split('T')[0];
+      
+      // const response = await apiCall<WebSearchResponse>(
+      //   buildApiUrl(API_CONFIG.webSearch.getSearchResult, {
+      //     widget_id: widgetId,
+      //     target_date: targetDate
+      //   })
+      // );
+      
+      // setSearchResults([response]);
+
+      const dummyResult = getDummyWebSearchResult('default');
       setSearchResults([dummyResult]);
+      
+      throw new Error('Not implemented');
     } catch (err) {
-      console.error('Failed to fetch search results:', err);
-      setError('Failed to load search results');
+      // console.error('Failed to fetch search results:', err);
+      // setError('Failed to load search results');
       // Fallback to generic dummy data
       const dummyResult = getDummyWebSearchResult('default');
       setSearchResults([dummyResult]);
@@ -218,25 +230,9 @@ const WebSearchWidget = ({ onRemove, config, scheduledItem }: EverydayWebSearchW
               key={result.id} 
               className="bg-card/50 rounded-lg p-2 space-y-3"
             >
-              {/* Search Term */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                  {result.searchTerm}
-                </span>
                 <span className="text-xs text-muted-foreground">
                   {result.scheduleDate}
                 </span>
-              </div>
-
-              {/* Heading */}
-              <h4 className="font-semibold text-card-foreground text-lg">
-                {result.heading}
-              </h4>
-
-              {/* Subheading */}
-              <p className="text-sm text-muted-foreground font-medium">
-                {result.subheading}
-              </p>
 
               {/* Main Text */}
               <p className="text-sm text-card-foreground leading-relaxed">

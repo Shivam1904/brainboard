@@ -19,18 +19,21 @@ export interface WidgetConfig {
   resizable: boolean;
   category: 'productivity' | 'information' | 'entertainment' | 'utilities';
   icon?: string;
+  // API mapping fields
+  apiWidgetType?: string; // Maps to API widget type (e.g., 'todo', 'websearch')
 }
 
 export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
   // Medium sized widgets (10x8 or 8x10)
   webSearch: {
     id: 'webSearch',
+    apiWidgetType: 'websearch',
     title: 'Web Search',
     description: 'Daily web search functionality',
     component: 'WebSearchWidget',
     minSize: { w: 8, h: 8 },
-    maxSize: { w: 16, h: 16 },
-    defaultSize: { w: 10, h: 12 },
+    maxSize: { w: 20, h: 24 },
+    defaultSize: { w: 10, h: 10 },
     deletable: true,
     resizable: true,
     category: 'information',
@@ -38,6 +41,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
   },
   calendar: {
     id: 'calendar',
+    apiWidgetType: 'calendar',
     title: 'Calendar',
     description: 'Monthly calendar with events and milestones',
     component: 'CalendarWidget',
@@ -51,12 +55,13 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
   },
   allSchedules: {
     id: 'allSchedules',
+    apiWidgetType: 'allSchedules',
     title: 'All Schedules',
     description: 'Manage all widget schedules and configurations',
     component: 'AllSchedulesWidget',
     minSize: { w: 12, h: 10 },
     maxSize: { w: 30, h: 36 },
-    defaultSize: { w: 15, h: 15 },
+    defaultSize: { w: 12, h: 15 },
     deletable: true,
     resizable: true,
     category: 'productivity',
@@ -65,12 +70,13 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
 
   everydayTaskList: {
     id: 'everydayTaskList',
+    apiWidgetType: 'todo',
     title: 'Every Day Task List',
     description: 'Daily task management and tracking',
     component: 'TaskListWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 30, h: 36 },
-    defaultSize: { w: 15, h: 20 },
+    defaultSize: { w: 15, h: 15 },
     deletable: true,
     resizable: true,
     category: 'productivity',
@@ -78,6 +84,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
   },
   habitListTracker: {
     id: 'habitListTracker',
+    apiWidgetType: 'habittracker',
     title: 'Habit List Tracker',
     description: 'Track and monitor daily habits',
     component: 'HabitListTrackerWidget',
@@ -120,6 +127,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
 
   webSearchChart: {
     id: 'webSearchChart',
+    apiWidgetType: 'websearchchart',
     title: 'Web Search Chart',
     description: 'Visualize web search patterns and trends',
     component: 'WebSearchChartWidget',
@@ -149,12 +157,13 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
   // Small sized widgets (8x6)
   reminders: {
     id: 'reminders',
+    apiWidgetType: 'alarm',
     title: 'Reminders',
     description: 'Quick reminder management',
     component: 'RemindersWidget',
     minSize: { w: 6, h: 4 },
-    maxSize: { w: 10, h: 8 },
-    defaultSize: { w: 8, h: 6 },
+    maxSize: { w: 20, h: 28 },
+    defaultSize: { w: 12, h: 10 },
     deletable: true,
     resizable: true,
     category: 'productivity',
@@ -163,12 +172,13 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
 
   singleItemTracker: {
     id: 'singleItemTracker',
+    apiWidgetType: 'singleitemtracker',
     title: 'Item Tracker',
     description: 'Track single items like smoke/gym/weight',
     component: 'SingleItemTrackerWidget',
     minSize: { w: 6, h: 4 },
-    maxSize: { w: 10, h: 8 },
-    defaultSize: { w: 8, h: 6 },
+    maxSize: { w: 15, h: 18 },
+    defaultSize: { w: 10, h: 12 },
     deletable: true,
     resizable: true,
     category: 'productivity',
@@ -229,4 +239,36 @@ export const getSmallSizedWidgets = (): WidgetConfig[] => {
   return Object.values(WIDGET_CONFIGS).filter(widget => 
     widget.defaultSize.w < 8 || widget.defaultSize.h < 8
   );
+};
+
+// API Mapping Helper Functions
+export const getConfigWidgetIdByApiType = (apiWidgetType: string): string | undefined => {
+  const widget = Object.values(WIDGET_CONFIGS).find(w => w.apiWidgetType === apiWidgetType);
+  return widget?.id;
+};
+
+export const getApiWidgetTypeByConfigId = (configWidgetId: string): string | undefined => {
+  return WIDGET_CONFIGS[configWidgetId]?.apiWidgetType;
+};
+
+
+// Type mapping for Dashboard component
+export const getApiTypeToConfigMapping = (): Record<string, string> => {
+  const mapping: Record<string, string> = {};
+  Object.values(WIDGET_CONFIGS).forEach(widget => {
+    if (widget.apiWidgetType) {
+      mapping[widget.apiWidgetType] = widget.id;
+    }
+  });
+  return mapping;
+};
+
+export const getConfigToApiTypeMapping = (): Record<string, string> => {
+  const mapping: Record<string, string> = {};
+  Object.values(WIDGET_CONFIGS).forEach(widget => {
+    if (widget.apiWidgetType) {
+      mapping[widget.id] = widget.apiWidgetType;
+    }
+  });
+  return mapping;
 };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
+import { Widget } from '../../utils/dashboardUtils'
 // import { buildApiUrl, apiCall } from '../../config/api'; // Uncomment when API is ready
 
 interface CalendarEvent {
@@ -154,15 +155,10 @@ const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface CalendarWidgetProps {
   onRemove: () => void;
-  config?: Record<string, any>;
-  scheduledItem?: {
-    id: string;
-    title: string;
-    category?: string;
-  };
+  widget: Widget
 }
 
-const CalendarWidget = ({ onRemove, config }: CalendarWidgetProps) => {
+const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);

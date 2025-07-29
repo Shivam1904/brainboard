@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Search, ExternalLink } from 'lucide-react'
 import BaseWidget from './BaseWidget'
+import { Widget } from '../../utils/dashboardUtils'
 
 interface Summary {
   id: string
@@ -12,9 +13,10 @@ interface Summary {
 
 interface WebSummaryWidgetProps {
   onRemove: () => void
+  widget: Widget
 }
 
-const WebSummaryWidget = ({ onRemove }: WebSummaryWidgetProps) => {
+const WebSummaryWidget = ({ onRemove, widget }: WebSummaryWidgetProps) => {
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [currentSummary, setCurrentSummary] = useState<Summary | null>(null)

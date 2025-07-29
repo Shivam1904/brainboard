@@ -2,7 +2,7 @@
 export const GRID_CONFIG = {
   // Grid layout settings
   cols: {
-    lg: 50, // Number of columns for large screens
+    lg: 55, // Number of columns for large screens
   },
   rowHeight: 32, // Height of each grid row in pixels
   margin: [0, 0] as [number, number], // Margin between grid items [vertical, horizontal]

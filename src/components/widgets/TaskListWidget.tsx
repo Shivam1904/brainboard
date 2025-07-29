@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { CheckCircle, Circle, Plus, X } from 'lucide-react';
 import FrequencySection from './FrequencySection';
-// import { buildApiUrl, apiCall } from '../../config/api'; // Uncomment when API is ready
+import { buildApiUrl, apiCall, API_CONFIG } from '../../config/api';
+import { TodoTask, TodoTodayResponse } from '../../types/widgets';
+import { Widget } from '../../utils/dashboardUtils'
 
 interface Task {
   id: string;
@@ -98,17 +100,21 @@ const getCategoryColor = (category: string) => {
   }
 };
 
+const getPriorityFromNumber = (priority: number): 'High' | 'Medium' | 'Low' => {
+  switch (priority) {
+    case 3: return 'High';
+    case 2: return 'Medium';
+    case 1: return 'Low';
+    default: return 'Medium';
+  }
+};
+
 interface TaskListWidgetProps {
   onRemove: () => void;
-  config?: Record<string, any>;
-  scheduledItem?: {
-    id: string;
-    title: string;
-    category?: string;
-  };
+  widget: Widget
 }
 
-const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps) => {
+const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,16 +140,36 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
       setLoading(true);
       setError(null);
       
-      // TODO: Replace with real API call
-      // const response = await apiCall<Task[]>(buildApiUrl('/api/tasks/today'));
-      // setTasks(response);
+      // Get widget_id from config or use the centralized mapping
+      const widgetId = widget.id;
+      const targetDate = new Date().toISOString().split('T')[0];
       
-      // Using dummy data for now
+      const response = await apiCall<TodoTodayResponse>(
+        buildApiUrl(API_CONFIG.tasks.getTodayTasks, {
+          widget_id: widgetId,
+          target_date: targetDate
+        })
+      );
+      
+      // Transform API response to local Task format
+      const transformedTasks: Task[] = response.tasks.map((apiTask: TodoTask) => ({
+        id: apiTask.id,
+        title: apiTask.content,
+        description: '', // API doesn't provide description field
+        completed: apiTask.is_done,
+        priority: getPriorityFromNumber(apiTask.priority),
+        category: apiTask.category,
+        dueDate: apiTask.due_date || undefined,
+        createdAt: apiTask.created_at
+      }));
+      
+      setTasks(transformedTasks);
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+      // Fallback to dummy data on error
       const dummyTasks = getDummyTasks();
       setTasks(dummyTasks);
-    } catch (err) {
-      setError('Failed to load tasks');
-      console.error('Error fetching tasks:', err);
+      setError('Using offline data - API unavailable');
     } finally {
       setLoading(false);
     }
@@ -151,27 +177,32 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
 
   const updateTaskStatus = async (taskId: string, completed: boolean) => {
     try {
-      // TODO: Replace with real API call
+      // TODO: Replace with real API call when endpoint is available
       // await apiCall(buildApiUrl(`/api/tasks/update`), {
       //   method: 'PUT',
       //   body: JSON.stringify({ id: taskId, completed })
       // });
       
-      // Update local state
+      // Update local state for now
       setTasks(prevTasks => 
         prevTasks.map(task => 
           task.id === taskId ? { ...task, completed } : task
         )
       );
     } catch (err) {
-      setError('Failed to update task');
       console.error('Error updating task:', err);
+      // Still update local state even if API fails
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId ? { ...task, completed } : task
+        )
+      );
     }
   };
 
   const addMission = async (missionData: MissionFormData) => {
     try {
-      // TODO: Replace with real API call
+      // TODO: Replace with real API call when endpoint is available
       // await apiCall(buildApiUrl('/api/tasks/mission'), {
       //   method: 'POST',
       //   body: JSON.stringify(missionData)
@@ -207,8 +238,36 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
         }
       });
     } catch (err) {
-      setError('Failed to add mission');
       console.error('Error adding mission:', err);
+      // Still add to local state even if API fails
+      const newTask: Task = {
+        id: Date.now().toString(),
+        title: missionData.title,
+        description: missionData.description,
+        completed: false,
+        priority: missionData.priority,
+        category: missionData.category,
+        dueDate: missionData.dueDate,
+        createdAt: new Date().toISOString()
+      };
+      
+      setTasks(prevTasks => [newTask, ...prevTasks]);
+      setShowAddForm(false);
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'Medium',
+        category: 'personal',
+        dueDate: new Date().toISOString().split('T')[0],
+        frequency: {
+          frequencySet: 'BALANCED',
+          frequencySetValue: 0.6,
+          frequency: 3,
+          frequencyUnit: 'TIMES',
+          frequencyPeriod: 'WEEKLY',
+          isDailyHabit: false
+        }
+      });
     }
   };
 
@@ -236,11 +295,11 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
     );
   }
 
-  if (error) {
+  if (error && tasks.length === 0) {
     return (
       <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
         <div className="flex flex-col items-center justify-center h-32 text-center">
-          <p className="text-red-600 mb-2">{error}</p>
+          <p className="text-orange-600 mb-2">{error}</p>
           <button 
             onClick={fetchTasks}
             className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
@@ -255,6 +314,13 @@ const TaskListWidget = ({ onRemove, config, scheduledItem }: TaskListWidgetProps
   return (
     <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
       <div className="p-4 h-full overflow-y-auto">
+        {/* Offline Indicator */}
+        {error && (
+          <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+            <p className="text-xs text-orange-700 text-center">{error}</p>
+          </div>
+        )}
+        
         {/* Progress Bar */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
