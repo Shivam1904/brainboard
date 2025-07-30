@@ -129,6 +129,7 @@ async def get_all_widget_list(
                 "widget_type": widget.widget_type,
                 "frequency": widget.frequency,
                 "importance": widget.importance,
+                "is_permanent": widget.is_permanent,
                 "category": widget.category,
                 "created_at": widget.created_at.isoformat(),
                 "updated_at": widget.updated_at.isoformat()
@@ -174,21 +175,27 @@ async def add_new_widget(
         
         # Create corresponding details table entry based on widget type
         if request.widget_type in ["todo-habit", "todo-task", "todo-event"]:
-            from models.database import ToDoDetails
+            from services.todo_service import TodoService
             # Use provided todo_type or extract from widget type
             todo_type = request.todo_type or request.widget_type.replace("todo-", "")
             # Convert string date to Python date object
             due_date = None
             if request.due_date:
                 due_date = datetime.strptime(request.due_date, '%Y-%m-%d').date()
-            todo_details = ToDoDetails(
+            
+            # Use the todo service to create todo details and potentially calendar widget
+            todo_service = TodoService(db)
+            todo_result = todo_service.create_todo_details_with_calendar(
                 widget_id=widget.id,
                 title=request.title,
-                todo_type=todo_type,  # 'habit', 'task', or 'event'
-                due_date=due_date,  # Use provided due date
-                created_by=user_id
+                todo_type=todo_type,
+                due_date=due_date,
+                user_id=user_id
             )
-            db.add(todo_details)
+            
+            # Log if calendar was created
+            if todo_result.get("calendar_created"):
+                logger.info(f"Calendar widget automatically created for user {user_id}")
         elif request.widget_type == "singleitemtracker":
             from models.database import SingleItemTrackerDetails
             tracker_details = SingleItemTrackerDetails(
@@ -286,18 +293,25 @@ async def update_widget(
                 todo_details.updated_at = datetime.now(timezone.utc)
             else:
                 # Create new todo details if they don't exist
+                from services.todo_service import TodoService
                 todo_type = request.todo_type or request.widget_type.replace("todo-", "")
                 due_date = None
                 if request.due_date:
                     due_date = datetime.strptime(request.due_date, '%Y-%m-%d').date()
-                todo_details = ToDoDetails(
+                
+                # Use the todo service to create todo details and potentially calendar widget
+                todo_service = TodoService(db)
+                todo_result = todo_service.create_todo_details_with_calendar(
                     widget_id=widget_id,
                     title=request.title,
                     todo_type=todo_type,
                     due_date=due_date,
-                    created_by=user_id
+                    user_id=user_id
                 )
-                db.add(todo_details)
+                
+                # Log if calendar was created
+                if todo_result.get("calendar_created"):
+                    logger.info(f"Calendar widget automatically created for user {user_id} during widget update")
                 
         elif request.widget_type == "singleitemtracker":
             from models.database import SingleItemTrackerDetails

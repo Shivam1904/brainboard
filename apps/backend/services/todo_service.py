@@ -19,6 +19,63 @@ class TodoService:
     def __init__(self, db: Session):
         self.db = db
     
+    def create_todo_details_with_calendar(self, widget_id: str, title: str, todo_type: str, 
+                                        due_date: Optional[date] = None, user_id: str = None) -> Dict[str, Any]:
+        """
+        Create todo details and automatically create a calendar widget if it's the first todo entry
+        """
+        try:
+            # Check if this is the first todo entry for the user
+            existing_todos = self.db.query(ToDoDetails).join(
+                DashboardWidgetDetails
+            ).filter(
+                DashboardWidgetDetails.user_id == user_id,
+                ToDoDetails.delete_flag == False
+            ).count()
+            
+            # Create the todo details
+            todo_details = ToDoDetails(
+                widget_id=widget_id,
+                title=title,
+                todo_type=todo_type,
+                due_date=due_date,
+                created_by=user_id
+            )
+            
+            self.db.add(todo_details)
+            self.db.flush()  # Get the ID
+            
+            # If this is the first todo entry, create a calendar widget
+            if existing_todos == 0:
+                logger.info(f"First todo entry for user {user_id}, creating calendar widget")
+                
+                calendar_widget = DashboardWidgetDetails(
+                    user_id=user_id,
+                    widget_type="calendar",
+                    frequency="daily",
+                    importance=1.0,  # High importance for calendar
+                    title="My Calendar",
+                    category="information",
+                    is_permanent=True,  # Calendar should be permanent
+                    created_by=user_id
+                )
+                
+                self.db.add(calendar_widget)
+                logger.info(f"Created calendar widget with ID: {calendar_widget.id}")
+            
+            return {
+                "todo_details_id": todo_details.id,
+                "widget_id": todo_details.widget_id,
+                "title": todo_details.title,
+                "todo_type": todo_details.todo_type,
+                "due_date": todo_details.due_date.isoformat() if todo_details.due_date else None,
+                "calendar_created": existing_todos == 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating todo details with calendar: {e}")
+            raise
+    
     def get_today_todo_list(self, todo_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get today's todo activities filtered by type"""
         try:

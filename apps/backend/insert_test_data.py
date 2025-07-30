@@ -101,7 +101,10 @@ def create_test_data():
         db.commit()
         print(f"✅ Created {len(widgets_data)} dashboard widgets")
         
-        # Create todo details
+        # Create todo details using the service to ensure calendar creation logic
+        from services.todo_service import TodoService
+        todo_service = TodoService(db)
+        
         todo_details_data = [
             {"widget_id": "id0", "title": "AWS", "todo_type": "task"},
             {"widget_id": "id1", "title": "Meditation", "todo_type": "event"},
@@ -110,13 +113,14 @@ def create_test_data():
         ]
         
         for todo_data in todo_details_data:
-            todo_detail = ToDoDetails(
+            todo_result = todo_service.create_todo_details_with_calendar(
                 widget_id=todo_data["widget_id"],
                 title=todo_data["title"],
                 todo_type=todo_data["todo_type"],
-                created_by=user.id
+                user_id=user.id
             )
-            db.add(todo_detail)
+            if todo_result.get("calendar_created"):
+                print(f"📅 Calendar widget created for first todo entry: {todo_data['title']}")
         
         # Create single item tracker details
         tracker_detail = SingleItemTrackerDetails(
