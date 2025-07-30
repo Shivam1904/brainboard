@@ -184,26 +184,19 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                   {webSearchData.results_count} results
                 </span>
-                {activityData && (
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    activityData.activity.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {activityData.activity.status === 'completed' ? 'Read' : 'Unread'}
-                  </span>
-                )}
               </div>
               
               {/* Read Checkbox */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col items-center gap-2">
                 <input
                   type="checkbox"
                   id="read-checkbox"
                   checked={isRead}
                   onChange={(e) => updateReadStatus(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  className="w-4 h-4 text-blue-600 bg-gray-100 cursor-pointer border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
                 <label htmlFor="read-checkbox" className="text-xs text-gray-600">
-                  Mark as Read
+                  Read
                 </label>
               </div>
             </div>

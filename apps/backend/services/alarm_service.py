@@ -4,7 +4,7 @@ Alarm Service - Business logic for alarm operations
 
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import logging
 
 from models.database import (
@@ -137,6 +137,67 @@ class AlarmService:
             self.db.rollback()
             return None
     
+    def create_alarm_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create alarm activity entry for today's dashboard"""
+        try:
+            # Get alarm details for the widget
+            alarm_details = self.db.query(AlarmDetails).filter(
+                AlarmDetails.widget_id == widget_id
+            ).first()
+            
+            if not alarm_details:
+                logger.warning(f"No alarm details found for widget {widget_id}")
+                return None
+            
+            # Create new activity entry
+            activity = AlarmItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                alarmdetails_id=alarm_details.id,
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            self.db.flush()  # Get the ID
+            
+            logger.info(f"Created alarm activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "started_at": activity.started_at,
+                "snoozed_at": activity.snoozed_at
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating alarm activity for widget {widget_id}: {e}")
+            return None
+
+    def create_alarm_details(self, widget_id: str, title: str, alarm_times: list = None, user_id: str = None) -> Dict[str, Any]:
+        """Create alarm details"""
+        try:
+            # Use provided alarm times or default to 09:00
+            if alarm_times is None:
+                alarm_times = ["09:00"]
+            
+            alarm_details = AlarmDetails(
+                widget_id=widget_id,
+                title=title,
+                alarm_times=alarm_times,
+                created_by=user_id
+            )
+            self.db.add(alarm_details)
+            self.db.flush()  # Get the ID
+            
+            return {
+                "alarm_details_id": alarm_details.id,
+                "widget_id": alarm_details.widget_id,
+                "title": alarm_details.title,
+                "alarm_times": alarm_details.alarm_times
+            }
+        except Exception as e:
+            logger.error(f"Error creating alarm details: {e}")
+            raise
+    
     def get_alarm_details(self, widget_id: str) -> Optional[Dict[str, Any]]:
         """Get alarm details for a specific widget"""
         try:
@@ -162,6 +223,43 @@ class AlarmService:
         except Exception as e:
             logger.error(f"Error getting alarm details for widget {widget_id}: {e}")
             return None
+    
+    def update_or_create_alarm_details(self, widget_id: str, title: str, alarm_times: list = None, user_id: str = None) -> Dict[str, Any]:
+        """Update existing alarm details or create new ones if they don't exist"""
+        try:
+            # Use provided alarm times or default to 09:00
+            if alarm_times is None:
+                alarm_times = ["09:00"]
+            
+            # Check if alarm details exist
+            alarm_details = self.db.query(AlarmDetails).filter(
+                AlarmDetails.widget_id == widget_id
+            ).first()
+            
+            if alarm_details:
+                # Update existing alarm details
+                alarm_details.title = title
+                alarm_details.alarm_times = alarm_times
+                alarm_details.updated_at = datetime.now(timezone.utc)
+                
+                return {
+                    "alarm_details_id": alarm_details.id,
+                    "widget_id": alarm_details.widget_id,
+                    "title": alarm_details.title,
+                    "alarm_times": alarm_details.alarm_times,
+                    "action": "updated"
+                }
+            else:
+                # Create new alarm details
+                return self.create_alarm_details(
+                    widget_id=widget_id,
+                    title=title,
+                    alarm_times=alarm_times,
+                    user_id=user_id
+                )
+        except Exception as e:
+            logger.error(f"Error updating/creating alarm details for widget {widget_id}: {e}")
+            raise
     
     def update_alarm_details(self, alarm_details_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update alarm details"""

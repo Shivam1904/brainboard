@@ -4,7 +4,7 @@ Single Item Tracker Service - Business logic for tracker operations
 
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import logging
 
 from models.database import (
@@ -132,6 +132,68 @@ class SingleItemTrackerService:
             self.db.rollback()
             return None
     
+    def create_tracker_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create tracker activity entry for today's dashboard"""
+        try:
+            # Get tracker details for the widget
+            tracker_details = self.db.query(SingleItemTrackerDetails).filter(
+                SingleItemTrackerDetails.widget_id == widget_id
+            ).first()
+            
+            if not tracker_details:
+                logger.warning(f"No tracker details found for widget {widget_id}")
+                return None
+            
+            # Create new activity entry
+            activity = SingleItemTrackerItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                singleitemtrackerdetails_id=tracker_details.id,
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            self.db.flush()  # Get the ID
+            
+            logger.info(f"Created tracker activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "value": activity.value,
+                "time_added": activity.time_added
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating tracker activity for widget {widget_id}: {e}")
+            return None
+
+    def create_tracker_details(self, widget_id: str, title: str, value_type: str = "number", 
+                              value_unit: str = "units", target_value: str = "0", user_id: str = None) -> Dict[str, Any]:
+        """Create single item tracker details"""
+        try:
+            tracker_details = SingleItemTrackerDetails(
+                widget_id=widget_id,
+                title=title,
+                value_type=value_type,
+                value_unit=value_unit,
+                target_value=target_value,
+                created_by=user_id
+            )
+            self.db.add(tracker_details)
+            self.db.flush()  # Get the ID
+            
+            return {
+                "tracker_details_id": tracker_details.id,
+                "widget_id": tracker_details.widget_id,
+                "title": tracker_details.title,
+                "value_type": tracker_details.value_type,
+                "value_unit": tracker_details.value_unit,
+                "target_value": tracker_details.target_value
+            }
+        except Exception as e:
+            logger.error(f"Error creating tracker details: {e}")
+            raise
+    
     def get_tracker_details(self, widget_id: str) -> Optional[Dict[str, Any]]:
         """Get tracker details for a specific widget"""
         try:
@@ -156,6 +218,46 @@ class SingleItemTrackerService:
         except Exception as e:
             logger.error(f"Error getting tracker details for widget {widget_id}: {e}")
             return None
+    
+    def update_or_create_tracker_details(self, widget_id: str, title: str, value_type: str = "number",
+                                        value_unit: str = "units", target_value: str = "0", user_id: str = None) -> Dict[str, Any]:
+        """Update existing tracker details or create new ones if they don't exist"""
+        try:
+            # Check if tracker details exist
+            tracker_details = self.db.query(SingleItemTrackerDetails).filter(
+                SingleItemTrackerDetails.widget_id == widget_id
+            ).first()
+            
+            if tracker_details:
+                # Update existing tracker details
+                tracker_details.title = title
+                tracker_details.value_type = value_type
+                tracker_details.value_unit = value_unit
+                tracker_details.target_value = target_value
+                tracker_details.updated_at = datetime.now(timezone.utc)
+                
+                return {
+                    "tracker_details_id": tracker_details.id,
+                    "widget_id": tracker_details.widget_id,
+                    "title": tracker_details.title,
+                    "value_type": tracker_details.value_type,
+                    "value_unit": tracker_details.value_unit,
+                    "target_value": tracker_details.target_value,
+                    "action": "updated"
+                }
+            else:
+                # Create new tracker details
+                return self.create_tracker_details(
+                    widget_id=widget_id,
+                    title=title,
+                    value_type=value_type,
+                    value_unit=value_unit,
+                    target_value=target_value,
+                    user_id=user_id
+                )
+        except Exception as e:
+            logger.error(f"Error updating/creating tracker details for widget {widget_id}: {e}")
+            raise
     
     def update_tracker_details(self, tracker_details_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update tracker details"""

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { getAllWidgets, getImplementedWidgets, WidgetConfig } from '../config/widgets'
+import AddWidgetForm from './AddWidgetForm'
 
 interface AddWidgetButtonProps {
   onAddWidget: (widgetId: string) => void
@@ -9,6 +10,7 @@ interface AddWidgetButtonProps {
 
 const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
   const [isOpen, setIsOpen] = useState(false)
+  const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null)
   
   // Get all widgets except "All Schedules" since it's automatically included
   const allWidgets = getAllWidgets().filter(widget => widget.id !== 'allSchedules')
@@ -17,9 +19,19 @@ const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
   const isImplemented = (widgetId: string) => 
     implementedWidgets.some(widget => widget.id === widgetId)
 
-  const handleAddWidget = (widgetId: string) => {
-    onAddWidget(widgetId)
+  const handleWidgetSelect = (widgetId: string) => {
+    setSelectedWidgetId(widgetId)
     setIsOpen(false)
+  }
+
+  const handleFormClose = () => {
+    setSelectedWidgetId(null)
+  }
+
+  const handleFormSuccess = () => {
+    // Refresh the dashboard after successful widget addition
+    onAddWidget('refresh')
+    setSelectedWidgetId(null)
   }
 
   const renderWidget = (widget: WidgetConfig) => {
@@ -28,7 +40,7 @@ const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
     return (
       <button
         key={widget.id}
-        onClick={() => handleAddWidget(widget.id)}
+        onClick={() => handleWidgetSelect(widget.id)}
         className={`w-full text-left px-3 py-2 text-sm transition-colors ${
           implemented 
             ? 'hover:bg-accent hover:text-accent-foreground cursor-pointer' 
@@ -52,30 +64,41 @@ const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
   }
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-      >
-        <Plus size={16} />
-        Add Widget
-      </button>
+    <>
+      <div className="relative">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        >
+          <Plus size={16} />
+          Add Widget
+        </button>
 
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-2 bg-card border rounded-md shadow-lg min-w-[200px] max-h-[400px] overflow-y-auto z-10">
-          <div className="py-1">
-            {allWidgets.map(widget => renderWidget(widget))}
+        {isOpen && (
+          <div className="absolute right-0 top-full mt-2 bg-card border rounded-md shadow-lg min-w-[200px] max-h-[400px] overflow-y-auto z-10">
+            <div className="py-1">
+              {allWidgets.map(widget => renderWidget(widget))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => setIsOpen(false)}
+        {isOpen && (
+          <div
+            className="fixed inset-0 z-0"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+      </div>
+
+      {/* Add Widget Form Modal */}
+      {selectedWidgetId && (
+        <AddWidgetForm
+          widgetId={selectedWidgetId}
+          onClose={handleFormClose}
+          onSuccess={handleFormSuccess}
         />
       )}
-    </div>
+    </>
   )
 }
 

@@ -20,6 +20,10 @@ interface CalendarDay {
   isCurrentMonth: boolean;
   isToday: boolean;
   events: CalendarEvent[];
+  todosCompleted: number;
+  todosTotal: number;
+  habitStreak: number;
+  milestones: number;
 }
 
 interface CalendarData {
@@ -28,6 +32,13 @@ interface CalendarData {
   days: CalendarDay[];
   events: CalendarEvent[];
   milestones: CalendarEvent[];
+  monthlyStats?: {
+    totalTodosCompleted: number;
+    totalTodos: number;
+    averageCompletionRate: number;
+    longestHabitStreak: number;
+    totalMilestones: number;
+  };
 }
 
 const getEventTypeColor = (type: string) => {
@@ -195,6 +206,43 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
           </div>
         )}
 
+        {/* Monthly Stats */}
+        {calendarData.monthlyStats && (
+          <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+            <h4 className="text-sm font-semibold text-gray-800 mb-2">Monthly Overview</h4>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-green-600">📋</span>
+                <div>
+                  <div className="font-medium">{calendarData.monthlyStats.averageCompletionRate}%</div>
+                  <div className="text-gray-500">Completion Rate</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-orange-600">🔥</span>
+                <div>
+                  <div className="font-medium">{calendarData.monthlyStats.longestHabitStreak}d</div>
+                  <div className="text-gray-500">Best Streak</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-purple-600">🏆</span>
+                <div>
+                  <div className="font-medium">{calendarData.monthlyStats.totalMilestones}</div>
+                  <div className="text-gray-500">Milestones</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-600">📊</span>
+                <div>
+                  <div className="font-medium">{calendarData.monthlyStats.totalTodosCompleted}</div>
+                  <div className="text-gray-500">Todos Done</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Day Headers */}
         <div className="grid grid-cols-7 mb-1">
           {dayNames.map(day => (
@@ -209,7 +257,7 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
           {calendarData.days.map((day, index) => (
             <div
               key={index}
-              className={`min-h-[24px] p-1 border border-gray-200 text-xs ${
+              className={`min-h-[80px] p-1 border border-gray-200 text-xs ${
                 !day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'
               } ${day.isToday ? 'bg-blue-50 border-blue-300' : ''}`}
             >
@@ -219,9 +267,45 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
                 {day.day}
               </div>
               
+              {/* Todos Progress */}
+              {day.isCurrentMonth && day.todosTotal > 0 && (
+                <div className="mb-1">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-gray-500">📋</span>
+                    <span className="text-xs text-gray-600">{day.todosCompleted}/{day.todosTotal}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1">
+                    <div 
+                      className="bg-green-500 h-1 rounded-full"
+                      style={{ width: `${(day.todosCompleted / day.todosTotal) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Habit Streak */}
+              {day.isCurrentMonth && day.habitStreak > 0 && (
+                <div className="mb-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-orange-500">🔥</span>
+                    <span className="text-xs text-gray-600">{day.habitStreak}d</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Milestones */}
+              {day.isCurrentMonth && day.milestones > 0 && (
+                <div className="mb-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-purple-500">🏆</span>
+                    <span className="text-xs text-gray-600">{day.milestones}</span>
+                  </div>
+                </div>
+              )}
+              
               {/* Events */}
               <div className="space-y-1">
-                {day.events.slice(0, 2).map(event => (
+                {day.events.slice(0, 1).map(event => (
                   <div
                     key={event.id}
                     onClick={() => setSelectedEvent(event)}
@@ -231,9 +315,9 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
                     {event.title}
                   </div>
                 ))}
-                {day.events.length > 2 && (
+                {day.events.length > 1 && (
                   <div className="text-xs text-gray-500 text-center">
-                    +{day.events.length - 2} more
+                    +{day.events.length - 1} more
                   </div>
                 )}
               </div>
@@ -241,31 +325,62 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
           ))}
         </div>
 
-        {/* Upcoming Events */}
-        <div className="mt-4">
-          <h4 className="font-medium text-sm text-gray-700 mb-2">Upcoming Events</h4>
-          <div className="space-y-2 max-h-32 overflow-y-auto">
-            {calendarData.events
-              .filter(event => new Date(event.date) >= new Date())
-              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-              .slice(0, 3)
-              .map(event => (
-                <div
-                  key={event.id}
-                  onClick={() => setSelectedEvent(event)}
-                  className="flex items-center gap-2 p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100"
-                >
-                  <Calendar size={12} className="text-gray-500" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{event.title}</div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(event.date).toLocaleDateString()}
-                      {event.time && ` • ${event.time}`}
+        {/* Upcoming Events & Milestones */}
+        <div className="mt-4 space-y-4">
+          {/* Upcoming Events */}
+          <div>
+            <h4 className="font-medium text-sm text-gray-700 mb-2">Upcoming Events</h4>
+            <div className="space-y-2 max-h-24 overflow-y-auto">
+              {calendarData.events
+                .filter(event => new Date(event.date) >= new Date())
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .slice(0, 2)
+                .map(event => (
+                  <div
+                    key={event.id}
+                    onClick={() => setSelectedEvent(event)}
+                    className="flex items-center gap-2 p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100"
+                  >
+                    <Calendar size={12} className="text-gray-500" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{event.title}</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(event.date).toLocaleDateString()}
+                        {event.time && ` • ${event.time}`}
+                      </div>
                     </div>
+                    <div className={`w-2 h-2 rounded-full ${getEventTypeColor(event.type).replace('bg-', '').replace(' text-', '')}`}></div>
                   </div>
-                  <div className={`w-2 h-2 rounded-full ${getEventTypeColor(event.type).replace('bg-', '').replace(' text-', '')}`}></div>
-                </div>
-              ))}
+                ))}
+            </div>
+          </div>
+
+          {/* Recent Milestones */}
+          <div>
+            <h4 className="font-medium text-sm text-gray-700 mb-2">Recent Milestones</h4>
+            <div className="space-y-2 max-h-24 overflow-y-auto">
+              {calendarData.milestones
+                .filter(milestone => new Date(milestone.date) <= new Date())
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 2)
+                .map(milestone => (
+                  <div
+                    key={milestone.id}
+                    onClick={() => setSelectedEvent(milestone)}
+                    className="flex items-center gap-2 p-2 bg-purple-50 rounded cursor-pointer hover:bg-purple-100"
+                  >
+                    <div className="text-purple-600">🏆</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{milestone.title}</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(milestone.date).toLocaleDateString()}
+                        {milestone.time && ` • ${milestone.time}`}
+                      </div>
+                    </div>
+                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  </div>
+                ))}
+            </div>
           </div>
         </div>
       </div>

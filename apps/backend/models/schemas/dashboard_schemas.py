@@ -10,6 +10,8 @@ class WidgetType(str, Enum):
     ALARM = "alarm"
     SINGLEITEMTRACKER = "singleitemtracker"
     WEBSEARCH = "websearch"
+    CALENDAR = "calendar"
+    ALL_SCHEDULES = "allSchedules"
 
 class Frequency(str, Enum):
     DAILY = "daily"
@@ -27,6 +29,19 @@ class CreateWidgetRequest(BaseModel):
     importance: float = Field(..., ge=0.0, le=1.0)
     title: str = Field(..., min_length=1, max_length=200)
     category: Optional[str] = Field(None, max_length=50)
+    
+    # Widget-specific fields
+    # Todo-specific fields
+    todo_type: Optional[str] = Field(None, description="Todo type: habit, task, or event")
+    due_date: Optional[str] = Field(None, description="Due date for todo items")
+    
+    # Alarm-specific fields
+    alarm_time: Optional[str] = Field(None, description="Time of day for alarm (HH:MM format)")
+    
+    # Single item tracker-specific fields
+    value_data_type: Optional[str] = Field(None, description="Data type for tracker values")
+    value_data_unit: Optional[str] = Field(None, description="Unit for tracker values")
+    target_value: Optional[str] = Field(None, description="Target value for tracker")
 
 class UpdateWidgetRequest(BaseModel):
     """Request schema for updating a dashboard widget"""
@@ -48,6 +63,9 @@ class WidgetResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UpdateDailyWidgetRequest(BaseModel):
+    is_active: bool
 
 class DailyWidgetResponse(BaseModel):
     """Response schema for daily widget"""

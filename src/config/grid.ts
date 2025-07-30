@@ -5,7 +5,7 @@ export const GRID_CONFIG = {
     lg: 55, // Number of columns for large screens
   },
   rowHeight: 32, // Height of each grid row in pixels
-  margin: [0, 0] as [number, number], // Margin between grid items [vertical, horizontal]
+  margin: [5, 5] as [number, number], // Margin between grid items [vertical, horizontal]
   containerPadding: [8, 8] as [number, number], // Padding around the grid container
   
   // Breakpoints (for responsive design)

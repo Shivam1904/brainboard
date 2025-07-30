@@ -289,14 +289,233 @@ export const getDummyTracker = (widgetId: string) => {
 };
 
 export const getDummyCalendarData = (year: number, month: number) => {
-  // Calendar widget is not in the API, so we return empty data
+  // Generate calendar days for the specified month
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  const startDate = new Date(firstDay);
+  startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
+  
+  const days: any[] = [];
+  const currentDate = new Date();
+  
+  // Generate 42 days (6 weeks) to fill the calendar grid
+  for (let i = 0; i < 42; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    
+    const isCurrentMonth = date.getMonth() === month - 1;
+    const isToday = date.toDateString() === currentDate.toDateString();
+    
+    // Generate random events for each day
+    const dayEvents = generateDayEvents(date, isCurrentMonth);
+    
+    days.push({
+      date: date.toISOString().split('T')[0],
+      day: date.getDate(),
+      isCurrentMonth,
+      isToday,
+      events: dayEvents,
+      todosCompleted: Math.floor(Math.random() * 8) + 2, // 2-9 todos
+      todosTotal: Math.floor(Math.random() * 5) + 8, // 8-12 total todos
+      habitStreak: Math.floor(Math.random() * 15) + 1, // 1-15 day streak
+      milestones: Math.floor(Math.random() * 3) // 0-2 milestones
+    });
+  }
+
+  // Generate events for the month
+  const events = generateMonthEvents(year, month);
+  
+  // Generate milestones for the month
+  const milestones = generateMonthMilestones(year, month);
+
   return {
     year,
     month,
-    days: [],
-    events: [],
-    milestones: []
+    days,
+    events,
+    milestones,
+    monthlyStats: {
+      totalTodosCompleted: days.reduce((sum, day) => sum + day.todosCompleted, 0),
+      totalTodos: days.reduce((sum, day) => sum + day.todosTotal, 0),
+      averageCompletionRate: Math.round((days.reduce((sum, day) => sum + day.todosCompleted, 0) / days.reduce((sum, day) => sum + day.todosTotal, 0)) * 100),
+      longestHabitStreak: Math.max(...days.map(day => day.habitStreak)),
+      totalMilestones: days.reduce((sum, day) => sum + day.milestones, 0)
+    }
   };
+};
+
+// Helper function to generate events for a specific day
+const generateDayEvents = (date: Date, isCurrentMonth: boolean) => {
+  if (!isCurrentMonth) return [];
+  
+  const events: any[] = [];
+  const dayOfWeek = date.getDay();
+  const dayOfMonth = date.getDate();
+  
+  // Generate different types of events based on the day
+  if (dayOfWeek === 1) { // Monday
+    events.push({
+      id: `event-${date.toISOString().split('T')[0]}-1`,
+      title: "Team Meeting",
+      date: date.toISOString().split('T')[0],
+      time: "09:00",
+      location: "Conference Room A",
+      type: "event" as const,
+      priority: "High" as const,
+      description: "Weekly team sync meeting"
+    });
+  }
+  
+  if (dayOfMonth === 15) {
+    events.push({
+      id: `event-${date.toISOString().split('T')[0]}-2`,
+      title: "Project Deadline",
+      date: date.toISOString().split('T')[0],
+      time: "17:00",
+      type: "milestone" as const,
+      priority: "High" as const,
+      description: "Submit final project deliverables"
+    });
+  }
+  
+  if (dayOfWeek === 5) { // Friday
+    events.push({
+      id: `event-${date.toISOString().split('T')[0]}-3`,
+      title: "Weekly Review",
+      date: date.toISOString().split('T')[0],
+      time: "16:00",
+      type: "task" as const,
+      priority: "Medium" as const,
+      description: "Review weekly progress and plan next week"
+    });
+  }
+  
+  if (dayOfMonth % 7 === 0) {
+    events.push({
+      id: `event-${date.toISOString().split('T')[0]}-4`,
+      title: "Health Check",
+      date: date.toISOString().split('T')[0],
+      time: "10:00",
+      location: "Gym",
+      type: "reminder" as const,
+      priority: "Low" as const,
+      description: "Weekly health and fitness check-in"
+    });
+  }
+  
+  // Add some random events
+  if (Math.random() > 0.7) {
+    const eventTypes: ('event' | 'milestone' | 'reminder' | 'task')[] = ['event', 'milestone', 'reminder', 'task'];
+    const priorities: ('High' | 'Medium' | 'Low')[] = ['High', 'Medium', 'Low'];
+    const titles = [
+      "Client Call",
+      "Code Review",
+      "Lunch Meeting",
+      "Training Session",
+      "Product Demo",
+      "Strategy Meeting",
+      "Budget Review",
+      "Performance Review"
+    ];
+    
+    events.push({
+      id: `event-${date.toISOString().split('T')[0]}-${Math.floor(Math.random() * 1000)}`,
+      title: titles[Math.floor(Math.random() * titles.length)],
+      date: date.toISOString().split('T')[0],
+      time: `${Math.floor(Math.random() * 12) + 9}:${Math.random() > 0.5 ? '00' : '30'}`,
+      type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
+      priority: priorities[Math.floor(Math.random() * priorities.length)],
+      description: "Random event description"
+    });
+  }
+  
+  return events;
+};
+
+// Helper function to generate events for the entire month
+const generateMonthEvents = (year: number, month: number) => {
+  const events = [];
+  
+  // Add some recurring events
+  for (let day = 1; day <= 31; day++) {
+    const date = new Date(year, month - 1, day);
+    if (date.getMonth() === month - 1) { // Ensure it's the correct month
+      const dayEvents = generateDayEvents(date, true);
+      events.push(...dayEvents);
+    }
+  }
+  
+  // Add some special events
+  events.push(
+    {
+      id: "event-monthly-1",
+      title: "Monthly Planning Session",
+      date: `${year}-${month.toString().padStart(2, '0')}-01`,
+      time: "14:00",
+      location: "Board Room",
+      type: "event" as const,
+      priority: "High" as const,
+      description: "Monthly strategic planning and goal setting session"
+    },
+    {
+      id: "event-monthly-2",
+      title: "Quarterly Review",
+      date: `${year}-${month.toString().padStart(2, '0')}-15`,
+      time: "10:00",
+      location: "Conference Room B",
+      type: "milestone" as const,
+      priority: "High" as const,
+      description: "Quarterly performance review and assessment"
+    },
+    {
+      id: "event-monthly-3",
+      title: "Team Building Event",
+      date: `${year}-${month.toString().padStart(2, '0')}-20`,
+      time: "16:00",
+      location: "Office Lounge",
+      type: "event" as const,
+      priority: "Medium" as const,
+      description: "Monthly team building and social event"
+    }
+  );
+  
+  return events;
+};
+
+// Helper function to generate milestones for the month
+const generateMonthMilestones = (year: number, month: number) => {
+  return [
+    {
+      id: "milestone-1",
+      title: "Project Alpha Completed",
+      date: `${year}-${month.toString().padStart(2, '0')}-10`,
+      time: "17:30",
+      type: "milestone" as const,
+      priority: "High" as const,
+      description: "Successfully completed major project milestone",
+      category: "work"
+    },
+    {
+      id: "milestone-2",
+      title: "30-Day Fitness Streak",
+      date: `${year}-${month.toString().padStart(2, '0')}-25`,
+      time: "18:00",
+      type: "milestone" as const,
+      priority: "Medium" as const,
+      description: "Achieved 30 consecutive days of exercise",
+      category: "health"
+    },
+    {
+      id: "milestone-3",
+      title: "Learning Certification",
+      date: `${year}-${month.toString().padStart(2, '0')}-28`,
+      time: "15:00",
+      type: "milestone" as const,
+      priority: "Medium" as const,
+      description: "Completed advanced certification course",
+      category: "learning"
+    }
+  ];
 };
 
 export const getDummyAllSchedulesWidgets = () => {

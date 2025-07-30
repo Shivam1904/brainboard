@@ -5,6 +5,7 @@ import TaskListWidget from './widgets/TaskListWidget'
 import SingleItemTrackerWidget from './widgets/SingleItemTrackerWidget'
 import AlarmWidget from './widgets/AlarmWidget'
 import BaseWidget from './widgets/BaseWidget'
+import CalendarWidget from './widgets/CalendarWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties, findEmptyPosition } from '../config/grid'
@@ -20,6 +21,7 @@ import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
 import HabitListWidget from './widgets/HabitListWidget';
 import EventTrackerWidget from './widgets/EventTrackerWidget';
+import { apiService } from '../services/api';
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -262,6 +264,12 @@ const Dashboard = () => {
 
   // Add new widget using addNewWidget API
   const addWidget = async (widgetId: string) => {
+    // Handle refresh case
+    if (widgetId === 'refresh') {
+      await fetchTodayWidgets();
+      return;
+    }
+    
     const config = getWidgetConfig(widgetId);
     
     if (!config) {
@@ -319,7 +327,7 @@ const Dashboard = () => {
     }
   }
 
-  const removeWidget = (dailyWidgetId: string) => {
+  const removeWidget = async (dailyWidgetId: string) => {
     const widget = widgets.find(w => w.daily_widget_id === dailyWidgetId)
     const widgetType = widget?.widget_type || 'widget'
     
@@ -330,8 +338,15 @@ const Dashboard = () => {
     }
     
     if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
-      const updatedWidgets = widgets.filter((widget: UIWidget) => widget.daily_widget_id !== dailyWidgetId);
-      setWidgets(updatedWidgets)
+      try {
+        // Call API to set is_active = 0
+        await apiService.updateDailyWidgetActive(dailyWidgetId, false);
+        const updatedWidgets = widgets.filter((widget: UIWidget) => widget.daily_widget_id !== dailyWidgetId);
+        setWidgets(updatedWidgets)
+      } catch (error) {
+        alert('Failed to remove widget from dashboard. Please try again.');
+        console.error('Failed to update is_active for DailyWidget:', error);
+      }
     }
   }
 
@@ -379,10 +394,17 @@ const Dashboard = () => {
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );
+      case 'calendar':
+        return (
+          <CalendarWidget
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+        );
       case 'allSchedules':
         return (
           <AllSchedulesWidget
-            widget={widget}
+            onWidgetAddedToToday={() => fetchTodayWidgets()}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );
@@ -480,7 +502,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className="h-full w-full flex flex-col bg-yellow-100">
       <div className="px-4 py-3 flex justify-between items-center border-b bg-card shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex flex-col">

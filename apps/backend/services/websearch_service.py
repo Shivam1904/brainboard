@@ -4,7 +4,7 @@ WebSearch Service - Business logic for websearch operations
 
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import logging
 
 from models.database import (
@@ -136,6 +136,63 @@ class WebSearchService:
             self.db.rollback()
             return None
     
+    def create_websearch_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create websearch activity entry for today's dashboard"""
+        try:
+            # Get websearch details for the widget
+            websearch_details = self.db.query(WebSearchDetails).filter(
+                WebSearchDetails.widget_id == widget_id
+            ).first()
+            
+            if not websearch_details:
+                logger.warning(f"No websearch details found for widget {widget_id}")
+                return None
+            
+            # Create new activity entry
+            activity = WebSearchItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                websearchdetails_id=websearch_details.id,
+                status="pending",
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            self.db.flush()  # Get the ID
+            
+            logger.info(f"Created websearch activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "status": activity.status,
+                "reaction": activity.reaction,
+                "summary": activity.summary
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating websearch activity for widget {widget_id}: {e}")
+            return None
+
+    def create_websearch_details(self, widget_id: str, title: str, user_id: str = None) -> Dict[str, Any]:
+        """Create websearch details"""
+        try:
+            websearch_details = WebSearchDetails(
+                widget_id=widget_id,
+                title=title,
+                created_by=user_id
+            )
+            self.db.add(websearch_details)
+            self.db.flush()  # Get the ID
+            
+            return {
+                "websearch_details_id": websearch_details.id,
+                "widget_id": websearch_details.widget_id,
+                "title": websearch_details.title
+            }
+        except Exception as e:
+            logger.error(f"Error creating websearch details: {e}")
+            raise
+    
     def get_websearch_details(self, widget_id: str) -> Optional[Dict[str, Any]]:
         """Get websearch details for a specific widget"""
         try:
@@ -157,6 +214,36 @@ class WebSearchService:
         except Exception as e:
             logger.error(f"Error getting websearch details for widget {widget_id}: {e}")
             return None
+    
+    def update_or_create_websearch_details(self, widget_id: str, title: str, user_id: str = None) -> Dict[str, Any]:
+        """Update existing websearch details or create new ones if they don't exist"""
+        try:
+            # Check if websearch details exist
+            websearch_details = self.db.query(WebSearchDetails).filter(
+                WebSearchDetails.widget_id == widget_id
+            ).first()
+            
+            if websearch_details:
+                # Update existing websearch details
+                websearch_details.title = title
+                websearch_details.updated_at = datetime.now(timezone.utc)
+                
+                return {
+                    "websearch_details_id": websearch_details.id,
+                    "widget_id": websearch_details.widget_id,
+                    "title": websearch_details.title,
+                    "action": "updated"
+                }
+            else:
+                # Create new websearch details
+                return self.create_websearch_details(
+                    widget_id=widget_id,
+                    title=title,
+                    user_id=user_id
+                )
+        except Exception as e:
+            logger.error(f"Error updating/creating websearch details for widget {widget_id}: {e}")
+            raise
     
     def update_websearch_details(self, websearch_details_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update websearch details"""

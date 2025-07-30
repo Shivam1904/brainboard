@@ -59,6 +59,7 @@ interface TaskListWidgetProps {
   onRemove: () => void;
   widget: {
     daily_widget_id: string;
+    widget_ids: string[];
     widget_type: string;
     priority: string;
     reasoning: string;
@@ -68,7 +69,7 @@ interface TaskListWidgetProps {
 }
 
 const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [task, setTask] = useState<Task>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -94,26 +95,24 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       setError(null);
       
       // Use real API call for events
-      const response = await dashboardService.getTodayTodoList('event');
+      const response = await dashboardService.getTodoItemDetailsAndActivity(widget.daily_widget_id ,widget.widget_ids[0]);
       
       // Convert API response to internal Task format
-      const convertedTasks: Task[] = response.todos.map((todo: TodoActivity) => ({
-        id: todo.id,
-        title: todo.title,
-        description: todo.description || '',
-        completed: todo.status === 'completed',
-        priority: getPriorityFromNumber(todo.progress / 25), // Convert progress to priority
-        category: 'personal', // Default category
-        dueDate: todo.due_date || '',
-        createdAt: todo.created_at
-      }));
+      const convertedTask: Task = {
+        id: response.activity.id,
+        title: response.todo_details.title,
+        description: response.todo_details.description,
+        completed: response.activity.status === 'completed',
+        priority: 'Medium',
+        createdAt: response.todo_details.created_at
+      };
       
-      setTasks(convertedTasks);
+      setTask(convertedTask);
     } catch (err) {
-      console.error('Failed to fetch tasks:', err);
-      setError('Failed to load tasks');
+      console.error('Failed to fetch task:', err);
+      setError('Failed to load task');
       // Fallback to empty array
-      setTasks([]);
+      setTask(undefined);
     } finally {
       setLoading(false);
     }
@@ -129,26 +128,25 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       });
       
       // Update local state
-      setTasks(prevTasks => 
-        prevTasks.map(task => 
-          task.id === taskId ? { ...task, completed } : task
-        )
-      );
+      setTask({
+        id: task?.id || '',
+        title: task?.title || '',
+        description: task?.description || '',
+        category: task?.category || '',
+        dueDate: task?.dueDate || '',
+        createdAt: task?.createdAt || '',
+        completed: completed,
+        priority: 'Medium'
+      });
     } catch (err) {
       console.error('Error updating task:', err);
-      // Still update local state even if API fails
-      setTasks(prevTasks => 
-        prevTasks.map(task => 
-          task.id === taskId ? { ...task, completed } : task
-        )
-      );
     }
   };
 
   const addMission = async (missionData: MissionFormData) => {
     try {
       // TODO: Replace with real API call when endpoint is available
-      // await apiCall(buildApiUrl('/api/tasks/mission'), {
+      // await apiCall(buildApiUrl('/api/task/mission'), {
       //   method: 'POST',
       //   body: JSON.stringify(missionData)
       // });
@@ -165,7 +163,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         createdAt: new Date().toISOString()
       };
       
-      setTasks(prevTasks => [newTask, ...prevTasks]);
+      setTask(newTask);
       setShowAddForm(false);
       setFormData({
         title: '',
@@ -196,7 +194,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         createdAt: new Date().toISOString()
       };
       
-      setTasks(prevTasks => [newTask, ...prevTasks]);
+      setTask(newTask);
       setShowAddForm(false);
       setFormData({
         title: '',
@@ -226,10 +224,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
     fetchTasks();
   }, []);
 
-  const completedTasks = tasks.filter(task => task.completed);
-  const pendingTasks = tasks.filter(task => !task.completed);
-  const progressPercentage = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
-
+  const completedTasks = task?.completed;
   if (loading) {
     return (
       <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
@@ -240,7 +235,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
     );
   }
 
-  if (error && tasks.length === 0) {
+  if (error && task === null) {
     return (
       <BaseWidget title="Event Tracker" icon="📋" onRemove={onRemove}>
         <div className="flex flex-col items-center justify-center h-32 text-center">
@@ -270,26 +265,25 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         
         {/* Tasks List */}
         <div className="space-y-3 ">
-          {tasks.length === 0 ? (
+          {task === undefined ? (
             <div className="text-center py-8 text-gray-500">
-              <p>No tasks for today</p>
+              <p>Error</p>
               <p className="text-sm">Add a mission to get started!</p>
             </div>
           ) : (
-            tasks.slice(0, 1).map(task => (
               <div 
-                key={task.id} 
+                key={task?.id} 
                 className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
-                  task.completed 
+                  task?.completed 
                     ? 'bg-gray-50 border-gray-200' 
                     : 'bg-white border-gray-200 hover:border-blue-300'
                 }`}
               >
                 <button
-                  onClick={() => updateTaskStatus(task.id, !task.completed)}
+                  onClick={() => updateTaskStatus(task?.id, !task?.completed)}
                   className="mt-0.5 flex-shrink-0"
                 >
-                  {task.completed ? (
+                  {task?.completed ? (
                     <CheckCircle size={20} className="text-green-600" />
                   ) : (
                     <Circle size={20} className="text-gray-400 hover:text-blue-600" />
@@ -299,38 +293,37 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <h4 className={`font-medium text-sm ${
-                      task.completed ? 'line-through text-gray-500' : 'text-gray-900'
+                      task?.completed ? 'line-through text-gray-500' : 'text-gray-900'
                     }`}>
-                      {task.title}
+                      {task?.title}
                     </h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                      {task.priority}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task?.priority || '')}`}>
+                      {task?.priority}
                     </span>
                   </div>
                   
-                  {task.description && (
+                  {task?.description && (
                     <p className={`text-xs mt-1 ${
-                      task.completed ? 'text-gray-400' : 'text-gray-600'
+                      task?.completed ? 'text-gray-400' : 'text-gray-600'
                     }`}>
-                      {task.description}
+                      {task?.description}
                     </p>
                   )}
                   
                   <div className="flex items-center gap-2 mt-2">
-                    {task.category && (
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(task.category)}`}>
-                        {task.category}
+                    {task?.category && (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(task?.category)}`}>
+                        {task?.category}
                       </span>
                     )}
-                    {task.dueDate && (
+                    {task?.dueDate && (
                       <span className="text-xs text-gray-500">
-                        Due: {new Date(task.dueDate).toLocaleDateString()}
+                        Due: {new Date(task?.dueDate).toLocaleDateString()}
                       </span>
                     )}
                   </div>
                 </div>
               </div>
-            ))
           )}
         </div>
       </div>

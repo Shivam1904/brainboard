@@ -14,6 +14,7 @@ class DailyWidget(Base):
     priority = Column(String, nullable=False)  # 'HIGH', 'LOW'
     reasoning = Column(Text, nullable=True)  # AI reasoning for selection
     date = Column(Date, nullable=False)  # Date when this widget should be shown
+    is_active = Column(Boolean, default=True)  # Indicates if the widget is active (1=active, 0=inactive)
     
     # Audit columns
     created_at = Column(DateTime, default=datetime.utcnow)

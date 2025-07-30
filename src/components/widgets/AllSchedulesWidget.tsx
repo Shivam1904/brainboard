@@ -1,18 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { DashboardWidget, ApiWidgetType, ApiCategory, ApiFrequency } from '../../types';
+import { DashboardWidget, ApiWidgetType } from '../../types';
 import { dashboardService } from '../../services/dashboard';
 import { getDummyAllSchedulesWidgets } from '../../data/widgetDummyData';
+import AddWidgetForm from '../AddWidgetForm';
 
 interface AllSchedulesWidgetProps {
   onRemove: () => void;
-  widget: any; // Using the UIWidget type from Dashboard
+  onWidgetAddedToToday: (widget: DashboardWidget) => void;
 }
 
-const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
+interface GroupedWidgets {
+  [key: string]: DashboardWidget[];
+}
+
+const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidgetProps) => {
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
+  const [todayWidgetIds, setTodayWidgetIds] = useState<string[]>([]);
+  const [addingToToday, setAddingToToday] = useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Load widgets from API using getAllWidgetList
   useEffect(() => {
@@ -21,16 +30,31 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
         setLoading(true);
         setError(null);
         
-        const response = await dashboardService.getAllWidgets();
-        console.log('All widgets response:', response);
+        // Load all widgets and today's widgets in parallel
+        const [allWidgetsResponse, todayWidgetsResponse] = await Promise.all([
+          dashboardService.getAllWidgets(),
+          dashboardService.getTodayWidgets()
+        ]);
+        
+        console.log('All widgets response:', allWidgetsResponse);
+        console.log('Today widgets response:', todayWidgetsResponse);
+        
+        // Extract widget IDs that are already in today's dashboard
+        const todayIds: string[] = [];
+        todayWidgetsResponse.widgets.forEach((dailyWidget: any) => {
+          if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
+            todayIds.push(...dailyWidget.widget_ids);
+          }
+        });
+        setTodayWidgetIds(todayIds);
         
         // If no widgets from API, use dummy data
-        if (response.widgets.length === 0) {
+        if (allWidgetsResponse.widgets.length === 0) {
           console.log('No widgets found, using dummy data');
           const dummyWidgets = getDummyAllSchedulesWidgets();
           setWidgets(dummyWidgets as any);
         } else {
-          setWidgets(response.widgets);
+          setWidgets(allWidgetsResponse.widgets);
         }
       } catch (err) {
         console.error('Failed to load widgets:', err);
@@ -46,24 +70,136 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
     loadWidgets();
   }, []);
 
-  // Update widget details
-  const updateWidgetDetails = async (widgetId: string, updateData: {
-    title?: string;
-    frequency?: ApiFrequency;
-    importance?: number;
-    category?: ApiCategory;
-  }) => {
+  // Handle edit widget
+  const handleEditWidget = async (widget: DashboardWidget) => {
     try {
-      // Call the updateDetails API endpoint
-      const response = await dashboardService.updateWidgetDetails(widgetId, updateData);
-      console.log('Widget updated:', response);
+      setLoading(true);
       
-      // Refresh the widget list
-      const refreshResponse = await dashboardService.getAllWidgets();
-      setWidgets(refreshResponse.widgets);
+      // Fetch widget-specific details based on widget type
+      let widgetDetails: any = {};
+      
+      switch (widget.widget_type) {
+        case 'todo-habit':
+        case 'todo-task':
+        case 'todo-event':
+          try {
+            const todoDetails = await dashboardService.getTodoDetails(widget.id);
+            widgetDetails = {
+              ...widget,
+              todo_type: todoDetails.todo_type,
+              due_date: todoDetails.due_date,
+              description: todoDetails.description
+            };
+          } catch (err) {
+            console.warn('Failed to fetch todo details, using basic widget data:', err);
+            widgetDetails = widget;
+          }
+          break;
+          
+        case 'alarm':
+          try {
+            const alarmDetails = await dashboardService.getAlarmDetails(widget.id);
+            widgetDetails = {
+              ...widget,
+              alarm_times: alarmDetails.alarm_times,
+              description: alarmDetails.description,
+              target_value: alarmDetails.target_value,
+              is_snoozable: alarmDetails.is_snoozable
+            };
+          } catch (err) {
+            console.warn('Failed to fetch alarm details, using basic widget data:', err);
+            widgetDetails = widget;
+          }
+          break;
+          
+        case 'singleitemtracker':
+          try {
+            const trackerDetails = await dashboardService.getTrackerDetails(widget.id);
+            widgetDetails = {
+              ...widget,
+              value_type: trackerDetails.value_type,
+              value_unit: trackerDetails.value_unit,
+              target_value: trackerDetails.target_value
+            };
+          } catch (err) {
+            console.warn('Failed to fetch tracker details, using basic widget data:', err);
+            widgetDetails = widget;
+          }
+          break;
+          
+        case 'websearch':
+          try {
+            await dashboardService.getWebSearchDetails(widget.id);
+            widgetDetails = {
+              ...widget,
+              // Websearch details are minimal, just title
+            };
+          } catch (err) {
+            console.warn('Failed to fetch websearch details, using basic widget data:', err);
+            widgetDetails = widget;
+          }
+          break;
+          
+        default:
+          widgetDetails = widget;
+          break;
+      }
+      
+      setEditingWidget(widgetDetails);
     } catch (err) {
-      console.error('Failed to update widget:', err);
-      setError('Failed to update widget');
+      console.error('Failed to fetch widget details:', err);
+      setError('Failed to load widget details for editing');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle form close
+  const handleFormClose = () => {
+    setEditingWidget(null);
+  };
+
+  // Handle form success (refresh widget list)
+  const handleFormSuccess = async () => {
+    try {
+      const response = await dashboardService.getAllWidgets();
+      setWidgets(response.widgets);
+    } catch (err) {
+      console.error('Failed to refresh widgets after edit:', err);
+    }
+  };
+
+  // Handle add to today
+  const handleAddToToday = async (widget: DashboardWidget) => {
+    try {
+      setAddingToToday(widget.id);
+      
+      const response = await dashboardService.addWidgetToToday(widget.id);
+      console.log('Widget added to today:', response);
+      
+      // Refresh today's widgets to update the list
+      const todayWidgetsResponse = await dashboardService.getTodayWidgets();
+      const todayIds: string[] = [];
+      todayWidgetsResponse.widgets.forEach((dailyWidget: any) => {
+        if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
+          todayIds.push(...dailyWidget.widget_ids);
+        }
+      });
+      setTodayWidgetIds(todayIds);
+      
+      // Show success message
+      // alert(`${widget.title} has been added to today's dashboard!`);
+      onWidgetAddedToToday(widget);
+      
+    } catch (err) {
+      console.error('Failed to add widget to today:', err);
+      if (err instanceof Error) {
+        alert(`Failed to add widget to today: ${err.message}`);
+      } else {
+        alert('Failed to add widget to today');
+      }
+    } finally {
+      setAddingToToday(null);
     }
   };
 
@@ -80,17 +216,30 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
     return typeNames[type] || type;
   };
 
+  // Get widget type icon
+  const getWidgetTypeIcon = (type: ApiWidgetType): string => {
+    const icons: Record<ApiWidgetType, string> = {
+      'todo-habit': '🔄',
+      'todo-task': '📋',
+      'todo-event': '📅',
+      'alarm': '⏰',
+      'singleitemtracker': '📊',
+      'websearch': '🔍'
+    };
+    return icons[type] || '⚙️';
+  };
+
   // Get category color
   const getCategoryColor = (category?: string | null): string => {
     const colors: Record<string, string> = {
-      'health': 'bg-red-100 text-red-800',
-      'productivity': 'bg-blue-100 text-blue-800',
-      'job': 'bg-green-100 text-green-800',
-      'information': 'bg-purple-100 text-purple-800',
-      'entertainment': 'bg-yellow-100 text-yellow-800',
-      'utilities': 'bg-gray-100 text-gray-800'
+      'health': 'bg-red-50 text-red-700 border-red-200',
+      'productivity': 'bg-blue-50 text-blue-700 border-blue-200',
+      'job': 'bg-green-50 text-green-700 border-green-200',
+      'information': 'bg-purple-50 text-purple-700 border-purple-200',
+      'entertainment': 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      'utilities': 'bg-gray-50 text-gray-700 border-gray-200'
     };
-    return colors[category || ''] || 'bg-gray-100 text-gray-800';
+    return colors[category?.toLowerCase() || ''] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
   // Get frequency display name
@@ -103,13 +252,35 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
     return frequencyNames[frequency] || frequency;
   };
 
+  // Group widgets by type
+  const groupedWidgets = widgets.reduce((groups: GroupedWidgets, widget) => {
+    const type = widget.widget_type as ApiWidgetType;
+    const displayName = getWidgetTypeDisplayName(type);
+    if (!groups[displayName]) {
+      groups[displayName] = [];
+    }
+    groups[displayName].push(widget);
+    return groups;
+  }, {});
+
+  // Toggle group expansion
+  const toggleGroup = (groupName: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupName)) {
+      newExpanded.delete(groupName);
+    } else {
+      newExpanded.add(groupName);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
   if (loading) {
     return (
       <BaseWidget title="All Widgets" icon="⚙️" onRemove={onRemove}>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-muted-foreground">Loading widgets...</p>
+            <p className="text-muted-foreground text-sm">Loading widgets...</p>
           </div>
         </div>
       </BaseWidget>
@@ -121,10 +292,10 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
       <BaseWidget title="All Widgets" icon="⚙️" onRemove={onRemove}>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <p className="text-destructive mb-2">{error}</p>
+            <p className="text-destructive mb-2 text-sm">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+              className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm"
             >
               Retry
             </button>
@@ -135,60 +306,141 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
   }
 
   return (
-    <BaseWidget title={`Widget Schedules (${widgets.length})`} icon="⚙️" onRemove={onRemove}>
+    <BaseWidget title={`Widget Library (${widgets.length})`} icon="📚" onRemove={onRemove}>
       <div className="h-full flex flex-col">
-
-        {/* Widget list */}
-        <div className="flex-1 overflow-y-auto space-y-2">
-          {widgets.length === 0 ? (
+        {/* Widget groups */}
+        <div className="flex-1 overflow-y-auto space-y-3">
+          {Object.keys(groupedWidgets).length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <p>No widgets found</p>
-              <p className="text-sm">Widgets will appear here when added to your dashboard</p>
+              <div className="text-4xl mb-2">📚</div>
+              <p className="text-sm font-medium">No widgets found</p>
+              <p className="text-xs text-muted-foreground mt-1">Widgets will appear here when added to your dashboard</p>
             </div>
           ) : (
-            widgets.map((widget) => (
-              <div
-                key={widget.id}
-                className="bg-card/50 border border-border rounded-lg p-3 hover:bg-card/70 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium truncate">{widget.title}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(widget.category)}`}>
-                        {getWidgetTypeDisplayName(widget.widget_type as ApiWidgetType)}
-                      </span>
-                      {widget.category && (
-                        <span className="text-xs text-muted-foreground">
-                          {widget.category}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>Frequency: {getFrequencyDisplayName(widget.frequency)}</div>
-                      <div>Importance: {widget.importance}/1.0</div>
-                      <div>Created: {new Date(widget.created_at).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                  
-                  {/* Edit button */}
+            Object.entries(groupedWidgets).map(([groupName, groupWidgets]) => {
+              const isExpanded = expandedGroups.has(groupName);
+              const widgetType = groupWidgets[0]?.widget_type as ApiWidgetType;
+              const icon = getWidgetTypeIcon(widgetType);
+              
+              return (
+                <div key={groupName} className="bg-card/30 border border-border/50 rounded-lg overflow-hidden">
+                  {/* Group header */}
                   <button
-                    onClick={() => {
-                      // For now, just log the widget ID for editing
-                      console.log('Edit widget:', widget.id);
-                      // TODO: Implement edit modal/form
-                    }}
-                    className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80"
+                    onClick={() => toggleGroup(groupName)}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-card/50 transition-colors"
                   >
-                    Edit
+                    <div className="flex items-center space-x-3">
+                      <span className="text-lg">{icon}</span>
+                      <div className="text-left">
+                        <h3 className="font-medium text-sm">{groupName}</h3>
+                        <p className="text-xs text-muted-foreground">{groupWidgets.length} widget{groupWidgets.length !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-muted-foreground">
+                        {groupWidgets.filter(w => todayWidgetIds.includes(w.id)).length} in today
+                      </span>
+                      <svg
+                        className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </button>
+
+                  {/* Group content */}
+                  {isExpanded && (
+                    <div className="border-t border-border/50 bg-card/20">
+                      <div className="p-3 space-y-2">
+                        {groupWidgets.map((widget) => (
+                          <div
+                            key={widget.id}
+                            className="bg-background/80 border border-border/30 rounded-md p-3 hover:bg-background transition-all duration-200 hover:shadow-sm"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <h4 className="font-medium text-sm truncate">{widget.title}</h4>
+                                  {widget.category && (
+                                    <span className={`text-xs px-2 py-0.5 rounded-full border ${getCategoryColor(widget.category)}`}>
+                                      {widget.category}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                <div className="flex items-center space-x-3 text-xs text-muted-foreground">
+                                  <span className="flex items-center space-x-1">
+                                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full"></span>
+                                    <span>{getFrequencyDisplayName(widget.frequency)}</span>
+                                  </span>
+                                  {todayWidgetIds.includes(widget.id) && (
+                                    <span className="flex items-center space-x-1 text-blue-600">
+                                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
+                                      <span>In Today</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Action buttons */}
+                              <div className="flex items-center space-x-1 ml-3">
+                                <button
+                                  onClick={() => handleEditWidget(widget)}
+                                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                                  title="Edit widget"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                                
+                                {!todayWidgetIds.includes(widget.id) && (
+                                  <button
+                                    onClick={() => handleAddToToday(widget)}
+                                    disabled={addingToToday === widget.id}
+                                    className={`p-1.5 rounded transition-colors ${
+                                      addingToToday === widget.id
+                                        ? 'text-muted-foreground cursor-not-allowed'
+                                        : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                                    }`}
+                                    title="Add to today"
+                                  >
+                                    {addingToToday === widget.id ? (
+                                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                                    ) : (
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
+
+      {/* Edit Widget Form Modal */}
+      {editingWidget && (
+        <AddWidgetForm
+          widgetId={editingWidget.widget_type}
+          onClose={handleFormClose}
+          onSuccess={handleFormSuccess}
+          editMode={true}
+          existingWidget={editingWidget}
+        />
+      )}
     </BaseWidget>
   );
 };

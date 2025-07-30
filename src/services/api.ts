@@ -64,6 +64,13 @@ class ApiService {
     importance: number;
     title: string;
     category: ApiCategory;
+    // Widget-specific fields
+    todo_type?: string;
+    due_date?: string;
+    alarm_time?: string;
+    value_data_type?: string;
+    value_data_unit?: string;
+    target_value?: string;
   }): Promise<{
     message: string;
     widget_id: string;
@@ -71,6 +78,45 @@ class ApiService {
     title: string;
   }> {
     return this.request('/dashboard/widget/addnew', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // POST /api/v1/dashboard/widget/addtotoday/{widget_id}
+  async addWidgetToToday(widgetId: string): Promise<{
+    message: string;
+    daily_widget_id: string;
+    widget_id: string;
+    widget_type: string;
+    title: string;
+  }> {
+    return this.request(`/dashboard/widget/addtotoday/${widgetId}`, {
+      method: 'POST',
+    });
+  }
+
+  // POST /api/v1/dashboard/widget/updateWidgetDetails/{widget_id}
+  async updateWidget(widgetId: string, data: {
+    widget_type: ApiWidgetType;
+    frequency: ApiFrequency;
+    importance: number;
+    title: string;
+    category: ApiCategory;
+    // Widget-specific fields
+    todo_type?: string;
+    due_date?: string;
+    alarm_time?: string;
+    value_data_type?: string;
+    value_data_unit?: string;
+    target_value?: string;
+  }): Promise<{
+    message: string;
+    widget_id: string;
+    widget_type: string;
+    title: string;
+  }> {
+    return this.request(`/dashboard/widget/updateWidgetDetails/${widgetId}`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -91,6 +137,18 @@ class ApiService {
     return this.request(`/dashboard/widget/updateDetails/${widgetId}`, {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  // POST /api/v1/dashboard/widgets/updateDailyWidget/{daily_widget_id}
+  async updateDailyWidgetActive(dailyWidgetId: string, isActive: boolean): Promise<{
+    message: string;
+    daily_widget_id: string;
+    is_active: boolean;
+  }> {
+    return this.request(`/dashboard/widgets/updateDailyWidget/${dailyWidgetId}`, {
+      method: 'POST',
+      body: JSON.stringify({ is_active: isActive }),
     });
   }
 

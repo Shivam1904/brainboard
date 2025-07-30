@@ -360,133 +360,20 @@ async def generate_today_plan(
 ):
     """
     Internal AI API: Generate today's plan
-    Responsible for generating DailyWidgetsAIOutput
+    Uses DailyPlanService to handle permanent widgets and AI processing
     """
     try:
         if target_date is None:
             target_date = date.today()
         
-        # Get all user widgets
-        widgets = db.query(DashboardWidgetDetails).filter(
-            DashboardWidgetDetails.user_id == user_id,
-            DashboardWidgetDetails.delete_flag == False
-        ).all()
+        # Use the new DailyPlanService
+        from services.daily_plan_service import DailyPlanService
+        daily_plan_service = DailyPlanService(db)
         
-        # AI Logic: Use LLM to generate intelligent daily plan
-        ai_outputs = []
+        result = await daily_plan_service.generate_daily_plan(user_id, target_date)
         
-        if not widgets:
-            logger.warning(f"No widgets found for user {user_id}")
-            return {
-                "message": "No widgets found for today's plan",
-                "date": target_date.isoformat(),
-                "widgets_processed": 0,
-                "ai_outputs_created": 0
-            }
+        return result
         
-        # Create widget context for LLM
-        # Note: widget_type is retrieved from DashboardWidgetDetails table, not determined by AI
-        widget_context = []
-        for widget in widgets:
-            widget_context.append({
-                "id": widget.id,
-                "title": widget.title,
-                "widget_type": widget.widget_type,  # From database, not AI-determined
-                "importance": widget.importance,
-                "frequency": widget.frequency,
-                "category": widget.category
-            })
-        
-        # Generate AI plan using LLM
-        try:
-            ai_result = await generate_daily_plan_with_llm(widget_context, target_date)
-            ai_plan = ai_result["plan"]
-            
-            # Process AI plan and create outputs
-            for plan_item in ai_plan:
-                widget_id = plan_item.get("widget_id")
-                priority = plan_item.get("priority", "MEDIUM")
-                reasoning = plan_item.get("reasoning", "AI selected this widget for today")
-                selected = plan_item.get("selected", False)
-                
-                # Find the corresponding widget
-                widget = next((w for w in widgets if w.id == widget_id), None)
-                if not widget:
-                    continue
-                
-                ai_output = DailyWidgetsAIOutput(
-                    widget_id=widget_id,
-                    priority=priority,
-                    reasoning=reasoning,
-                    result_json={
-                        "priority": priority,
-                        "selected_for_today": selected,
-                        "importance": widget.importance,
-                        "frequency": widget.frequency,
-                        "category": widget.category,
-                        "widget_type": widget.widget_type,
-                        "ai_reasoning": reasoning
-                    },
-                    date=target_date,
-                    ai_model_used=ai_result["model_used"],
-                    ai_prompt_used=ai_result["prompt_used"],
-                    ai_response_time=ai_result["response_time"],
-                    confidence_score=ai_result["confidence_score"],
-                    generation_type="ai_generated",
-                    created_by=user_id
-                )
-                db.add(ai_output)
-                ai_outputs.append(ai_output)
-                
-        except Exception as e:
-            logger.error(f"LLM plan generation failed, using fallback logic: {e}")
-            # Fallback to simple logic if LLM fails
-            for widget in widgets:
-                priority_score = widget.importance
-                if widget.frequency == "daily":
-                    priority_score += 0.2
-                elif widget.frequency == "weekly":
-                    priority_score += 0.1
-                
-                priority = "HIGH" if priority_score > 0.7 else "MEDIUM" if priority_score > 0.4 else "LOW"
-                
-                reasoning = f"Fallback: AI selected {widget.title} with {priority} priority based on importance ({widget.importance}) and frequency ({widget.frequency})"
-                
-                ai_output = DailyWidgetsAIOutput(
-                    widget_id=widget.id,
-                    priority=priority,
-                    reasoning=reasoning,
-                    result_json={
-                        "priority": priority,
-                        "priority_score": priority_score,
-                        "importance": widget.importance,
-                        "frequency": widget.frequency,
-                        "category": widget.category,
-                        "widget_type": widget.widget_type,
-                        "fallback_used": True
-                    },
-                    date=target_date,
-                    ai_model_used="fallback",
-                    ai_prompt_used=None,
-                    ai_response_time=None,
-                    confidence_score="0.50",  # Medium confidence for fallback logic
-                    generation_type="fallback",
-                    created_by=user_id
-                )
-                db.add(ai_output)
-                ai_outputs.append(ai_output)
-        
-        db.commit()
-        
-        # Generate activity from plan
-        await generate_activity_from_plan(target_date, user_id, db)
-        
-        return {
-            "message": "Today's plan generated successfully",
-            "date": target_date.isoformat(),
-            "widgets_processed": len(widgets),
-            "ai_outputs_created": len(ai_outputs)
-        }
     except Exception as e:
         logger.error(f"Failed to generate today's plan for user {user_id}: {e}")
         db.rollback()

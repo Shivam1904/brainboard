@@ -4,7 +4,7 @@ Todo Service - Business logic for todo operations
 
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import logging
 
 from models.database import (
@@ -18,6 +18,63 @@ class TodoService:
     
     def __init__(self, db: Session):
         self.db = db
+    
+    def create_todo_details_with_calendar(self, widget_id: str, title: str, todo_type: str, 
+                                        due_date: Optional[date] = None, user_id: str = None) -> Dict[str, Any]:
+        """
+        Create todo details and automatically create a calendar widget if it's the first todo entry
+        """
+        try:
+            # Check if this is the first todo entry for the user
+            existing_todos = self.db.query(ToDoDetails).join(
+                DashboardWidgetDetails
+            ).filter(
+                DashboardWidgetDetails.user_id == user_id,
+                ToDoDetails.delete_flag == False
+            ).count()
+            
+            # Create the todo details
+            todo_details = ToDoDetails(
+                widget_id=widget_id,
+                title=title,
+                todo_type=todo_type,
+                due_date=due_date,
+                created_by=user_id
+            )
+            
+            self.db.add(todo_details)
+            self.db.flush()  # Get the ID
+            
+            # If this is the first todo entry, create a calendar widget
+            if existing_todos == 0:
+                logger.info(f"First todo entry for user {user_id}, creating calendar widget")
+                
+                calendar_widget = DashboardWidgetDetails(
+                    user_id=user_id,
+                    widget_type="calendar",
+                    frequency="daily",
+                    importance=1.0,  # High importance for calendar
+                    title="My Calendar",
+                    category="information",
+                    is_permanent=True,  # Calendar should be permanent
+                    created_by=user_id
+                )
+                
+                self.db.add(calendar_widget)
+                logger.info(f"Created calendar widget with ID: {calendar_widget.id}")
+            
+            return {
+                "todo_details_id": todo_details.id,
+                "widget_id": todo_details.widget_id,
+                "title": todo_details.title,
+                "todo_type": todo_details.todo_type,
+                "due_date": todo_details.due_date.isoformat() if todo_details.due_date else None,
+                "calendar_created": existing_todos == 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating todo details with calendar: {e}")
+            raise
     
     def get_today_todo_list(self, todo_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get today's todo activities filtered by type"""
@@ -66,23 +123,36 @@ class TodoService:
     def update_activity(self, activity_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update todo activity"""
         try:
+            logger.info(f"Attempting to update todo activity with ID: {activity_id}")
+            logger.info(f"Update data: {update_data}")
+            
+            # First, let's check if the activity exists
             activity = self.db.query(ToDoItemActivity).filter(
                 ToDoItemActivity.id == activity_id
             ).first()
             
             if not activity:
+                logger.error(f"Todo activity with ID {activity_id} not found in database")
+                # Let's also log all todo activities to see what's available
+                all_activities = self.db.query(ToDoItemActivity).all()
+                logger.info(f"All todo activities in database: {[{'id': a.id, 'widget_id': a.widget_id, 'created_at': a.created_at} for a in all_activities]}")
                 return None
+            
+            logger.info(f"Found todo activity: {activity.id}, widget_id: {activity.widget_id}")
             
             # Update fields
             if "status" in update_data:
                 activity.status = update_data["status"]
+                logger.info(f"Updated status to: {update_data['status']}")
             if "progress" in update_data:
                 activity.progress = update_data["progress"]
+                logger.info(f"Updated progress to: {update_data['progress']}")
             
             activity.updated_at = datetime.utcnow()
             activity.updated_by = update_data.get("updated_by")
             
             self.db.commit()
+            logger.info(f"Successfully updated todo activity {activity_id}")
             
             return {
                 "activity_id": activity.id,
@@ -95,6 +165,57 @@ class TodoService:
             self.db.rollback()
             return None
     
+    def create_todo_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create todo activity entry for today's dashboard"""
+        try:
+            # Get todo details for the widget
+            todo_details = self.db.query(ToDoDetails).filter(
+                ToDoDetails.widget_id == widget_id
+            ).first()
+            
+            if not todo_details:
+                logger.warning(f"No todo details found for widget {widget_id}")
+                return None
+            
+            # Check if activity already exists for this widget in this daily widget
+            existing_activity = self.db.query(ToDoItemActivity).filter(
+                ToDoItemActivity.daily_widget_id == daily_widget_id,
+                ToDoItemActivity.widget_id == widget_id
+            ).first()
+            
+            if existing_activity:
+                logger.info(f"Todo activity already exists for widget {widget_id} in daily widget {daily_widget_id}")
+                return {
+                    "activity_id": existing_activity.id,
+                    "status": existing_activity.status,
+                    "progress": existing_activity.progress
+                }
+            
+            # Create new activity entry
+            activity = ToDoItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                tododetails_id=todo_details.id,
+                status="pending",
+                progress=0,
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            self.db.flush()  # Get the ID
+            
+            logger.info(f"Created todo activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "status": activity.status,
+                "progress": activity.progress
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating todo activity for widget {widget_id}: {e}")
+            return None
+
     def get_todo_details_and_activity(self, daily_widget_id: str, widget_id: str) -> Optional[Dict[str, Any]]:
         """Get todo details and activity for a specific widget"""
         try:
@@ -184,6 +305,44 @@ class TodoService:
         except Exception as e:
             logger.error(f"Error getting todo details for widget {widget_id}: {e}")
             return None
+    
+    def update_or_create_todo_details(self, widget_id: str, title: str, todo_type: str, 
+                                     due_date: Optional[date] = None, user_id: str = None) -> Dict[str, Any]:
+        """Update existing todo details or create new ones if they don't exist"""
+        try:
+            # Check if todo details exist
+            todo_details = self.db.query(ToDoDetails).filter(
+                ToDoDetails.widget_id == widget_id
+            ).first()
+            
+            if todo_details:
+                # Update existing todo details
+                todo_details.title = title
+                todo_details.todo_type = todo_type
+                if due_date:
+                    todo_details.due_date = due_date
+                todo_details.updated_at = datetime.now(timezone.utc)
+                
+                return {
+                    "todo_details_id": todo_details.id,
+                    "widget_id": todo_details.widget_id,
+                    "title": todo_details.title,
+                    "todo_type": todo_details.todo_type,
+                    "due_date": todo_details.due_date.isoformat() if todo_details.due_date else None,
+                    "action": "updated"
+                }
+            else:
+                # Create new todo details
+                return self.create_todo_details_with_calendar(
+                    widget_id=widget_id,
+                    title=title,
+                    todo_type=todo_type,
+                    due_date=due_date,
+                    user_id=user_id
+                )
+        except Exception as e:
+            logger.error(f"Error updating/creating todo details for widget {widget_id}: {e}")
+            raise
     
     def update_todo_details(self, todo_details_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update todo details"""
