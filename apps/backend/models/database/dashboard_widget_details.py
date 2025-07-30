@@ -15,6 +15,7 @@ class DashboardWidgetDetails(Base):
     importance = Column(Float, nullable=False)  # 0.0 to 1.0 scale
     title = Column(String, nullable=False)  # Redundant but kept for convenience
     category = Column(String, nullable=True)  # 'Job', 'Health', 'Productivity', etc.
+    is_permanent = Column(Boolean, default=False)  # If True, widget is automatically included in daily plans
     
     # Audit columns
     created_at = Column(DateTime, default=datetime.utcnow)

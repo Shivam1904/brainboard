@@ -130,7 +130,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'CalendarWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 20, h: 24 },
-    defaultSize: { w: 11, h: 14 },
+    defaultSize: { w: 14, h: 14 },
     deletable: true,
     resizable: true,
     category: 'information',

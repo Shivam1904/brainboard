@@ -10,6 +10,8 @@ class WidgetType(str, Enum):
     ALARM = "alarm"
     SINGLEITEMTRACKER = "singleitemtracker"
     WEBSEARCH = "websearch"
+    CALENDAR = "calendar"
+    ALL_SCHEDULES = "allSchedules"
 
 class Frequency(str, Enum):
     DAILY = "daily"

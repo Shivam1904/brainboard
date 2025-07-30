@@ -18,6 +18,7 @@ interface AddWidgetFormProps {
     frequency: string;
     importance: number;
     category: string;
+    is_permanent?: boolean;
     // Widget-specific fields that come from API calls
     todo_type?: string;
     due_date?: string;
@@ -36,6 +37,7 @@ interface FormData {
   frequency: FrequencySettings;
   importance: number;
   category: ApiCategory;
+  is_permanent: boolean;
   
   // Todo-specific fields
   todoType?: 'habit' | 'task' | 'event';
@@ -53,12 +55,15 @@ interface FormData {
 const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existingWidget }: AddWidgetFormProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const widgetConfig = getWidgetConfig(widgetId);
   
   // Initialize form data with existing widget data if in edit mode
   const getInitialFormData = (): FormData => {
+    
     if (editMode && existingWidget) {
       return {
         title: existingWidget.title,
+        is_permanent: existingWidget.is_permanent || false,
         frequency: {
           frequencySet: 'BALANCED',
           frequencySetValue: 0.6,
@@ -80,7 +85,8 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
     }
     
     return {
-      title: '',
+      title: 'calendar'==widgetConfig?.apiWidgetType  ? 'My Calendar' : 'allSchedules'==widgetConfig?.apiWidgetType  ? 'My Schedules' : '',
+      is_permanent: ['calendar', 'allSchedules'].includes(widgetConfig?.apiWidgetType as string) ? true : false,
       frequency: {
         frequencySet: 'BALANCED',
         frequencySetValue: 0.6,
@@ -89,9 +95,9 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
         frequencyPeriod: 'WEEKLY',
         isDailyHabit: false
       },
-      importance: 0.5,
+      importance: 0.7,
       category: 'productivity',
-      todoType: 'task',
+      todoType: widgetConfig?.apiWidgetType =='todo-event' ? 'event' : widgetConfig?.apiWidgetType =='todo-task' ? 'task' : 'habit',
       dueDate: new Date().toISOString().split('T')[0],
       alarmTime: '09:00',
       valueDataType: 'number',
@@ -102,7 +108,6 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
   
   const [formData, setFormData] = useState<FormData>(getInitialFormData());
 
-  const widgetConfig = getWidgetConfig(widgetId);
   if (!widgetConfig) {
     return null;
   }
@@ -182,7 +187,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
     if (!widgetConfig.apiWidgetType.startsWith('todo-')) return null;
 
     return (
-      <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-4 border border-orange-200">
+      <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-2 border border-orange-200">
         <label className="block text-lg font-bold text-gray-800 mb-3">
           TODO TYPE
         </label>
@@ -225,7 +230,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
     if (widgetConfig.apiWidgetType !== 'alarm') return null;
 
     return (
-      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
+      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-2 border border-yellow-200">
         <label className="block text-lg font-bold text-gray-800 mb-2">
           ALARM TIME
         </label>
@@ -243,7 +248,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
     if (widgetConfig.apiWidgetType !== 'singleitemtracker') return null;
 
     return (
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4 border border-green-200">
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-2 border border-green-200">
         <label className="block text-lg font-bold text-gray-800 mb-3">
           TRACKER SETTINGS
         </label>
@@ -324,7 +329,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
             )}
             
             {/* Widget Title Section */}
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-4 border border-orange-200">
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-2 border border-orange-200">
               <label className="block text-lg font-bold text-gray-800 mb-2">
                 WIDGET TITLE
               </label>
@@ -337,9 +342,16 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
                 required
               />
             </div>
+            {/* Add a permanent widget checkbox */}
+            {(<div className="flex justify-end gap-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-2 border border-purple-200">
+              <label className="block text-lg font-bold text-gray-800">
+                PERMANENT WIDGET
+              </label>
+              <input className="ml-2 " type="checkbox" checked={formData.is_permanent} onChange={(e) => setFormData({...formData, is_permanent: e.target.checked})} />
+            </div>)}
             
             {/* Category Section */}
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4 border border-green-200">
+            {(!formData.is_permanent && <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-2 border border-green-200">
               <label className="block text-lg font-bold text-gray-800 mb-3">
                 CATEGORY
               </label>
@@ -366,10 +378,10 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
                   </button>
                 ))}
               </div>
-            </div>
+            </div>)}
             
             {/* Importance Section */}
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+            {(!formData.is_permanent && <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-2 border border-purple-200">
               <label className="block text-lg font-bold text-gray-800 mb-3">
                 IMPORTANCE LEVEL
               </label>
@@ -391,10 +403,10 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
                 <span>Low</span>
                 <span>High</span>
               </div>
-            </div>
+            </div>)}
             
             {/* Frequency Section */}
-            <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-200">
+            {(!formData.is_permanent && <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-2 border border-teal-200">
               <label className="block text-lg font-bold text-gray-800 mb-3">
                 FREQUENCY
               </label>
@@ -403,7 +415,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
                 onChange={(frequency) => setFormData({...formData, frequency})}
                 pillarColor={getCategoryColor(formData.category)}
               />
-            </div>
+            </div>)}
             
             {/* Widget-specific fields */}
             {renderTodoFields()}
