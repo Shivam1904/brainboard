@@ -336,6 +336,11 @@ const Dashboard = () => {
       alert('The "All Schedules" widget cannot be removed as it is automatically included for widget management.');
       return;
     }
+    // Prevent removal of the automatically included "All Schedules" widget
+    if (widget?.widget_type === 'todo-habit' || widget?.widget_type === 'todo-task') {
+      alert('The "Habit and Task" widgets cannot be removed. Remove the individual tasks instead.');
+      return;
+    }
     
     if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
       try {
