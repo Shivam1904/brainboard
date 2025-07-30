@@ -11,7 +11,7 @@ import logging
 
 from core.database import get_db
 from models.database import User, DashboardWidgetDetails, DailyWidget
-from models.schemas.dashboard_schemas import CreateWidgetRequest, UpdateWidgetRequest
+from models.schemas.dashboard_schemas import CreateWidgetRequest, UpdateDailyWidgetRequest, UpdateWidgetRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["dashboard"])
@@ -51,6 +51,7 @@ async def get_today_widget_list(
         # Query DailyWidget table for today's widgets
         daily_widgets = db.query(DailyWidget).filter(
             DailyWidget.date == target_date,
+            DailyWidget.is_active == True,
             DailyWidget.delete_flag == False
         ).order_by(DailyWidget.priority.desc()).all()
         
@@ -235,7 +236,7 @@ async def add_new_widget(
             detail=f"Failed to create widget: {str(e)}"
         )
 
-@router.post("/widget/updatewidget/{widget_id}")
+@router.post("/widget/updateWidgetDetails/{widget_id}")
 async def update_widget(
     widget_id: str,
     request: CreateWidgetRequest,
@@ -413,10 +414,23 @@ async def add_widget_to_today(
         ).first()
         
         if existing_daily_widget:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Widget is already in today's dashboard"
-            )
+            if not existing_daily_widget.is_active:
+                existing_daily_widget.is_active = True
+                existing_daily_widget.updated_at = datetime.now(timezone.utc)
+                db.commit()
+                return {
+                    "message": "Widget was already in today's dashboard but was inactive. It has now been re-activated.",
+                    "daily_widget_id": existing_daily_widget.id,
+                    "widget_id": widget_id,
+                    "widget_type": widget.widget_type,
+                    "title": widget.title,
+                    "action_type": "reactivated existing daily widget"
+                }
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Widget is already in today's dashboard"
+                )
         
         # Special handling for todo widgets (todo-task and todo-habit, but not todo-event)
         daily_widget = None
@@ -540,6 +554,39 @@ async def add_widget_to_today(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to add widget to today's dashboard: {str(e)}"
+        )
+
+
+@router.post("/widgets/updateDailyWidget/{daily_widget_id}")
+async def update_daily_widget_active(
+    daily_widget_id: str,
+    request: UpdateDailyWidgetRequest,
+    user_id: str = Depends(get_default_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Update the is_active column for a DailyWidget (activate/deactivate widget)
+    """
+    try:
+        daily_widget = db.query(DailyWidget).filter(
+            DailyWidget.id == daily_widget_id,
+            DailyWidget.delete_flag == False
+        ).first()
+        if not daily_widget:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="DailyWidget not found"
+            )
+        daily_widget.is_active = request.is_active
+        daily_widget.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        return {"message": "DailyWidget is_active updated successfully", "daily_widget_id": daily_widget_id, "is_active": request.is_active}
+    except Exception as e:
+        logger.error(f"Failed to update is_active for DailyWidget {daily_widget_id}: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update is_active: {str(e)}"
         )
 
 @router.get("/getTodoList/{todo_type}")

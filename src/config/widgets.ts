@@ -122,6 +122,21 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     icon: '🔍'
   },
 
+  calendar: {
+    id: 'calendar',
+    apiWidgetType: 'calendar',
+    title: 'Calendar',
+    description: 'Calendar widget',
+    component: 'CalendarWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 20, h: 24 },
+    defaultSize: { w: 11, h: 14 },
+    deletable: true,
+    resizable: true,
+    category: 'information',
+    icon: '📅'
+  },
+
   // ALL SCHEDULES Widget (UI-only, not in API)
   allSchedules: {
     id: 'allSchedules',
@@ -162,6 +177,7 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
     WIDGET_CONFIGS.singleitemtracker,
     WIDGET_CONFIGS.websearch,
     WIDGET_CONFIGS.allSchedules, // UI-only widget
+    WIDGET_CONFIGS.calendar,
   ];
 };
 

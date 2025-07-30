@@ -96,7 +96,7 @@ class ApiService {
     });
   }
 
-  // POST /api/v1/dashboard/widget/updatewidget/{widget_id}
+  // POST /api/v1/dashboard/widget/updateWidgetDetails/{widget_id}
   async updateWidget(widgetId: string, data: {
     widget_type: ApiWidgetType;
     frequency: ApiFrequency;
@@ -116,7 +116,7 @@ class ApiService {
     widget_type: string;
     title: string;
   }> {
-    return this.request(`/dashboard/widget/updatewidget/${widgetId}`, {
+    return this.request(`/dashboard/widget/updateWidgetDetails/${widgetId}`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -137,6 +137,18 @@ class ApiService {
     return this.request(`/dashboard/widget/updateDetails/${widgetId}`, {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  // POST /api/v1/dashboard/widgets/updateDailyWidget/{daily_widget_id}
+  async updateDailyWidgetActive(dailyWidgetId: string, isActive: boolean): Promise<{
+    message: string;
+    daily_widget_id: string;
+    is_active: boolean;
+  }> {
+    return this.request(`/dashboard/widgets/updateDailyWidget/${dailyWidgetId}`, {
+      method: 'POST',
+      body: JSON.stringify({ is_active: isActive }),
     });
   }
 

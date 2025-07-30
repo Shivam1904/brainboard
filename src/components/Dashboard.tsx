@@ -21,6 +21,7 @@ import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
 import HabitListWidget from './widgets/HabitListWidget';
 import EventTrackerWidget from './widgets/EventTrackerWidget';
+import { apiService } from '../services/api';
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -326,7 +327,7 @@ const Dashboard = () => {
     }
   }
 
-  const removeWidget = (dailyWidgetId: string) => {
+  const removeWidget = async (dailyWidgetId: string) => {
     const widget = widgets.find(w => w.daily_widget_id === dailyWidgetId)
     const widgetType = widget?.widget_type || 'widget'
     
@@ -337,8 +338,15 @@ const Dashboard = () => {
     }
     
     if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
-      const updatedWidgets = widgets.filter((widget: UIWidget) => widget.daily_widget_id !== dailyWidgetId);
-      setWidgets(updatedWidgets)
+      try {
+        // Call API to set is_active = 0
+        await apiService.updateDailyWidgetActive(dailyWidgetId, false);
+        const updatedWidgets = widgets.filter((widget: UIWidget) => widget.daily_widget_id !== dailyWidgetId);
+        setWidgets(updatedWidgets)
+      } catch (error) {
+        alert('Failed to remove widget from dashboard. Please try again.');
+        console.error('Failed to update is_active for DailyWidget:', error);
+      }
     }
   }
 
@@ -396,6 +404,7 @@ const Dashboard = () => {
       case 'allSchedules':
         return (
           <AllSchedulesWidget
+            onWidgetAddedToToday={() => fetchTodayWidgets()}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );

@@ -7,9 +7,10 @@ import AddWidgetForm from '../AddWidgetForm';
 
 interface AllSchedulesWidgetProps {
   onRemove: () => void;
+  onWidgetAddedToToday: (widget: DashboardWidget) => void;
 }
 
-const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
+const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidgetProps) => {
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -182,7 +183,8 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
       setTodayWidgetIds(todayIds);
       
       // Show success message
-      alert(`${widget.title} has been added to today's dashboard!`);
+      // alert(`${widget.title} has been added to today's dashboard!`);
+      onWidgetAddedToToday(widget);
       
     } catch (err) {
       console.error('Failed to add widget to today:', err);
@@ -284,20 +286,12 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center">
                       <span className="text-sm font-medium truncate">{widget.title}</span>
-
                     </div>
                     
-                    <div className="flex flex-row text-xs text-muted-foreground">
-                      <div className="flex flex-col items-center">
-                        <div>Frequency: {getFrequencyDisplayName(widget.frequency)}</div>
-                        <div>Importance: {widget.importance}/1.0</div>
-                        <div>Created: {new Date(widget.created_at).toLocaleDateString()}</div>
-                      </div>
-                      <div className="flex flex-col items-center">
-                      </div>
-                      <div className="flex flex-col items-center">
+                    <div className="flex flex-row gap-2 text-xs text-muted-foreground">
+                      <div className="flex flex-col">
                         <span className={`text-xs rounded `}>
-                          {getWidgetTypeDisplayName(widget.widget_type as ApiWidgetType)}
+                          "{getWidgetTypeDisplayName(widget.widget_type as ApiWidgetType)}"
                         </span>
                         {widget.category && (
                           <span className={`text-xs rounded text-muted-foreground ${getCategoryColor((widget.category).toLowerCase())}`}>
@@ -305,11 +299,16 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
                           </span>
                         )}
                       </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">
+                          {getFrequencyDisplayName(widget.frequency)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   
                   {/* Action buttons */}
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex flex-col gap-2 ml-4">
                     {/* Edit button */}
                     <button
                       onClick={() => handleEditWidget(widget)}

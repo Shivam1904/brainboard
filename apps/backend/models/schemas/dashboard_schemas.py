@@ -62,6 +62,9 @@ class WidgetResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class UpdateDailyWidgetRequest(BaseModel):
+    is_active: bool
+
 class DailyWidgetResponse(BaseModel):
     """Response schema for daily widget"""
     daily_widget_id: str
