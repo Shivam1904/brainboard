@@ -306,6 +306,44 @@ class TodoService:
             logger.error(f"Error getting todo details for widget {widget_id}: {e}")
             return None
     
+    def update_or_create_todo_details(self, widget_id: str, title: str, todo_type: str, 
+                                     due_date: Optional[date] = None, user_id: str = None) -> Dict[str, Any]:
+        """Update existing todo details or create new ones if they don't exist"""
+        try:
+            # Check if todo details exist
+            todo_details = self.db.query(ToDoDetails).filter(
+                ToDoDetails.widget_id == widget_id
+            ).first()
+            
+            if todo_details:
+                # Update existing todo details
+                todo_details.title = title
+                todo_details.todo_type = todo_type
+                if due_date:
+                    todo_details.due_date = due_date
+                todo_details.updated_at = datetime.now(timezone.utc)
+                
+                return {
+                    "todo_details_id": todo_details.id,
+                    "widget_id": todo_details.widget_id,
+                    "title": todo_details.title,
+                    "todo_type": todo_details.todo_type,
+                    "due_date": todo_details.due_date.isoformat() if todo_details.due_date else None,
+                    "action": "updated"
+                }
+            else:
+                # Create new todo details
+                return self.create_todo_details_with_calendar(
+                    widget_id=widget_id,
+                    title=title,
+                    todo_type=todo_type,
+                    due_date=due_date,
+                    user_id=user_id
+                )
+        except Exception as e:
+            logger.error(f"Error updating/creating todo details for widget {widget_id}: {e}")
+            raise
+    
     def update_todo_details(self, todo_details_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update todo details"""
         try:

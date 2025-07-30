@@ -158,86 +158,14 @@ async def add_new_widget(
     Creates a new widget in DashboardWidgetDetails with basic form data and widget-specific details.
     """
     try:
-        # Create new dashboard widget
-        widget = DashboardWidgetDetails(
-            user_id=user_id,
-            widget_type=request.widget_type,
-            frequency=request.frequency,
-            importance=request.importance,
-            title=request.title,
-            category=request.category,
-            created_by=user_id
-        )
+        from services.service_factory import ServiceFactory
         
-        db.add(widget)
-        db.commit()
-        db.refresh(widget)
+        service_factory = ServiceFactory(db)
+        result = service_factory.dashboard_service.create_widget(request, user_id)
         
-        # Create corresponding details table entry based on widget type
-        if request.widget_type in ["todo-habit", "todo-task", "todo-event"]:
-            from services.todo_service import TodoService
-            # Use provided todo_type or extract from widget type
-            todo_type = request.todo_type or request.widget_type.replace("todo-", "")
-            # Convert string date to Python date object
-            due_date = None
-            if request.due_date:
-                due_date = datetime.strptime(request.due_date, '%Y-%m-%d').date()
-            
-            # Use the todo service to create todo details and potentially calendar widget
-            todo_service = TodoService(db)
-            todo_result = todo_service.create_todo_details_with_calendar(
-                widget_id=widget.id,
-                title=request.title,
-                todo_type=todo_type,
-                due_date=due_date,
-                user_id=user_id
-            )
-            
-            # Log if calendar was created
-            if todo_result.get("calendar_created"):
-                logger.info(f"Calendar widget automatically created for user {user_id}")
-        elif request.widget_type == "singleitemtracker":
-            from models.database import SingleItemTrackerDetails
-            tracker_details = SingleItemTrackerDetails(
-                widget_id=widget.id,
-                title=request.title,
-                value_type=request.value_data_type or "number",  # Use provided type or default
-                value_unit=request.value_data_unit or "units",   # Use provided unit or default
-                target_value=request.target_value or "0",        # Use provided target or default
-                created_by=user_id
-            )
-            db.add(tracker_details)
-        elif request.widget_type == "websearch":
-            from models.database import WebSearchDetails
-            websearch_details = WebSearchDetails(
-                widget_id=widget.id,
-                title=request.title,
-                created_by=user_id
-            )
-            db.add(websearch_details)
-        elif request.widget_type == "alarm":
-            from models.database import AlarmDetails
-            # Use provided alarm time or default to 09:00
-            alarm_times = [request.alarm_time] if request.alarm_time else ["09:00"]
-            alarm_details = AlarmDetails(
-                widget_id=widget.id,
-                title=request.title,
-                alarm_times=alarm_times,
-                created_by=user_id
-            )
-            db.add(alarm_details)
-        
-        db.commit()
-        
-        return {
-            "message": "Widget created successfully",
-            "widget_id": widget.id,
-            "widget_type": widget.widget_type,
-            "title": widget.title
-        }
+        return result
     except Exception as e:
         logger.error(f"Failed to create widget for user {user_id}: {e}")
-        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create widget: {str(e)}"
@@ -255,141 +183,24 @@ async def update_widget(
     Updates a widget in DashboardWidgetDetails and its corresponding details table.
     """
     try:
-        # Check if widget exists and belongs to user
-        widget = db.query(DashboardWidgetDetails).filter(
-            DashboardWidgetDetails.id == widget_id,
-            DashboardWidgetDetails.user_id == user_id,
-            DashboardWidgetDetails.delete_flag == False
-        ).first()
+        from services.service_factory import ServiceFactory
         
-        if not widget:
+        service_factory = ServiceFactory(db)
+        result = service_factory.dashboard_service.update_widget(widget_id, request, user_id)
+        
+        return result
+    except ValueError as e:
+        if str(e) == "Widget not found":
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Widget not found"
             )
-        
-        # Update dashboard widget details
-        widget.widget_type = request.widget_type
-        widget.frequency = request.frequency
-        widget.importance = request.importance
-        widget.title = request.title
-        widget.category = request.category
-        widget.updated_at = datetime.now(timezone.utc)
-        
-        # Update corresponding details table entry based on widget type
-        if request.widget_type in ["todo-habit", "todo-task", "todo-event"]:
-            from models.database import ToDoDetails
-            todo_details = db.query(ToDoDetails).filter(
-                ToDoDetails.widget_id == widget_id
-            ).first()
-            
-            if todo_details:
-                todo_type = request.todo_type or request.widget_type.replace("todo-", "")
-                todo_details.title = request.title
-                todo_details.todo_type = todo_type
-                # Convert string date to Python date object
-                if request.due_date:
-                    todo_details.due_date = datetime.strptime(request.due_date, '%Y-%m-%d').date()
-                todo_details.updated_at = datetime.now(timezone.utc)
-            else:
-                # Create new todo details if they don't exist
-                from services.todo_service import TodoService
-                todo_type = request.todo_type or request.widget_type.replace("todo-", "")
-                due_date = None
-                if request.due_date:
-                    due_date = datetime.strptime(request.due_date, '%Y-%m-%d').date()
-                
-                # Use the todo service to create todo details and potentially calendar widget
-                todo_service = TodoService(db)
-                todo_result = todo_service.create_todo_details_with_calendar(
-                    widget_id=widget_id,
-                    title=request.title,
-                    todo_type=todo_type,
-                    due_date=due_date,
-                    user_id=user_id
-                )
-                
-                # Log if calendar was created
-                if todo_result.get("calendar_created"):
-                    logger.info(f"Calendar widget automatically created for user {user_id} during widget update")
-                
-        elif request.widget_type == "singleitemtracker":
-            from models.database import SingleItemTrackerDetails
-            tracker_details = db.query(SingleItemTrackerDetails).filter(
-                SingleItemTrackerDetails.widget_id == widget_id
-            ).first()
-            
-            if tracker_details:
-                tracker_details.title = request.title
-                tracker_details.value_type = request.value_data_type or "number"
-                tracker_details.value_unit = request.value_data_unit or "units"
-                tracker_details.target_value = request.target_value or "0"
-                tracker_details.updated_at = datetime.utcnow()
-            else:
-                # Create new tracker details if they don't exist
-                tracker_details = SingleItemTrackerDetails(
-                    widget_id=widget_id,
-                    title=request.title,
-                    value_type=request.value_data_type or "number",
-                    value_unit=request.value_data_unit or "units",
-                    target_value=request.target_value or "0",
-                    created_by=user_id
-                )
-                db.add(tracker_details)
-                
-        elif request.widget_type == "websearch":
-            from models.database import WebSearchDetails
-            websearch_details = db.query(WebSearchDetails).filter(
-                WebSearchDetails.widget_id == widget_id
-            ).first()
-            
-            if websearch_details:
-                websearch_details.title = request.title
-                websearch_details.updated_at = datetime.utcnow()
-            else:
-                # Create new websearch details if they don't exist
-                websearch_details = WebSearchDetails(
-                    widget_id=widget_id,
-                    title=request.title,
-                    created_by=user_id
-                )
-                db.add(websearch_details)
-                
-        elif request.widget_type == "alarm":
-            from models.database import AlarmDetails
-            alarm_details = db.query(AlarmDetails).filter(
-                AlarmDetails.widget_id == widget_id
-            ).first()
-            
-            if alarm_details:
-                alarm_details.title = request.title
-                alarm_times = [request.alarm_time] if request.alarm_time else ["09:00"]
-                alarm_details.alarm_times = alarm_times
-                alarm_details.updated_at = datetime.utcnow()
-            else:
-                # Create new alarm details if they don't exist
-                alarm_times = [request.alarm_time] if request.alarm_time else ["09:00"]
-                alarm_details = AlarmDetails(
-                    widget_id=widget_id,
-                    title=request.title,
-                    alarm_times=alarm_times,
-                    created_by=user_id
-                )
-                db.add(alarm_details)
-        
-        db.commit()
-        
-        return {
-            "message": "Widget updated successfully",
-            "widget_id": widget.id,
-            "widget_type": widget.widget_type,
-            "title": widget.title
-        }
-    except HTTPException:
-        raise
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
         logger.error(f"Failed to update widget {widget_id} for user {user_id}: {e}")
-        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update widget: {str(e)}"
