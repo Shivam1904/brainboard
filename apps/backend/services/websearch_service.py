@@ -4,7 +4,7 @@ WebSearch Service - Business logic for websearch operations
 
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import logging
 
 from models.database import (
