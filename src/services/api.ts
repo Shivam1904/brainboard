@@ -64,6 +64,13 @@ class ApiService {
     importance: number;
     title: string;
     category: ApiCategory;
+    // Widget-specific fields
+    todo_type?: string;
+    due_date?: string;
+    alarm_time?: string;
+    value_data_type?: string;
+    value_data_unit?: string;
+    target_value?: string;
   }): Promise<{
     message: string;
     widget_id: string;
@@ -71,6 +78,32 @@ class ApiService {
     title: string;
   }> {
     return this.request('/dashboard/widget/addnew', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // POST /api/v1/dashboard/widget/updatewidget/{widget_id}
+  async updateWidget(widgetId: string, data: {
+    widget_type: ApiWidgetType;
+    frequency: ApiFrequency;
+    importance: number;
+    title: string;
+    category: ApiCategory;
+    // Widget-specific fields
+    todo_type?: string;
+    due_date?: string;
+    alarm_time?: string;
+    value_data_type?: string;
+    value_data_unit?: string;
+    target_value?: string;
+  }): Promise<{
+    message: string;
+    widget_id: string;
+    widget_type: string;
+    title: string;
+  }> {
+    return this.request(`/dashboard/widget/updatewidget/${widgetId}`, {
       method: 'POST',
       body: JSON.stringify(data),
     });

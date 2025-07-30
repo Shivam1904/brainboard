@@ -263,6 +263,12 @@ const Dashboard = () => {
 
   // Add new widget using addNewWidget API
   const addWidget = async (widgetId: string) => {
+    // Handle refresh case
+    if (widgetId === 'refresh') {
+      await fetchTodayWidgets();
+      return;
+    }
+    
     const config = getWidgetConfig(widgetId);
     
     if (!config) {
@@ -390,7 +396,6 @@ const Dashboard = () => {
       case 'allSchedules':
         return (
           <AllSchedulesWidget
-            widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );

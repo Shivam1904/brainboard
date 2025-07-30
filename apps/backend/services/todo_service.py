@@ -66,23 +66,36 @@ class TodoService:
     def update_activity(self, activity_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update todo activity"""
         try:
+            logger.info(f"Attempting to update todo activity with ID: {activity_id}")
+            logger.info(f"Update data: {update_data}")
+            
+            # First, let's check if the activity exists
             activity = self.db.query(ToDoItemActivity).filter(
                 ToDoItemActivity.id == activity_id
             ).first()
             
             if not activity:
+                logger.error(f"Todo activity with ID {activity_id} not found in database")
+                # Let's also log all todo activities to see what's available
+                all_activities = self.db.query(ToDoItemActivity).all()
+                logger.info(f"All todo activities in database: {[{'id': a.id, 'widget_id': a.widget_id, 'created_at': a.created_at} for a in all_activities]}")
                 return None
+            
+            logger.info(f"Found todo activity: {activity.id}, widget_id: {activity.widget_id}")
             
             # Update fields
             if "status" in update_data:
                 activity.status = update_data["status"]
+                logger.info(f"Updated status to: {update_data['status']}")
             if "progress" in update_data:
                 activity.progress = update_data["progress"]
+                logger.info(f"Updated progress to: {update_data['progress']}")
             
             activity.updated_at = datetime.utcnow()
             activity.updated_by = update_data.get("updated_by")
             
             self.db.commit()
+            logger.info(f"Successfully updated todo activity {activity_id}")
             
             return {
                 "activity_id": activity.id,

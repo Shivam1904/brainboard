@@ -29,6 +29,13 @@ export class DashboardService {
     importance: number;
     title: string;
     category: ApiCategory;
+    // Widget-specific fields
+    todo_type?: string;
+    due_date?: string;
+    alarm_time?: string;
+    value_data_type?: string;
+    value_data_unit?: string;
+    target_value?: string;
   }): Promise<{
     message: string;
     widget_id: string;
@@ -36,6 +43,29 @@ export class DashboardService {
     title: string;
   }> {
     return apiService.addNewWidget(data);
+  }
+
+  // Update widget
+  async updateWidget(widgetId: string, data: {
+    widget_type: ApiWidgetType;
+    frequency: ApiFrequency;
+    importance: number;
+    title: string;
+    category: ApiCategory;
+    // Widget-specific fields
+    todo_type?: string;
+    due_date?: string;
+    alarm_time?: string;
+    value_data_type?: string;
+    value_data_unit?: string;
+    target_value?: string;
+  }): Promise<{
+    message: string;
+    widget_id: string;
+    widget_type: string;
+    title: string;
+  }> {
+    return apiService.updateWidget(widgetId, data);
   }
 
   // Update widget details
@@ -132,6 +162,52 @@ export class DashboardService {
     updated_at: string;
   }> {
     return apiService.updateWebSearchActivity(activityId, data);
+  }
+
+  // Get todo details
+  async getTodoDetails(widgetId: string): Promise<{
+    id: string;
+    title: string;
+    todo_type: 'habit' | 'task' | 'event';
+    description: string;
+    due_date: string;
+    created_at: string;
+  }> {
+    return apiService.getTodoDetails(widgetId);
+  }
+
+  // Get alarm details
+  async getAlarmDetails(widgetId: string): Promise<{
+    id: string;
+    title: string;
+    description: string;
+    alarm_times: string[];
+    target_value: string;
+    is_snoozable: boolean;
+    created_at: string;
+  }> {
+    return apiService.getAlarmDetails(widgetId);
+  }
+
+  // Get tracker details
+  async getTrackerDetails(widgetId: string): Promise<{
+    id: string;
+    title: string;
+    value_type: string;
+    value_unit: string;
+    target_value: string;
+    created_at: string;
+  }> {
+    return apiService.getTrackerDetails(widgetId);
+  }
+
+  // Get websearch details
+  async getWebSearchDetails(widgetId: string): Promise<{
+    id: string;
+    title: string;
+    created_at: string;
+  }> {
+    return apiService.getWebSearchDetails(widgetId);
   }
 
   // Get alarm details and activity

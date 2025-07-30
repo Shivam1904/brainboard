@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { DashboardWidget, ApiWidgetType, ApiCategory, ApiFrequency } from '../../types';
+import { DashboardWidget, ApiWidgetType } from '../../types';
 import { dashboardService } from '../../services/dashboard';
 import { getDummyAllSchedulesWidgets } from '../../data/widgetDummyData';
+import AddWidgetForm from '../AddWidgetForm';
 
 interface AllSchedulesWidgetProps {
   onRemove: () => void;
-  widget: any; // Using the UIWidget type from Dashboard
 }
 
-const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
+const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
 
   // Load widgets from API using getAllWidgetList
   useEffect(() => {
@@ -46,24 +47,102 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
     loadWidgets();
   }, []);
 
-  // Update widget details
-  const updateWidgetDetails = async (widgetId: string, updateData: {
-    title?: string;
-    frequency?: ApiFrequency;
-    importance?: number;
-    category?: ApiCategory;
-  }) => {
+  // Handle edit widget
+  const handleEditWidget = async (widget: DashboardWidget) => {
     try {
-      // Call the updateDetails API endpoint
-      const response = await dashboardService.updateWidgetDetails(widgetId, updateData);
-      console.log('Widget updated:', response);
+      setLoading(true);
       
-      // Refresh the widget list
-      const refreshResponse = await dashboardService.getAllWidgets();
-      setWidgets(refreshResponse.widgets);
+      // Fetch widget-specific details based on widget type
+      let widgetDetails: any = {};
+      
+      switch (widget.widget_type) {
+        case 'todo-habit':
+        case 'todo-task':
+        case 'todo-event':
+          try {
+            const todoDetails = await dashboardService.getTodoDetails(widget.id);
+            widgetDetails = {
+              ...widget,
+              todo_type: todoDetails.todo_type,
+              due_date: todoDetails.due_date,
+              description: todoDetails.description
+            };
+          } catch (err) {
+            console.warn('Failed to fetch todo details, using basic widget data:', err);
+            widgetDetails = widget;
+          }
+          break;
+          
+        case 'alarm':
+          try {
+            const alarmDetails = await dashboardService.getAlarmDetails(widget.id);
+            widgetDetails = {
+              ...widget,
+              alarm_times: alarmDetails.alarm_times,
+              description: alarmDetails.description,
+              target_value: alarmDetails.target_value,
+              is_snoozable: alarmDetails.is_snoozable
+            };
+          } catch (err) {
+            console.warn('Failed to fetch alarm details, using basic widget data:', err);
+            widgetDetails = widget;
+          }
+          break;
+          
+        case 'singleitemtracker':
+          try {
+            const trackerDetails = await dashboardService.getTrackerDetails(widget.id);
+            widgetDetails = {
+              ...widget,
+              value_type: trackerDetails.value_type,
+              value_unit: trackerDetails.value_unit,
+              target_value: trackerDetails.target_value
+            };
+          } catch (err) {
+            console.warn('Failed to fetch tracker details, using basic widget data:', err);
+            widgetDetails = widget;
+          }
+          break;
+          
+        case 'websearch':
+          try {
+            await dashboardService.getWebSearchDetails(widget.id);
+            widgetDetails = {
+              ...widget,
+              // Websearch details are minimal, just title
+            };
+          } catch (err) {
+            console.warn('Failed to fetch websearch details, using basic widget data:', err);
+            widgetDetails = widget;
+          }
+          break;
+          
+        default:
+          widgetDetails = widget;
+          break;
+      }
+      
+      setEditingWidget(widgetDetails);
     } catch (err) {
-      console.error('Failed to update widget:', err);
-      setError('Failed to update widget');
+      console.error('Failed to fetch widget details:', err);
+      setError('Failed to load widget details for editing');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle form close
+  const handleFormClose = () => {
+    setEditingWidget(null);
+  };
+
+  // Handle form success (refresh widget list)
+  const handleFormSuccess = async () => {
+    try {
+      const response = await dashboardService.getAllWidgets();
+      setWidgets(response.widgets);
+    } catch (err) {
+      console.error('Failed to refresh widgets after edit:', err);
     }
   };
 
@@ -153,32 +232,35 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center">
                       <span className="text-sm font-medium truncate">{widget.title}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(widget.category)}`}>
-                        {getWidgetTypeDisplayName(widget.widget_type as ApiWidgetType)}
-                      </span>
-                      {widget.category && (
-                        <span className="text-xs text-muted-foreground">
-                          {widget.category}
-                        </span>
-                      )}
+
                     </div>
                     
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div>Frequency: {getFrequencyDisplayName(widget.frequency)}</div>
-                      <div>Importance: {widget.importance}/1.0</div>
-                      <div>Created: {new Date(widget.created_at).toLocaleDateString()}</div>
+                    <div className="flex flex-row text-xs text-muted-foreground">
+                      <div className="flex flex-col items-center">
+                        <div>Frequency: {getFrequencyDisplayName(widget.frequency)}</div>
+                        <div>Importance: {widget.importance}/1.0</div>
+                        <div>Created: {new Date(widget.created_at).toLocaleDateString()}</div>
+                      </div>
+                      <div className="flex flex-col items-center">
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className={`text-xs rounded `}>
+                          {getWidgetTypeDisplayName(widget.widget_type as ApiWidgetType)}
+                        </span>
+                        {widget.category && (
+                          <span className={`text-xs rounded text-muted-foreground ${getCategoryColor((widget.category).toLowerCase())}`}>
+                            {widget.category}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
                   {/* Edit button */}
                   <button
-                    onClick={() => {
-                      // For now, just log the widget ID for editing
-                      console.log('Edit widget:', widget.id);
-                      // TODO: Implement edit modal/form
-                    }}
+                    onClick={() => handleEditWidget(widget)}
                     className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80"
                   >
                     Edit
@@ -189,6 +271,17 @@ const AllSchedulesWidget = ({ onRemove, widget }: AllSchedulesWidgetProps) => {
           )}
         </div>
       </div>
+
+      {/* Edit Widget Form Modal */}
+      {editingWidget && (
+        <AddWidgetForm
+          widgetId={editingWidget.widget_type}
+          onClose={handleFormClose}
+          onSuccess={handleFormSuccess}
+          editMode={true}
+          existingWidget={editingWidget}
+        />
+      )}
     </BaseWidget>
   );
 };
