@@ -8,7 +8,8 @@ import {
   ApiWidgetType,
   ApiFrequency,
   ApiCategory,
-  TodoTodayResponse
+  TodoTodayResponse,
+  TodoDetailsAndActivityResponse
 } from '../types';
 
 export class DashboardService {
@@ -43,6 +44,17 @@ export class DashboardService {
     title: string;
   }> {
     return apiService.addNewWidget(data);
+  }
+
+  // Add widget to today's dashboard
+  async addWidgetToToday(widgetId: string): Promise<{
+    message: string;
+    daily_widget_id: string;
+    widget_id: string;
+    widget_type: string;
+    title: string;
+  }> {
+    return apiService.addWidgetToToday(widgetId);
   }
 
   // Update widget
@@ -81,6 +93,11 @@ export class DashboardService {
     title: string;
   }> {
     return apiService.updateWidgetDetails(widgetId, data);
+  }
+
+  // Get todo item details and activity
+  async getTodoItemDetailsAndActivity(dailyWidgetId: string, widgetId: string): Promise<TodoDetailsAndActivityResponse> {
+    return apiService.getTodoItemDetailsAndActivity(dailyWidgetId, widgetId);
   }
 
   // Get todo list by type

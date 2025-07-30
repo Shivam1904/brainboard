@@ -108,6 +108,57 @@ class TodoService:
             self.db.rollback()
             return None
     
+    def create_todo_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create todo activity entry for today's dashboard"""
+        try:
+            # Get todo details for the widget
+            todo_details = self.db.query(ToDoDetails).filter(
+                ToDoDetails.widget_id == widget_id
+            ).first()
+            
+            if not todo_details:
+                logger.warning(f"No todo details found for widget {widget_id}")
+                return None
+            
+            # Check if activity already exists for this widget in this daily widget
+            existing_activity = self.db.query(ToDoItemActivity).filter(
+                ToDoItemActivity.daily_widget_id == daily_widget_id,
+                ToDoItemActivity.widget_id == widget_id
+            ).first()
+            
+            if existing_activity:
+                logger.info(f"Todo activity already exists for widget {widget_id} in daily widget {daily_widget_id}")
+                return {
+                    "activity_id": existing_activity.id,
+                    "status": existing_activity.status,
+                    "progress": existing_activity.progress
+                }
+            
+            # Create new activity entry
+            activity = ToDoItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                tododetails_id=todo_details.id,
+                status="pending",
+                progress=0,
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            self.db.flush()  # Get the ID
+            
+            logger.info(f"Created todo activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "status": activity.status,
+                "progress": activity.progress
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating todo activity for widget {widget_id}: {e}")
+            return None
+
     def get_todo_details_and_activity(self, daily_widget_id: str, widget_id: str) -> Optional[Dict[str, Any]]:
         """Get todo details and activity for a specific widget"""
         try:

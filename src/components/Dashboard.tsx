@@ -493,7 +493,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className="h-full w-full flex flex-col bg-yellow-100">
       <div className="px-4 py-3 flex justify-between items-center border-b bg-card shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex flex-col">

@@ -14,6 +14,8 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
+  const [todayWidgetIds, setTodayWidgetIds] = useState<string[]>([]);
+  const [addingToToday, setAddingToToday] = useState<string | null>(null);
 
   // Load widgets from API using getAllWidgetList
   useEffect(() => {
@@ -22,16 +24,31 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
         setLoading(true);
         setError(null);
         
-        const response = await dashboardService.getAllWidgets();
-        console.log('All widgets response:', response);
+        // Load all widgets and today's widgets in parallel
+        const [allWidgetsResponse, todayWidgetsResponse] = await Promise.all([
+          dashboardService.getAllWidgets(),
+          dashboardService.getTodayWidgets()
+        ]);
+        
+        console.log('All widgets response:', allWidgetsResponse);
+        console.log('Today widgets response:', todayWidgetsResponse);
+        
+        // Extract widget IDs that are already in today's dashboard
+        const todayIds: string[] = [];
+        todayWidgetsResponse.widgets.forEach((dailyWidget: any) => {
+          if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
+            todayIds.push(...dailyWidget.widget_ids);
+          }
+        });
+        setTodayWidgetIds(todayIds);
         
         // If no widgets from API, use dummy data
-        if (response.widgets.length === 0) {
+        if (allWidgetsResponse.widgets.length === 0) {
           console.log('No widgets found, using dummy data');
           const dummyWidgets = getDummyAllSchedulesWidgets();
           setWidgets(dummyWidgets as any);
         } else {
-          setWidgets(response.widgets);
+          setWidgets(allWidgetsResponse.widgets);
         }
       } catch (err) {
         console.error('Failed to load widgets:', err);
@@ -143,6 +160,39 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
       setWidgets(response.widgets);
     } catch (err) {
       console.error('Failed to refresh widgets after edit:', err);
+    }
+  };
+
+  // Handle add to today
+  const handleAddToToday = async (widget: DashboardWidget) => {
+    try {
+      setAddingToToday(widget.id);
+      
+      const response = await dashboardService.addWidgetToToday(widget.id);
+      console.log('Widget added to today:', response);
+      
+      // Refresh today's widgets to update the list
+      const todayWidgetsResponse = await dashboardService.getTodayWidgets();
+      const todayIds: string[] = [];
+      todayWidgetsResponse.widgets.forEach((dailyWidget: any) => {
+        if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
+          todayIds.push(...dailyWidget.widget_ids);
+        }
+      });
+      setTodayWidgetIds(todayIds);
+      
+      // Show success message
+      alert(`${widget.title} has been added to today's dashboard!`);
+      
+    } catch (err) {
+      console.error('Failed to add widget to today:', err);
+      if (err instanceof Error) {
+        alert(`Failed to add widget to today: ${err.message}`);
+      } else {
+        alert('Failed to add widget to today');
+      }
+    } finally {
+      setAddingToToday(null);
     }
   };
 
@@ -258,13 +308,38 @@ const AllSchedulesWidget = ({ onRemove }: AllSchedulesWidgetProps) => {
                     </div>
                   </div>
                   
-                  {/* Edit button */}
-                  <button
-                    onClick={() => handleEditWidget(widget)}
-                    className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80"
-                  >
-                    Edit
-                  </button>
+                  {/* Action buttons */}
+                  <div className="flex gap-2 ml-4">
+                    {/* Edit button */}
+                    <button
+                      onClick={() => handleEditWidget(widget)}
+                      className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80"
+                    >
+                      Edit
+                    </button>
+                    
+                    {/* Do Today button - only show if not already in today's dashboard */}
+                    {!todayWidgetIds.includes(widget.id) && (
+                      <button
+                        onClick={() => handleAddToToday(widget)}
+                        disabled={addingToToday === widget.id}
+                        className={`text-xs px-2 py-1 rounded transition-colors ${
+                          addingToToday === widget.id
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                        }`}
+                      >
+                        {addingToToday === widget.id ? 'Adding...' : 'Do Today'}
+                      </button>
+                    )}
+                    
+                    {/* Already in today indicator */}
+                    {todayWidgetIds.includes(widget.id) && (
+                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                        In Today
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))

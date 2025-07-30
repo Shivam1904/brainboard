@@ -137,6 +137,41 @@ class AlarmService:
             self.db.rollback()
             return None
     
+    def create_alarm_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create alarm activity entry for today's dashboard"""
+        try:
+            # Get alarm details for the widget
+            alarm_details = self.db.query(AlarmDetails).filter(
+                AlarmDetails.widget_id == widget_id
+            ).first()
+            
+            if not alarm_details:
+                logger.warning(f"No alarm details found for widget {widget_id}")
+                return None
+            
+            # Create new activity entry
+            activity = AlarmItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                alarmdetails_id=alarm_details.id,
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            self.db.flush()  # Get the ID
+            
+            logger.info(f"Created alarm activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "started_at": activity.started_at,
+                "snoozed_at": activity.snoozed_at
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating alarm activity for widget {widget_id}: {e}")
+            return None
+
     def get_alarm_details(self, widget_id: str) -> Optional[Dict[str, Any]]:
         """Get alarm details for a specific widget"""
         try:

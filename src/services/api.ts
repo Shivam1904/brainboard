@@ -83,6 +83,19 @@ class ApiService {
     });
   }
 
+  // POST /api/v1/dashboard/widget/addtotoday/{widget_id}
+  async addWidgetToToday(widgetId: string): Promise<{
+    message: string;
+    daily_widget_id: string;
+    widget_id: string;
+    widget_type: string;
+    title: string;
+  }> {
+    return this.request(`/dashboard/widget/addtotoday/${widgetId}`, {
+      method: 'POST',
+    });
+  }
+
   // POST /api/v1/dashboard/widget/updatewidget/{widget_id}
   async updateWidget(widgetId: string, data: {
     widget_type: ApiWidgetType;

@@ -136,6 +136,43 @@ class WebSearchService:
             self.db.rollback()
             return None
     
+    def create_websearch_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create websearch activity entry for today's dashboard"""
+        try:
+            # Get websearch details for the widget
+            websearch_details = self.db.query(WebSearchDetails).filter(
+                WebSearchDetails.widget_id == widget_id
+            ).first()
+            
+            if not websearch_details:
+                logger.warning(f"No websearch details found for widget {widget_id}")
+                return None
+            
+            # Create new activity entry
+            activity = WebSearchItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                websearchdetails_id=websearch_details.id,
+                status="pending",
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            self.db.flush()  # Get the ID
+            
+            logger.info(f"Created websearch activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "status": activity.status,
+                "reaction": activity.reaction,
+                "summary": activity.summary
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating websearch activity for widget {widget_id}: {e}")
+            return None
+
     def get_websearch_details(self, widget_id: str) -> Optional[Dict[str, Any]]:
         """Get websearch details for a specific widget"""
         try:

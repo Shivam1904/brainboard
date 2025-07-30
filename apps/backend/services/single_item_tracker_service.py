@@ -132,6 +132,41 @@ class SingleItemTrackerService:
             self.db.rollback()
             return None
     
+    def create_tracker_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create tracker activity entry for today's dashboard"""
+        try:
+            # Get tracker details for the widget
+            tracker_details = self.db.query(SingleItemTrackerDetails).filter(
+                SingleItemTrackerDetails.widget_id == widget_id
+            ).first()
+            
+            if not tracker_details:
+                logger.warning(f"No tracker details found for widget {widget_id}")
+                return None
+            
+            # Create new activity entry
+            activity = SingleItemTrackerItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                singleitemtrackerdetails_id=tracker_details.id,
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            self.db.flush()  # Get the ID
+            
+            logger.info(f"Created tracker activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "value": activity.value,
+                "time_added": activity.time_added
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating tracker activity for widget {widget_id}: {e}")
+            return None
+
     def get_tracker_details(self, widget_id: str) -> Optional[Dict[str, Any]]:
         """Get tracker details for a specific widget"""
         try:
