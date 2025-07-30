@@ -4,7 +4,7 @@ Alarm Service - Business logic for alarm operations
 
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 import logging
 
 from models.database import (
@@ -75,12 +75,101 @@ class AlarmService:
                     "id": today_activity.id if today_activity else None,
                     "started_at": today_activity.started_at.isoformat() if today_activity and today_activity.started_at else None,
                     "snoozed_at": today_activity.snoozed_at.isoformat() if today_activity and today_activity.snoozed_at else None,
+                    "snooze_until": today_activity.snooze_until.isoformat() if today_activity and today_activity.snooze_until else None,
+                    "snooze_count": today_activity.snooze_count if today_activity else 0,
                     "created_at": today_activity.created_at.isoformat() if today_activity else None,
                     "updated_at": today_activity.updated_at.isoformat() if today_activity else None
                 } if today_activity else None
             }
         except Exception as e:
             logger.error(f"Error getting alarm details and activity for widget {widget_id}: {e}")
+            self.db.rollback()
+            return None
+    
+    def should_alarm_trigger(self, alarm_details: Dict[str, Any], activity: Dict[str, Any]) -> bool:
+        """Check if alarm should trigger based on current time and snooze status"""
+        if not alarm_details or not activity:
+            return False
+        
+        now = datetime.now()
+        
+        # If alarm was already started today, don't trigger again
+        if activity.get("started_at"):
+            return False
+        
+        # Check if currently snoozed
+        if activity.get("snooze_until"):
+            snooze_until = datetime.fromisoformat(activity["snooze_until"].replace('Z', '+00:00'))
+            if now < snooze_until:
+                return False
+        
+        # Check if any alarm time matches current time (within 1 minute)
+        current_time_str = now.strftime("%H:%M")
+        for alarm_time in alarm_details.get("alarm_times", []):
+            if alarm_time == current_time_str:
+                return True
+        
+        return False
+    
+    def snooze_alarm(self, activity_id: str, snooze_minutes: int = 2) -> Optional[Dict[str, Any]]:
+        """Snooze alarm for specified minutes"""
+        try:
+            activity = self.db.query(AlarmItemActivity).filter(
+                AlarmItemActivity.id == activity_id
+            ).first()
+            
+            if not activity:
+                return None
+            
+            now = datetime.now()
+            snooze_until = now + timedelta(minutes=snooze_minutes)
+            
+            activity.snoozed_at = now
+            activity.snooze_until = snooze_until
+            activity.snooze_count += 1
+            activity.updated_at = now
+            activity.updated_by = "user"
+            
+            self.db.commit()
+            
+            return {
+                "activity_id": activity.id,
+                "snoozed_at": activity.snoozed_at.isoformat(),
+                "snooze_until": activity.snooze_until.isoformat(),
+                "snooze_count": activity.snooze_count,
+                "updated_at": activity.updated_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error snoozing alarm activity {activity_id}: {e}")
+            self.db.rollback()
+            return None
+    
+    def stop_alarm(self, activity_id: str) -> Optional[Dict[str, Any]]:
+        """Stop alarm (mark as started)"""
+        try:
+            activity = self.db.query(AlarmItemActivity).filter(
+                AlarmItemActivity.id == activity_id
+            ).first()
+            
+            if not activity:
+                return None
+            
+            now = datetime.now()
+            activity.started_at = now
+            activity.snooze_until = None  # Clear snooze
+            activity.updated_at = now
+            activity.updated_by = "user"
+            
+            self.db.commit()
+            
+            return {
+                "activity_id": activity.id,
+                "started_at": activity.started_at.isoformat(),
+                "snooze_until": None,
+                "updated_at": activity.updated_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error stopping alarm activity {activity_id}: {e}")
             self.db.rollback()
             return None
     

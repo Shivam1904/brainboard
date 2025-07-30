@@ -59,6 +59,63 @@ async def get_alarm_details_and_activity(
             detail=f"Failed to get alarm details and activity: {str(e)}"
         )
 
+@router.post("/snoozeAlarm/{activity_id}")
+async def snooze_alarm(
+    activity_id: str,
+    snooze_minutes: int = Query(default=2, description="Minutes to snooze"),
+    db: Session = Depends(get_db)
+):
+    """
+    Snooze alarm for specified minutes
+    """
+    try:
+        service = AlarmService(db)
+        result = service.snooze_alarm(activity_id, snooze_minutes)
+        
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Alarm activity not found"
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error snoozing alarm: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to snooze alarm: {str(e)}"
+        )
+
+@router.post("/stopAlarm/{activity_id}")
+async def stop_alarm(
+    activity_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Stop alarm (mark as started)
+    """
+    try:
+        service = AlarmService(db)
+        result = service.stop_alarm(activity_id)
+        
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Alarm activity not found"
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error stopping alarm: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to stop alarm: {str(e)}"
+        )
+
 @router.post("/updateActivity/{activity_id}")
 async def update_alarm_activity(
     activity_id: str,

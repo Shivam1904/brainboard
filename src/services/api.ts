@@ -226,6 +226,31 @@ class ApiService {
     return this.request<AlarmDetailsAndActivityResponse>(`/widgets/alarm/getAlarmDetailsAndActivity/${widgetId}`);
   }
 
+  // POST /api/v1/widgets/alarm/snoozeAlarm/{activity_id}
+  async snoozeAlarm(activityId: string, snoozeMinutes: number = 2): Promise<{
+    activity_id: string;
+    snoozed_at: string;
+    snooze_until: string;
+    snooze_count: number;
+    updated_at: string;
+  }> {
+    return this.request(`/widgets/alarm/snoozeAlarm/${activityId}?snooze_minutes=${snoozeMinutes}`, {
+      method: 'POST',
+    });
+  }
+
+  // POST /api/v1/widgets/alarm/stopAlarm/{activity_id}
+  async stopAlarm(activityId: string): Promise<{
+    activity_id: string;
+    started_at: string;
+    snooze_until: null;
+    updated_at: string;
+  }> {
+    return this.request(`/widgets/alarm/stopAlarm/${activityId}`, {
+      method: 'POST',
+    });
+  }
+
   // POST /api/v1/widgets/alarm/updateActivity/{activity_id}
   async updateAlarmActivity(activityId: string, data: {
     started_at?: string;

@@ -95,6 +95,8 @@ export interface AlarmActivity {
   id: string;
   started_at: string;
   snoozed_at: string;
+  snooze_until: string;
+  snooze_count: number;
   created_at: string;
   updated_at: string;
 }

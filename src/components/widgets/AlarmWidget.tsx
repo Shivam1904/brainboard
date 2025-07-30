@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import BaseWidget from './BaseWidget';
-import { Bell, Plus, X, Clock, RotateCcw, Check, AlertTriangle } from 'lucide-react';
+import { Bell, Clock, RotateCcw, Check, AlertTriangle } from 'lucide-react';
 import { AlarmDetailsAndActivityResponse, AlarmDetails, AlarmActivity } from '../../types';
-import { dashboardService } from '../../services/dashboard';
+import { apiService } from '../../services/api';
 
 interface AlarmWidgetProps {
   onRemove: () => void;
@@ -59,18 +59,9 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
   const [alarmData, setAlarmData] = useState<AlarmDetailsAndActivityResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [triggeredAlarms, setTriggeredAlarms] = useState<Set<string>>(new Set());
   const [isAlerting, setIsAlerting] = useState(false);
+  const [snoozeTimeLeft, setSnoozeTimeLeft] = useState<number | null>(null);
   
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    alarm_times: ['09:00'],
-    target_value: '',
-    is_snoozable: true
-  });
-
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchAlarms = async () => {
@@ -82,7 +73,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
       const widgetId = widget.widget_ids[0];
       
       // Call the real API
-      const response = await dashboardService.getAlarmDetailsAndActivity(widgetId);
+      const response = await apiService.getAlarmDetailsAndActivity(widgetId);
       setAlarmData(response);
     } catch (err) {
       console.error('Failed to fetch alarms:', err);
@@ -94,90 +85,74 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
     }
   };
 
-  const createAlarm = async () => {
-    if (!alarmData || !formData.title.trim()) return;
+  const snoozeAlarm = async () => {
+    if (!alarmData?.activity?.id) return;
     
     try {
-      // For now, we'll just refresh the alarms since creating new alarms
-      // would require additional API endpoints that aren't implemented yet
-      await fetchAlarms();
-      setShowAddForm(false);
-      setFormData({
-        title: '',
-        description: '',
-        alarm_times: ['09:00'],
-        target_value: '',
-        is_snoozable: true
-      });
+      await apiService.snoozeAlarm(alarmData.activity.id, 2);
+      setIsAlerting(false);
+      setSnoozeTimeLeft(120); // 2 minutes in seconds
+      await fetchAlarms(); // Refresh data
     } catch (err) {
-      console.error('Error creating alarm:', err);
+      console.error('Error snoozing alarm:', err);
     }
   };
 
-  const updateAlarmStatus = async (alarmId: string, action: 'snooze' | 'dismiss') => {
-    if (!alarmData) return;
+  const stopAlarm = async () => {
+    if (!alarmData?.activity?.id) return;
     
     try {
-      // Update alarm activity using the real API
-      const updateData: {
-        updated_by: string;
-        snoozed_at?: string;
-        started_at?: string;
-      } = {
-        updated_by: 'user'
-      };
-      
-      if (action === 'snooze') {
-        updateData.snoozed_at = new Date().toISOString();
-      } else if (action === 'dismiss') {
-        updateData.started_at = new Date().toISOString();
-      }
-      
-      await dashboardService.updateAlarmActivity(alarmData.activity.id, updateData);
-      
-      // Remove from triggered alarms
-      setTriggeredAlarms(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(alarmId);
-        return newSet;
-      });
-      
-      // Refresh alarms
-      await fetchAlarms();
+      await apiService.stopAlarm(alarmData.activity.id);
+      setIsAlerting(false);
+      setSnoozeTimeLeft(null);
+      await fetchAlarms(); // Refresh data
     } catch (err) {
-      console.error('Error updating alarm status:', err);
-      // Still remove from triggered alarms even if API fails
-      setTriggeredAlarms(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(alarmId);
-        return newSet;
-      });
+      console.error('Error stopping alarm:', err);
     }
   };
 
-  // Check for triggered alarms every second for better responsiveness
+  // Check for triggered alarms and snooze status
   useEffect(() => {
     const checkAlarms = () => {
       if (!alarmData) return;
       
-      const newTriggeredAlarms = new Set<string>();
-      let hasTriggered = false;
+      const now = new Date();
+      let shouldAlert = false;
+      
+      // Check if alarm was already started today
+      if (alarmData.activity?.started_at) {
+        setIsAlerting(false);
+        setSnoozeTimeLeft(null);
+        return;
+      }
+      
+      // Check if currently snoozed
+      if (alarmData.activity?.snooze_until) {
+        const snoozeUntil = new Date(alarmData.activity.snooze_until);
+        if (now < snoozeUntil) {
+          // Still snoozed, calculate time left
+          const timeLeft = Math.ceil((snoozeUntil.getTime() - now.getTime()) / 1000);
+          setSnoozeTimeLeft(timeLeft > 0 ? timeLeft : null);
+          setIsAlerting(false);
+          return;
+        } else {
+          // Snooze expired, check if should trigger
+          setSnoozeTimeLeft(null);
+        }
+      }
       
       // Check if any alarm times are triggered
-      alarmData.alarm_details.alarm_times.forEach((alarmTime, index) => {
+      alarmData.alarm_details.alarm_times.forEach((alarmTime) => {
         if (isAlarmTriggered(alarmTime)) {
-          newTriggeredAlarms.add(`alarm-${index}`);
-          hasTriggered = true;
+          shouldAlert = true;
         }
       });
       
-      setTriggeredAlarms(newTriggeredAlarms);
-      
-      if (hasTriggered && !isAlerting) {
+      if (shouldAlert && !isAlerting) {
         setIsAlerting(true);
-        // Play alert sound (if browser supports it)
+        setSnoozeTimeLeft(null);
+        // Play alert sound
         try {
-          // Create a simple beep sound using Web Audio API
           const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
           const oscillator = audioContext.createOscillator();
           const gainNode = audioContext.createGain();
@@ -197,9 +172,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
         } catch (error) {
           console.log('Audio not supported, but alarm is triggered!');
         }
-        
-        console.log('Alarm triggered!');
-      } else if (!hasTriggered && isAlerting) {
+      } else if (!shouldAlert && isAlerting) {
         setIsAlerting(false);
       }
     };
@@ -213,6 +186,22 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
       }
     };
   }, [alarmData]);
+
+  // Update snooze countdown
+  useEffect(() => {
+    if (snoozeTimeLeft === null || snoozeTimeLeft <= 0) return;
+
+    const countdown = setInterval(() => {
+      setSnoozeTimeLeft(prev => {
+        if (prev === null || prev <= 1) {
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(countdown);
+  }, [snoozeTimeLeft]);
 
   useEffect(() => {
     fetchAlarms();
@@ -261,137 +250,83 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
     );
   }
 
+  const getNextAlarmTime = (alarm_times: string[]): string => {
+    const now = new Date();
+    const nextAlarmTime = alarm_times.find(time => {
+      const [hours, minutes] = time.split(':').map(Number);
+      const alarmDate = new Date();
+      alarmDate.setHours(hours, minutes, 0, 0);
+      return alarmDate > now;
+    });
+    return nextAlarmTime || 'No alarms set';
+  };
+
+  const formatSnoozeTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
   return (
     <BaseWidget 
-      title={isAlerting ? "🚨 ALARMS TRIGGERED! 🚨" : "Alarms"} 
+      title={isAlerting ? "🚨 ALARM TRIGGERED! 🚨" : "Alarms"} 
       icon={isAlerting ? "🔔" : "⏰"} 
       onRemove={onRemove}
     >
       <div className="h-full flex flex-col">
-        {/* Alert Banner */}
-        {isAlerting && (
-          <div className="mb-4 p-4 bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 rounded-lg animate-pulse shadow-lg">
-            <div className="flex items-center gap-3">
+        {/* Main Alarm Display - Always visible */}
+        <div className={`flex-1 p-4 rounded-lg transition-all duration-300 ${
+          isAlerting 
+            ? 'bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 animate-pulse shadow-lg' 
+            : 'bg-blue-50 border border-blue-200'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Clock className={`h-5 w-5 ${isAlerting ? 'text-white' : 'text-blue-600'}`} />
+              <span className={`text-sm font-medium ${isAlerting ? 'text-white' : 'text-blue-800'}`}>
+                Next Alarm at {getNextAlarmTime(alarmData.alarm_details.alarm_times)}
+              </span>
+            </div>
+            {isAlerting && (
               <div className="animate-bounce">
-                <AlertTriangle className="h-6 w-6 text-white" />
+                <AlertTriangle className="h-5 w-5 text-white" />
               </div>
-              <div>
-                <span className="font-bold text-white text-lg">🚨 ALARM TRIGGERED! 🚨</span>
-                <p className="text-red-100 text-sm mt-1">
-                  {Array.from(triggeredAlarms).map(id => {
-                    const alarmIndex = parseInt(id.split('-')[1]);
-                    return alarmData.alarm_details.alarm_times[alarmIndex];
-                  }).join(', ')}
-                </p>
+            )}
+          </div>
+          
+          <div className={`text-lg font-bold mb-3 ${isAlerting ? 'text-white' : 'text-blue-900'}`}>
+            {alarmData.alarm_details.title}
+          </div>
+
+          {/* Snooze countdown */}
+          {snoozeTimeLeft !== null && snoozeTimeLeft > 0 && (
+            <div className="mb-3 p-2 bg-yellow-100 border border-yellow-300 rounded">
+              <div className="text-sm text-yellow-800">
+                ⏰ Snoozed for {formatSnoozeTime(snoozeTimeLeft)}
               </div>
             </div>
-          </div>
-        )}
-        
+          )}
 
-        
-        {/* Next Alarm Display */}
-        {alarmData.alarm_details.alarm_times.length > 0 && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-800">Next Alarm</span>
-                </div>
-                <div className="text-lg font-bold text-blue-900">
-                  {alarmData.alarm_details.title}
-                </div>
-              </div>
-              
-              {/* Debug button for testing */}
+          {/* Action buttons - only show when alerting */}
+          {isAlerting && (
+            <div className="flex gap-3 mt-4">
               <button
-                onClick={() => {
-                  const now = new Date();
-                  const testTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                  setTriggeredAlarms(new Set(['alarm-0']));
-                  setIsAlerting(true);
-                  console.log('Test alarm triggered for:', testTime);
-                }}
-                className="px-2 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
-                title="Test alarm (for debugging)"
+                onClick={snoozeAlarm}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-md flex items-center justify-center gap-2"
+                title="Snooze for 2 minutes"
               >
-                Test
+                <RotateCcw className="h-4 w-4" />
+                <span className="font-medium">Snooze</span>
+              </button>
+              <button
+                onClick={stopAlarm}
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-md flex items-center justify-center gap-2"
+                title="Stop alarm"
+              >
+                <Check className="h-4 w-4" />
+                <span className="font-medium">Stop</span>
               </button>
             </div>
-          </div>
-        )}
-
-        {/* Alarms List */}
-        <div className="space-y-3">
-          {alarmData.alarm_details.alarm_times.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No alarms set</p>
-              <p className="text-sm">Add an alarm to get started!</p>
-            </div>
-          ) : (
-            alarmData.alarm_details.alarm_times.map((alarmTime, index) => {
-              const alarmId = `alarm-${index}`;
-              const isTriggered = triggeredAlarms.has(alarmId);
-              
-              return (
-                <div
-                  key={alarmId}
-                  className={`p-4 border-2 rounded-lg transition-all duration-300 ${
-                    isTriggered 
-                      ? 'bg-gradient-to-r from-red-100 to-orange-100 border-red-400 shadow-lg animate-pulse' 
-                      : 'bg-card/50 border-border hover:bg-card/70'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <div className={isTriggered ? 'animate-bounce' : ''}>
-                          <Bell className={`h-5 w-5 ${
-                            isTriggered ? 'text-red-600' : 'text-muted-foreground'
-                          }`} />
-                        </div>
-                        <span className={`font-bold text-lg ${
-                          isTriggered ? 'text-red-800' : 'text-foreground'
-                        }`}>
-                          {alarmTime}
-                        </span>
-                      </div>
-                      <span className={`text-xs ${
-                        isTriggered ? 'text-red-700 font-medium' : 'text-muted-foreground'
-                      }`}>
-                        {alarmData.alarm_details.title}
-                      </span>
-                    </div>
-                    
-                    {isTriggered && (
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => updateAlarmStatus(alarmId, 'snooze')}
-                          className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-md"
-                          title="Snooze"
-                        >
-                          <div className="flex items-center gap-1">
-                            <RotateCcw className="h-4 w-4" />
-                            <span className="text-sm font-medium">Snooze</span>
-                          </div>
-                        </button>
-                        <button
-                          onClick={() => updateAlarmStatus(alarmId, 'dismiss')}
-                          className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-md"
-                          title="Dismiss"
-                        >
-                          <div className="flex items-center gap-1">
-                            <Check className="h-4 w-4" />
-                            <span className="text-sm font-medium">Dismiss</span>
-                          </div>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
           )}
         </div>
       </div>

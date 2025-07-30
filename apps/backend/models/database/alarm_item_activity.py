@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Text
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Text, Integer
 from sqlalchemy.orm import relationship
 from core.database import Base
 from datetime import datetime
@@ -14,6 +14,8 @@ class AlarmItemActivity(Base):
     alarmdetails_id = Column(String, ForeignKey("alarm_details.id"), nullable=False)
     started_at = Column(DateTime, nullable=True)  # When alarm was started
     snoozed_at = Column(DateTime, nullable=True)  # When alarm was snoozed
+    snooze_until = Column(DateTime, nullable=True)  # When snooze expires
+    snooze_count = Column(Integer, default=0)  # Number of times snoozed today
     
     # Audit columns
     created_at = Column(DateTime, default=datetime.utcnow)
