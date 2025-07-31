@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from db.dependency import get_db_session_dependency
 from services.widget_service import WidgetService
-from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse
+from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse
 from utils.errors import raise_not_found, raise_database_error
 
 # ============================================================================
@@ -41,6 +41,18 @@ async def get_widget_categories(
     """Get list of widget categories."""
     service = WidgetService(db)
     return await service.get_widget_categories()
+
+@router.post("/create", response_model=CreateWidgetResponse)
+async def create_widget(
+    request: CreateWidgetRequest,
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Create a new dashboard widget."""
+    try:
+        service = WidgetService(db)
+        return await service.create_widget(request, DEFAULT_USER_ID)
+    except Exception as e:
+        raise raise_database_error(f"Failed to create widget: {str(e)}")
 
 @router.get("/{widget_id}", response_model=WidgetResponse)
 async def get_widget_details(

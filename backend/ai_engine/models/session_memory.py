@@ -7,7 +7,7 @@ Session memory data structures for conversation state management.
 # ============================================================================
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 import uuid
 
 # ============================================================================
@@ -20,14 +20,7 @@ class ConversationHistory(BaseModel):
     content: str = Field(..., description="Message content")
     timestamp: datetime = Field(default_factory=datetime.now, description="Message timestamp")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "role": "user",
-                "content": "Set an alarm for 7 AM",
-                "timestamp": "2024-01-15T10:30:00"
-            }
-        }
+    model_config = ConfigDict(from_attributes=True)
 
 class SessionMemory(BaseModel):
     """Session memory for conversation state management."""
@@ -44,25 +37,7 @@ class SessionMemory(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now, description="Session creation time")
     updated_at: datetime = Field(default_factory=datetime.now, description="Last update time")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "session_id": "550e8400-e29b-41d4-a716-446655440000",
-                "user_id": "user_001",
-                "current_intent": "create_alarm",
-                "filled_params": {
-                    "title": "Wake up",
-                    "alarm_times": ["07:00"]
-                },
-                "pending_params": ["description"],
-                "original_message": "Set an alarm for 7 AM",
-                "conversation_history": [],
-                "fallback_attempts": 0,
-                "max_fallback_attempts": 3,
-                "created_at": "2024-01-15T10:30:00",
-                "updated_at": "2024-01-15T10:30:00"
-            }
-        }
+    model_config = ConfigDict(from_attributes=True)
     
     def is_expired(self, timeout_minutes: int = 30) -> bool:
         """Check if session has expired."""

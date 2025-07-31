@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate realistic dummy data for the backend.
+Generate realistic dummy data for the backend by directly inserting into all tables.
 """
 
 # ============================================================================
@@ -8,12 +8,14 @@ Generate realistic dummy data for the backend.
 # ============================================================================
 import asyncio
 import json
-from datetime import datetime, timedelta
+import uuid
+from datetime import datetime, timedelta, date
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from models.base import Base
 from models.dashboard_widget_details import DashboardWidgetDetails
 from models.alarm_details import AlarmDetails
+from models.daily_widget import DailyWidget
 from models.alarm_item_activity import AlarmItemActivity
 from db.engine import DATABASE_URL
 
@@ -21,8 +23,8 @@ from db.engine import DATABASE_URL
 # DATA GENERATION
 # ============================================================================
 async def generate_dummy_data():
-    """Generate realistic dummy data."""
-    print("🔧 Generating dummy data...")
+    """Generate realistic dummy data for all tables."""
+    print("🔧 Generating dummy data for all tables...")
     
     # Create engine
     engine = create_async_engine(
@@ -40,46 +42,62 @@ async def generate_dummy_data():
         await conn.run_sync(Base.metadata.create_all)
     
     async with AsyncSessionLocal() as session:
-        # Generate DashboardWidgetDetails first (parent table)
+        # ============================================================================
+        # 1. GENERATE DASHBOARD_WIDGET_DETAILS (Parent table)
+        # ============================================================================
+        print("📊 Creating dashboard widgets...")
         dashboard_widgets = []
         
-        # Create some realistic widget configurations
         widget_configs = [
             {
                 "user_id": "user_001",
                 "widget_type": "alarm",
                 "frequency": "daily",
-                "importance": 0.8,
+                "importance": 0.9,
                 "title": "Morning Wake Up",
                 "category": "Health",
-                "is_permanent": True
+                "is_permanent": True,
+                "created_by": "user_001"
             },
             {
                 "user_id": "user_001", 
                 "widget_type": "alarm",
                 "frequency": "daily",
-                "importance": 0.6,
+                "importance": 0.7,
                 "title": "Lunch Break",
                 "category": "Work",
-                "is_permanent": False
+                "is_permanent": False,
+                "created_by": "user_001"
             },
             {
                 "user_id": "user_001",
                 "widget_type": "alarm", 
                 "frequency": "daily",
-                "importance": 0.9,
+                "importance": 0.8,
                 "title": "Evening Exercise",
                 "category": "Health",
-                "is_permanent": True
+                "is_permanent": True,
+                "created_by": "user_001"
             },
             {
                 "user_id": "user_002",
                 "widget_type": "alarm",
                 "frequency": "daily", 
-                "importance": 0.7,
+                "importance": 0.6,
                 "title": "Team Standup",
                 "category": "Work",
-                "is_permanent": True
+                "is_permanent": True,
+                "created_by": "user_002"
+            },
+            {
+                "user_id": "user_001",
+                "widget_type": "alarm",
+                "frequency": "weekly",
+                "importance": 0.5,
+                "title": "Weekly Review",
+                "category": "Productivity",
+                "is_permanent": False,
+                "created_by": "user_001"
             }
         ]
         
@@ -91,7 +109,12 @@ async def generate_dummy_data():
         await session.commit()
         print(f"✅ Created {len(dashboard_widgets)} dashboard widgets")
         
-        # Generate AlarmDetails (child of DashboardWidgetDetails)
+        # ============================================================================
+        # 2. GENERATE ALARM_DETAILS (Child of DashboardWidgetDetails)
+        # ============================================================================
+        print("⏰ Creating alarm details...")
+        alarm_details = []
+        
         alarm_configs = [
             {
                 "widget_id": dashboard_widgets[0].id,  # Morning Wake Up
@@ -99,7 +122,8 @@ async def generate_dummy_data():
                 "description": "Time to start the day!",
                 "alarm_times": ["07:00", "07:15"],
                 "target_value": "Wake up early",
-                "is_snoozable": True
+                "is_snoozable": True,
+                "created_by": "user_001"
             },
             {
                 "widget_id": dashboard_widgets[1].id,  # Lunch Break
@@ -107,7 +131,8 @@ async def generate_dummy_data():
                 "description": "Take a break and eat lunch",
                 "alarm_times": ["12:00", "12:30"],
                 "target_value": "Healthy lunch",
-                "is_snoozable": True
+                "is_snoozable": True,
+                "created_by": "user_001"
             },
             {
                 "widget_id": dashboard_widgets[2].id,  # Evening Exercise
@@ -115,7 +140,8 @@ async def generate_dummy_data():
                 "description": "Time for your daily workout",
                 "alarm_times": ["18:00", "18:30"],
                 "target_value": "30 min workout",
-                "is_snoozable": False
+                "is_snoozable": False,
+                "created_by": "user_001"
             },
             {
                 "widget_id": dashboard_widgets[3].id,  # Team Standup
@@ -123,11 +149,20 @@ async def generate_dummy_data():
                 "description": "Daily team meeting",
                 "alarm_times": ["09:00"],
                 "target_value": "Attend meeting",
-                "is_snoozable": False
+                "is_snoozable": False,
+                "created_by": "user_002"
+            },
+            {
+                "widget_id": dashboard_widgets[4].id,  # Weekly Review
+                "title": "Weekly Review",
+                "description": "Review weekly progress and plan next week",
+                "alarm_times": ["16:00"],
+                "target_value": "Complete weekly review",
+                "is_snoozable": True,
+                "created_by": "user_001"
             }
         ]
         
-        alarm_details = []
         for config in alarm_configs:
             alarm = AlarmDetails(**config)
             alarm_details.append(alarm)
@@ -136,61 +171,155 @@ async def generate_dummy_data():
         await session.commit()
         print(f"✅ Created {len(alarm_details)} alarm details")
         
-        # Generate AlarmItemActivity (child of both DashboardWidgetDetails and AlarmDetails)
-        today = datetime.now().date()
+        # ============================================================================
+        # 3. GENERATE DAILY_WIDGETS (Daily widget selections)
+        # ============================================================================
+        print("📅 Creating daily widgets...")
+        daily_widgets = []
+        
+        today = date.today()
         yesterday = today - timedelta(days=1)
+        tomorrow = today + timedelta(days=1)
+        
+        daily_widget_configs = [
+            # Today's daily widgets
+            {
+                "widget_ids": [dashboard_widgets[0].id, dashboard_widgets[1].id],  # Morning + Lunch
+                "widget_type": "alarm",
+                "priority": "HIGH",
+                "reasoning": "Important daily routines for health and work",
+                "date": today,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            {
+                "widget_ids": [dashboard_widgets[2].id],  # Evening Exercise
+                "widget_type": "alarm",
+                "priority": "MEDIUM",
+                "reasoning": "Daily exercise routine",
+                "date": today,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            # Yesterday's daily widgets
+            {
+                "widget_ids": [dashboard_widgets[0].id, dashboard_widgets[3].id],  # Morning + Standup
+                "widget_type": "alarm",
+                "priority": "HIGH",
+                "reasoning": "Daily morning routine and team meeting",
+                "date": yesterday,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            # Tomorrow's daily widgets
+            {
+                "widget_ids": [dashboard_widgets[0].id, dashboard_widgets[4].id],  # Morning + Weekly Review
+                "widget_type": "alarm",
+                "priority": "HIGH",
+                "reasoning": "Morning routine and weekly planning",
+                "date": tomorrow,
+                "is_active": True,
+                "created_by": "user_001"
+            }
+        ]
+        
+        for config in daily_widget_configs:
+            daily_widget = DailyWidget(**config)
+            daily_widgets.append(daily_widget)
+            session.add(daily_widget)
+        
+        await session.commit()
+        print(f"✅ Created {len(daily_widgets)} daily widgets")
+        
+        # ============================================================================
+        # 4. GENERATE ALARM_ITEM_ACTIVITIES (Activity tracking)
+        # ============================================================================
+        print("📈 Creating alarm activities...")
+        alarm_activities = []
         
         activity_configs = [
             # Today's activities
             {
-                "widget_id": dashboard_widgets[0].id,
+                "daily_widget_id": daily_widgets[0].id,  # Today's high priority group
+                "widget_id": dashboard_widgets[0].id,  # Morning Wake Up
                 "alarmdetails_id": alarm_details[0].id,
                 "started_at": datetime.combine(today, datetime.strptime("07:00", "%H:%M").time()),
                 "snoozed_at": datetime.combine(today, datetime.strptime("07:05", "%H:%M").time()),
                 "snooze_until": datetime.combine(today, datetime.strptime("07:15", "%H:%M").time()),
-                "snooze_count": 1
+                "snooze_count": 1,
+                "created_by": "user_001"
             },
             {
-                "widget_id": dashboard_widgets[1].id,
+                "daily_widget_id": daily_widgets[0].id,  # Today's high priority group
+                "widget_id": dashboard_widgets[1].id,  # Lunch Break
                 "alarmdetails_id": alarm_details[1].id,
                 "started_at": datetime.combine(today, datetime.strptime("12:00", "%H:%M").time()),
                 "snoozed_at": None,
                 "snooze_until": None,
-                "snooze_count": 0
+                "snooze_count": 0,
+                "created_by": "user_001"
+            },
+            {
+                "daily_widget_id": daily_widgets[1].id,  # Today's medium priority group
+                "widget_id": dashboard_widgets[2].id,  # Evening Exercise
+                "alarmdetails_id": alarm_details[2].id,
+                "started_at": datetime.combine(today, datetime.strptime("18:00", "%H:%M").time()),
+                "snoozed_at": None,
+                "snooze_until": None,
+                "snooze_count": 0,
+                "created_by": "user_001"
             },
             # Yesterday's activities
             {
-                "widget_id": dashboard_widgets[0].id,
+                "daily_widget_id": daily_widgets[2].id,  # Yesterday's group
+                "widget_id": dashboard_widgets[0].id,  # Morning Wake Up
                 "alarmdetails_id": alarm_details[0].id,
                 "started_at": datetime.combine(yesterday, datetime.strptime("07:00", "%H:%M").time()),
                 "snoozed_at": datetime.combine(yesterday, datetime.strptime("07:03", "%H:%M").time()),
                 "snooze_until": datetime.combine(yesterday, datetime.strptime("07:10", "%H:%M").time()),
-                "snooze_count": 2
+                "snooze_count": 2,
+                "created_by": "user_001"
             },
             {
-                "widget_id": dashboard_widgets[2].id,
-                "alarmdetails_id": alarm_details[2].id,
-                "started_at": datetime.combine(yesterday, datetime.strptime("18:00", "%H:%M").time()),
+                "daily_widget_id": daily_widgets[2].id,  # Yesterday's group
+                "widget_id": dashboard_widgets[3].id,  # Team Standup
+                "alarmdetails_id": alarm_details[3].id,
+                "started_at": datetime.combine(yesterday, datetime.strptime("09:00", "%H:%M").time()),
                 "snoozed_at": None,
                 "snooze_until": None,
-                "snooze_count": 0
+                "snooze_count": 0,
+                "created_by": "user_002"
             }
         ]
         
         for config in activity_configs:
             activity = AlarmItemActivity(**config)
+            alarm_activities.append(activity)
             session.add(activity)
         
         await session.commit()
-        print(f"✅ Created {len(activity_configs)} alarm activities")
+        print(f"✅ Created {len(alarm_activities)} alarm activities")
     
     await engine.dispose()
-    print("🎉 Dummy data generation complete!")
-    print("\n📊 Generated data:")
-    print(f"   - {len(dashboard_widgets)} dashboard widgets")
-    print(f"   - {len(alarm_details)} alarm details") 
-    print(f"   - {len(activity_configs)} alarm activities")
-    print("\n🔗 All foreign key constraints satisfied!")
+    
+    # ============================================================================
+    # SUMMARY
+    # ============================================================================
+    print("\n🎉 Dummy data generation complete!")
+    print("=" * 50)
+    print("📊 Generated data summary:")
+    print(f"   📋 Dashboard Widgets: {len(dashboard_widgets)}")
+    print(f"   ⏰ Alarm Details: {len(alarm_details)}")
+    print(f"   📅 Daily Widgets: {len(daily_widgets)}")
+    print(f"   📈 Alarm Activities: {len(alarm_activities)}")
+    print("\n🔗 All foreign key relationships satisfied!")
+    print("\n📅 Date ranges:")
+    print(f"   - Yesterday: {yesterday}")
+    print(f"   - Today: {today}")
+    print(f"   - Tomorrow: {tomorrow}")
+    print("\n👥 Users: user_001, user_002")
+    print("🎯 Widget Types: alarm only")
+    print("📊 Categories: Health, Work, Productivity")
 
 # ============================================================================
 # MAIN

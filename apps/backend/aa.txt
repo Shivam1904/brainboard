@@ -6,10 +6,10 @@ Core Tables:
 --- When we add new widget (it creates an entry in the DashboardWidgetsDetails, and also in a Details table of the type of widget)
 DashboardWidgetDetails
  widget_id  | user_id | widget_type | frequency | importance | title | category       (title is a redundant column in this table)
- id0 |  u1 | todo | weekly | 0.9 | "AWS" | "Job"
- id1 |  u1 | todo | daily | 0.5 | "Meditation" | "Health"
- id2 |  u1 | todo | daily | 1.0 | "Gym" | "Health"
- id3 |  u1 | todo | daily | 1.0 | "Take meds" | "Health"
+ id0 |  u1 | todo-task | weekly | 0.9 | "AWS" | "Job"
+ id1 |  u1 | todo-task | daily | 0.5 | "Meditation" | "Health"
+ id2 |  u1 | todo-habit | daily | 1.0 | "Gym" | "Health"
+ id3 |  u1 | todo-habit | daily | 1.0 | "Take meds" | "Health"
  id4 |  u1 | alarm | daily | 1.0 | "Gym Alarm" | "Health"
  id5 |  u1 | singleitemtracker | daily | 0.5 | "Weight Tracker" | "Health"
  id6 |  u1 | websearch | daily | 1.0 | "YC funded AI companies" | "Productivity"
@@ -108,7 +108,8 @@ AlarmDetails
 
 DailyWidget  -- how many widgets "today"?
 daily_widget_id | widget_ids | widget_type | priority | reasoning | date | 
-id_xxx_todo	| [id0, id1, id2, id3]| todo | HIGH 	| Reason | july 28 | other columns		(todo items are grouped together)
+id_xxx_todo	| [id0, id1]| todo-task | HIGH 	| Reason | july 28 | other columns		(todo task items are grouped together)
+id_xxx_hab	| [id2, id3]| todo-habit | HIGH 	| Reason | july 28 | other columns		(todo habit items are grouped together)
 id_xxx_4	| [id4]		| alarm 	| HIGH 	| Reason | july 28 	(other items are not grouped)
 id_xxx_5	| [id5]		| singleitemtracker | HIGH 	| Reason | july 28 	(other items are not grouped)
 id_xxx_6	| [id6]		| websearch | HIGH 	| Reason | july 28 	(other items are not grouped)
@@ -118,6 +119,7 @@ id_xxx_8	| [id8]		| websearch | LOW 	| Reason | july 28 	(other items are not gr
 ToDoItemActivity
 ToDoItemActivity__id | daily_widget_id | widget_id | tododetails_id | status | progress | 
 id | id_xxx_todo | id0 | txi1 | "in progress" | 32%
+id | id_xxx_6 | id6 | ...
 
 SingleItemTrackerItemActivity
 SingleItemTrackerItemActivity_id | daily_widget_id | widget_id | singleitemtrackerdetails_id | value | time_added

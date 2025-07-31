@@ -10,7 +10,7 @@ class DashboardWidgetDetails(BaseModel):
     __tablename__ = "dashboard_widget_details"
     
     user_id = Column(String, nullable=False)  # Simplified for now
-    widget_type = Column(String, nullable=False)  # 'todo-habit', 'todo-task', 'todo-event', 'alarm', 'singleitemtracker', 'websearch'
+    widget_type = Column(String, nullable=False)  # 'alarm'
     frequency = Column(String, nullable=False)  # 'daily', 'weekly', 'monthly'
     importance = Column(Float, nullable=False)  # 0.0 to 1.0 scale
     title = Column(String, nullable=False)  # Redundant but kept for convenience

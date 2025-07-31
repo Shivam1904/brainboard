@@ -292,6 +292,46 @@ class AlarmService:
             logger.error(f"Error getting user alarms: {e}")
             return {"success": False, "message": f"Failed to get user alarms: {str(e)}"}
 
+    async def create_alarm_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create alarm activity entry for today's dashboard"""
+        try:
+            logger.info(f"Creating alarm activity for widget {widget_id}, daily_widget_id {daily_widget_id}, user_id {user_id}")
+            
+            # Get alarm details for the widget
+            stmt = select(AlarmDetails).where(AlarmDetails.widget_id == widget_id)
+            result = await self.db.execute(stmt)
+            alarm_details = result.scalar_one_or_none()
+            
+            if not alarm_details:
+                logger.warning(f"No alarm details found for widget {widget_id}")
+                return None
+            
+            logger.info(f"Found alarm details: {alarm_details.id} for widget {widget_id}")
+            
+            # Create new activity entry
+            activity = AlarmItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                alarmdetails_id=alarm_details.id,
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            await self.db.commit()  # Commit the transaction
+            await self.db.refresh(activity)  # Refresh to get the ID
+            
+            logger.info(f"Created alarm activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "started_at": activity.started_at,
+                "snoozed_at": activity.snoozed_at
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating alarm activity for widget {widget_id}: {e}")
+            return None
+
     async def update_alarm_details(self, alarm_details_id: str, user_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update alarm details."""
         try:

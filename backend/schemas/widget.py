@@ -8,41 +8,71 @@ Widget schemas for request/response validation.
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
+
+# ============================================================================
+# ENUMS
+# ============================================================================
+class WidgetType(str, Enum):
+    ALARM = "alarm"
+
+class Frequency(str, Enum):
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
+# ============================================================================
+# REQUEST SCHEMAS
+# ============================================================================
+class CreateWidgetRequest(BaseModel):
+    """Request schema for creating a new dashboard widget"""
+    widget_type: WidgetType
+    frequency: Frequency
+    importance: float = Field(..., ge=0.0, le=1.0)
+    title: str = Field(..., min_length=1, max_length=200)
+    category: Optional[str] = Field(None, max_length=50)
+    
+    # Alarm-specific fields
+    alarm_time: Optional[str] = Field(None, description="Time of day for alarm (HH:MM format)")
 
 # ============================================================================
 # RESPONSE SCHEMAS
 # ============================================================================
 class WidgetResponse(BaseModel):
-    """Response schema for user widgets."""
+    """Response schema for dashboard widget"""
     model_config = ConfigDict(from_attributes=True)
     
     id: str
     widget_type: str
-    title: str
-    category: str
     frequency: str
     importance: float
+    title: str
+    category: Optional[str] = None
     is_permanent: bool
     created_at: datetime
     updated_at: datetime
 
 class WidgetTypeResponse(BaseModel):
-    """Response schema for widget types."""
-    model_config = ConfigDict(from_attributes=True)
-    
+    """Response schema for widget type information"""
     id: str
     name: str
     description: str
     category: str
     icon: str
-    count: int
+    count: int = 0
     config_schema: Dict[str, Any]
 
 class WidgetCategoryResponse(BaseModel):
-    """Response schema for widget categories."""
-    model_config = ConfigDict(from_attributes=True)
-    
+    """Response schema for widget category information"""
     id: str
     name: str
     description: str
-    icon: str 
+    icon: str
+
+class CreateWidgetResponse(BaseModel):
+    """Response schema for widget creation"""
+    success: bool
+    message: str
+    widget_id: Optional[str] = None
+    widget_type: Optional[str] = None
+    title: Optional[str] = None 
