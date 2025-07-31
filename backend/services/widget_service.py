@@ -12,7 +12,8 @@ import logging
 
 from models.dashboard_widget_details import DashboardWidgetDetails
 from models.alarm_details import AlarmDetails
-from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse
+from models.todo_details import TodoDetails
+from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse, UpdateWidgetRequest
 
 # ============================================================================
 # CONSTANTS
@@ -33,6 +34,41 @@ WIDGET_TYPE_DEFINITIONS = {
             "alarm_times": {"type": "array", "items": {"type": "string"}, "required": True},
             "target_value": {"type": "string", "required": False},
             "is_snoozable": {"type": "boolean", "required": False, "default": True}
+        }
+    },
+    "todo-habit": {
+        "id": "todo-habit",
+        "name": "Habit Widget",
+        "description": "Track daily habits and routines",
+        "category": "health",
+        "icon": "repeat",
+        "config_schema": {
+            "title": {"type": "string", "required": True},
+            "description": {"type": "string", "required": False}
+        }
+    },
+    "todo-task": {
+        "id": "todo-task",
+        "name": "Task Widget",
+        "description": "Manage tasks with due dates and progress tracking",
+        "category": "work",
+        "icon": "check-square",
+        "config_schema": {
+            "title": {"type": "string", "required": True},
+            "description": {"type": "string", "required": False},
+            "due_date": {"type": "date", "required": False}
+        }
+    },
+    "todo-event": {
+        "id": "todo-event",
+        "name": "Event Widget",
+        "description": "Track events and milestones",
+        "category": "productivity",
+        "icon": "calendar",
+        "config_schema": {
+            "title": {"type": "string", "required": True},
+            "description": {"type": "string", "required": False},
+            "due_date": {"type": "date", "required": False}
         }
     }
 }
@@ -139,6 +175,8 @@ class WidgetService:
             # Create corresponding details table entry based on widget type
             if request.widget_type == "alarm":
                 await self._create_alarm_details(widget.id, request, user_id)
+            elif request.widget_type in ["todo-habit", "todo-task", "todo-event"]:
+                await self._create_todo_details(widget.id, request, user_id)
             
             await self.db.commit()
             
@@ -168,4 +206,76 @@ class WidgetService:
         
         self.db.add(alarm_details)
         await self.db.commit()
-        await self.db.refresh(alarm_details) 
+        await self.db.refresh(alarm_details)
+
+    async def _create_todo_details(self, widget_id: str, request: CreateWidgetRequest, user_id: str) -> None:
+        """Create todo details."""
+        # Map widget_type to todo_type
+        todo_type_mapping = {
+            "todo-habit": "todo-habit",
+            "todo-task": "todo-task", 
+            "todo-event": "todo-event"
+        }
+        
+        # Parse due_date if provided
+        due_date = None
+        if request.due_date:
+            try:
+                from datetime import datetime
+                due_date = datetime.strptime(request.due_date, "%Y-%m-%d").date()
+            except ValueError:
+                due_date = None
+        
+        todo_details = TodoDetails(
+            widget_id=widget_id,
+            title=request.title,
+            todo_type=todo_type_mapping.get(request.widget_type, "todo-task"),
+            description=request.description,
+            due_date=due_date
+        )
+        
+        self.db.add(todo_details)
+        await self.db.commit()
+        await self.db.refresh(todo_details)
+
+    async def update_widget(self, widget_id: str, request: UpdateWidgetRequest, user_id: str) -> Dict[str, Any]:
+        """Update widget details."""
+        try:
+            # Get the widget
+            stmt = select(DashboardWidgetDetails).where(
+                DashboardWidgetDetails.id == widget_id,
+                DashboardWidgetDetails.user_id == user_id
+            )
+            result = await self.db.execute(stmt)
+            widget = result.scalar_one_or_none()
+            
+            if not widget:
+                raise ValueError(f"Widget {widget_id} not found for user {user_id}")
+            
+            # Update fields if provided
+            if request.frequency is not None:
+                widget.frequency = request.frequency
+            if request.importance is not None:
+                widget.importance = request.importance
+            if request.title is not None:
+                widget.title = request.title
+            if request.category is not None:
+                widget.category = request.category
+            
+            widget.updated_by = user_id
+            
+            await self.db.commit()
+            await self.db.refresh(widget)
+            
+            return {
+                "success": True,
+                "message": "Widget updated successfully",
+                "widget_id": widget.id,
+                "widget_type": widget.widget_type,
+                "title": widget.title
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to update widget {widget_id} for user {user_id}: {e}")
+            await self.db.rollback()
+            raise 

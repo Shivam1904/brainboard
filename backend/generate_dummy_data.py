@@ -17,6 +17,8 @@ from models.dashboard_widget_details import DashboardWidgetDetails
 from models.alarm_details import AlarmDetails
 from models.daily_widget import DailyWidget
 from models.alarm_item_activity import AlarmItemActivity
+from models.todo_details import TodoDetails
+from models.todo_item_activity import TodoItemActivity
 from db.engine import DATABASE_URL
 
 # ============================================================================
@@ -98,6 +100,36 @@ async def generate_dummy_data():
                 "category": "Productivity",
                 "is_permanent": False,
                 "created_by": "user_001"
+            },
+            {
+                "user_id": "user_001",
+                "widget_type": "todo-task",
+                "frequency": "daily",
+                "importance": 0.8,
+                "title": "Daily Tasks",
+                "category": "Work",
+                "is_permanent": True,
+                "created_by": "user_001"
+            },
+            {
+                "user_id": "user_001",
+                "widget_type": "todo-habit",
+                "frequency": "daily",
+                "importance": 0.7,
+                "title": "Habits Tracker",
+                "category": "Health",
+                "is_permanent": True,
+                "created_by": "user_001"
+            },
+            {
+                "user_id": "user_001",
+                "widget_type": "todo-event",
+                "frequency": "weekly",
+                "importance": 0.6,
+                "title": "Weekly Events",
+                "category": "Productivity",
+                "is_permanent": False,
+                "created_by": "user_001"
             }
         ]
         
@@ -172,12 +204,53 @@ async def generate_dummy_data():
         print(f"✅ Created {len(alarm_details)} alarm details")
         
         # ============================================================================
-        # 3. GENERATE DAILY_WIDGETS (Daily widget selections)
+        # 3. GENERATE TODO_DETAILS (Child of DashboardWidgetDetails)
+        # ============================================================================
+        print("📋 Creating todo details...")
+        todo_details = []
+        
+        today = date.today()
+        todo_configs = [
+            {
+                "widget_id": dashboard_widgets[5].id,  # Daily Tasks
+                "title": "Daily Tasks",
+                "todo_type": "todo-task",
+                "description": "Complete daily work tasks",
+                "due_date": today,
+                "created_by": "user_001"
+            },
+            {
+                "widget_id": dashboard_widgets[6].id,  # Habits Tracker
+                "title": "Habits Tracker",
+                "todo_type": "todo-habit",
+                "description": "Track daily habits and routines",
+                "due_date": None,
+                "created_by": "user_001"
+            },
+            {
+                "widget_id": dashboard_widgets[7].id,  # Weekly Events
+                "title": "Weekly Events",
+                "todo_type": "todo-event",
+                "description": "Track weekly events and milestones",
+                "due_date": today + timedelta(days=7),
+                "created_by": "user_001"
+            }
+        ]
+        
+        for config in todo_configs:
+            todo = TodoDetails(**config)
+            todo_details.append(todo)
+            session.add(todo)
+        
+        await session.commit()
+        print(f"✅ Created {len(todo_details)} todo details")
+        
+        # ============================================================================
+        # 4. GENERATE DAILY_WIDGETS (Daily widget selections)
         # ============================================================================
         print("📅 Creating daily widgets...")
         daily_widgets = []
         
-        today = date.today()
         yesterday = today - timedelta(days=1)
         tomorrow = today + timedelta(days=1)
         
@@ -197,6 +270,33 @@ async def generate_dummy_data():
                 "widget_type": "alarm",
                 "priority": "MEDIUM",
                 "reasoning": "Daily exercise routine",
+                "date": today,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            {
+                "widget_ids": [dashboard_widgets[5].id],  # Daily Tasks
+                "widget_type": "todo-task",
+                "priority": "HIGH",
+                "reasoning": "Daily task management",
+                "date": today,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            {
+                "widget_ids": [dashboard_widgets[6].id],  # Habits
+                "widget_type": "todo-habit",
+                "priority": "HIGH",
+                "reasoning": "Daily habit tracking",
+                "date": today,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            {
+                "widget_ids": [dashboard_widgets[7].id],  # Events
+                "widget_type": "todo-event",
+                "priority": "MEDIUM",
+                "reasoning": "Weekly event tracking",
                 "date": today,
                 "is_active": True,
                 "created_by": "user_001"
@@ -232,7 +332,7 @@ async def generate_dummy_data():
         print(f"✅ Created {len(daily_widgets)} daily widgets")
         
         # ============================================================================
-        # 4. GENERATE ALARM_ITEM_ACTIVITIES (Activity tracking)
+        # 5. GENERATE ALARM_ITEM_ACTIVITIES (Activity tracking)
         # ============================================================================
         print("📈 Creating alarm activities...")
         alarm_activities = []
@@ -271,7 +371,7 @@ async def generate_dummy_data():
             },
             # Yesterday's activities
             {
-                "daily_widget_id": daily_widgets[2].id,  # Yesterday's group
+                "daily_widget_id": daily_widgets[3].id,  # Yesterday's group
                 "widget_id": dashboard_widgets[0].id,  # Morning Wake Up
                 "alarmdetails_id": alarm_details[0].id,
                 "started_at": datetime.combine(yesterday, datetime.strptime("07:00", "%H:%M").time()),
@@ -281,7 +381,7 @@ async def generate_dummy_data():
                 "created_by": "user_001"
             },
             {
-                "daily_widget_id": daily_widgets[2].id,  # Yesterday's group
+                "daily_widget_id": daily_widgets[3].id,  # Yesterday's group
                 "widget_id": dashboard_widgets[3].id,  # Team Standup
                 "alarmdetails_id": alarm_details[3].id,
                 "started_at": datetime.combine(yesterday, datetime.strptime("09:00", "%H:%M").time()),
@@ -299,6 +399,48 @@ async def generate_dummy_data():
         
         await session.commit()
         print(f"✅ Created {len(alarm_activities)} alarm activities")
+        
+        # ============================================================================
+        # 6. GENERATE TODO_ITEM_ACTIVITIES (Todo activity tracking)
+        # ============================================================================
+        print("📋 Creating todo activities...")
+        todo_activities = []
+        
+        todo_activity_configs = [
+            # Today's activities
+            {
+                "daily_widget_id": daily_widgets[2].id,  # Today's todo-task group
+                "widget_id": dashboard_widgets[5].id,  # Daily Tasks
+                "tododetails_id": todo_details[0].id,
+                "status": "in progress",
+                "progress": 60,
+                "created_by": "user_001"
+            },
+            {
+                "daily_widget_id": daily_widgets[3].id,  # Today's todo-habit group
+                "widget_id": dashboard_widgets[6].id,  # Habits Tracker
+                "tododetails_id": todo_details[1].id,
+                "status": "completed",
+                "progress": 100,
+                "created_by": "user_001"
+            },
+            {
+                "daily_widget_id": daily_widgets[4].id,  # Today's todo-event group
+                "widget_id": dashboard_widgets[7].id,  # Weekly Events
+                "tododetails_id": todo_details[2].id,
+                "status": "pending",
+                "progress": 0,
+                "created_by": "user_001"
+            }
+        ]
+        
+        for config in todo_activity_configs:
+            activity = TodoItemActivity(**config)
+            todo_activities.append(activity)
+            session.add(activity)
+        
+        await session.commit()
+        print(f"✅ Created {len(todo_activities)} todo activities")
     
     await engine.dispose()
     
@@ -310,15 +452,17 @@ async def generate_dummy_data():
     print("📊 Generated data summary:")
     print(f"   📋 Dashboard Widgets: {len(dashboard_widgets)}")
     print(f"   ⏰ Alarm Details: {len(alarm_details)}")
+    print(f"   📋 Todo Details: {len(todo_details)}")
     print(f"   📅 Daily Widgets: {len(daily_widgets)}")
     print(f"   📈 Alarm Activities: {len(alarm_activities)}")
+    print(f"   📋 Todo Activities: {len(todo_activities)}")
     print("\n🔗 All foreign key relationships satisfied!")
     print("\n📅 Date ranges:")
     print(f"   - Yesterday: {yesterday}")
     print(f"   - Today: {today}")
     print(f"   - Tomorrow: {tomorrow}")
     print("\n👥 Users: user_001, user_002")
-    print("🎯 Widget Types: alarm only")
+    print("🎯 Widget Types: alarm, todo-habit, todo-task, todo-event")
     print("📊 Categories: Health, Work, Productivity")
 
 # ============================================================================

@@ -19,4 +19,5 @@ class DailyWidget(BaseModel):
     is_active = Column(Boolean, default=True)  # Indicates if the widget is active
     
     # Relationships
-    alarm_activities = relationship("AlarmItemActivity", back_populates="daily_widget", cascade="all, delete-orphan") 
+    alarm_activities = relationship("AlarmItemActivity", back_populates="daily_widget", cascade="all, delete-orphan")
+    todo_activities = relationship("TodoItemActivity", back_populates="daily_widget", cascade="all, delete-orphan") 

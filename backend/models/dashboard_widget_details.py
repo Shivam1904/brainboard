@@ -18,4 +18,5 @@ class DashboardWidgetDetails(BaseModel):
     is_permanent = Column(Boolean, default=False)  # If True, widget is automatically included in daily plans
     
     # Relationships
-    alarm_details = relationship("AlarmDetails", back_populates="dashboard_widget", cascade="all, delete-orphan") 
+    alarm_details = relationship("AlarmDetails", back_populates="dashboard_widget", cascade="all, delete-orphan")
+    todo_details = relationship("TodoDetails", back_populates="dashboard_widget", cascade="all, delete-orphan") 
