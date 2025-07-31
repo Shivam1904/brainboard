@@ -11,7 +11,7 @@ class TodoDetails(BaseModel):
     
     widget_id = Column(String, ForeignKey("dashboard_widget_details.id"), nullable=False)
     title = Column(String, nullable=False)
-    todo_type = Column(String, nullable=False)  # 'task' or 'habit'
+    todo_type = Column(String, nullable=False)  # 'todo-habit', 'todo-task', or 'todo-event'
     description = Column(Text, nullable=True)
     due_date = Column(Date, nullable=True)
     

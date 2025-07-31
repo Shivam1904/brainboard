@@ -15,6 +15,9 @@ from enum import Enum
 # ============================================================================
 class WidgetType(str, Enum):
     ALARM = "alarm"
+    TODO_HABIT = "todo-habit"
+    TODO_TASK = "todo-task"
+    TODO_EVENT = "todo-event"
 
 class Frequency(str, Enum):
     DAILY = "daily"
@@ -31,6 +34,10 @@ class CreateWidgetRequest(BaseModel):
     importance: float = Field(..., ge=0.0, le=1.0)
     title: str = Field(..., min_length=1, max_length=200)
     category: Optional[str] = Field(None, max_length=50)
+    
+    # Todo-specific fields
+    description: Optional[str] = Field(None, max_length=500, description="Description for todo widgets")
+    due_date: Optional[str] = Field(None, description="Due date for todo widgets (YYYY-MM-DD format)")
     
     # Alarm-specific fields
     alarm_time: Optional[str] = Field(None, description="Time of day for alarm (HH:MM format)")

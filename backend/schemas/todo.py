@@ -20,7 +20,7 @@ class UpdateActivityRequest(BaseModel):
 class UpdateTodoDetailsRequest(BaseModel):
     """Request schema for updating todo details."""
     title: Optional[str] = Field(None, min_length=1, max_length=200)
-    todo_type: Optional[str] = Field(None, pattern="^(task|habit)$")
+    todo_type: Optional[str] = Field(None, pattern="^(todo-habit|todo-task|todo-event)$")
     description: Optional[str] = Field(None, max_length=500)
     due_date: Optional[date] = None
 

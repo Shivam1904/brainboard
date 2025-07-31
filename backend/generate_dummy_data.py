@@ -103,7 +103,7 @@ async def generate_dummy_data():
             },
             {
                 "user_id": "user_001",
-                "widget_type": "todo",
+                "widget_type": "todo-task",
                 "frequency": "daily",
                 "importance": 0.8,
                 "title": "Daily Tasks",
@@ -113,12 +113,22 @@ async def generate_dummy_data():
             },
             {
                 "user_id": "user_001",
-                "widget_type": "todo",
+                "widget_type": "todo-habit",
                 "frequency": "daily",
                 "importance": 0.7,
                 "title": "Habits Tracker",
                 "category": "Health",
                 "is_permanent": True,
+                "created_by": "user_001"
+            },
+            {
+                "user_id": "user_001",
+                "widget_type": "todo-event",
+                "frequency": "weekly",
+                "importance": 0.6,
+                "title": "Weekly Events",
+                "category": "Productivity",
+                "is_permanent": False,
                 "created_by": "user_001"
             }
         ]
@@ -204,7 +214,7 @@ async def generate_dummy_data():
             {
                 "widget_id": dashboard_widgets[5].id,  # Daily Tasks
                 "title": "Daily Tasks",
-                "todo_type": "task",
+                "todo_type": "todo-task",
                 "description": "Complete daily work tasks",
                 "due_date": today,
                 "created_by": "user_001"
@@ -212,9 +222,17 @@ async def generate_dummy_data():
             {
                 "widget_id": dashboard_widgets[6].id,  # Habits Tracker
                 "title": "Habits Tracker",
-                "todo_type": "habit",
+                "todo_type": "todo-habit",
                 "description": "Track daily habits and routines",
                 "due_date": None,
+                "created_by": "user_001"
+            },
+            {
+                "widget_id": dashboard_widgets[7].id,  # Weekly Events
+                "title": "Weekly Events",
+                "todo_type": "todo-event",
+                "description": "Track weekly events and milestones",
+                "due_date": today + timedelta(days=7),
                 "created_by": "user_001"
             }
         ]
@@ -257,10 +275,28 @@ async def generate_dummy_data():
                 "created_by": "user_001"
             },
             {
-                "widget_ids": [dashboard_widgets[5].id, dashboard_widgets[6].id],  # Daily Tasks + Habits
-                "widget_type": "todo",
+                "widget_ids": [dashboard_widgets[5].id],  # Daily Tasks
+                "widget_type": "todo-task",
                 "priority": "HIGH",
-                "reasoning": "Daily productivity and habit tracking",
+                "reasoning": "Daily task management",
+                "date": today,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            {
+                "widget_ids": [dashboard_widgets[6].id],  # Habits
+                "widget_type": "todo-habit",
+                "priority": "HIGH",
+                "reasoning": "Daily habit tracking",
+                "date": today,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            {
+                "widget_ids": [dashboard_widgets[7].id],  # Events
+                "widget_type": "todo-event",
+                "priority": "MEDIUM",
+                "reasoning": "Weekly event tracking",
                 "date": today,
                 "is_active": True,
                 "created_by": "user_001"
@@ -373,7 +409,7 @@ async def generate_dummy_data():
         todo_activity_configs = [
             # Today's activities
             {
-                "daily_widget_id": daily_widgets[2].id,  # Today's todo group
+                "daily_widget_id": daily_widgets[2].id,  # Today's todo-task group
                 "widget_id": dashboard_widgets[5].id,  # Daily Tasks
                 "tododetails_id": todo_details[0].id,
                 "status": "in progress",
@@ -381,11 +417,19 @@ async def generate_dummy_data():
                 "created_by": "user_001"
             },
             {
-                "daily_widget_id": daily_widgets[2].id,  # Today's todo group
+                "daily_widget_id": daily_widgets[3].id,  # Today's todo-habit group
                 "widget_id": dashboard_widgets[6].id,  # Habits Tracker
                 "tododetails_id": todo_details[1].id,
                 "status": "completed",
                 "progress": 100,
+                "created_by": "user_001"
+            },
+            {
+                "daily_widget_id": daily_widgets[4].id,  # Today's todo-event group
+                "widget_id": dashboard_widgets[7].id,  # Weekly Events
+                "tododetails_id": todo_details[2].id,
+                "status": "pending",
+                "progress": 0,
                 "created_by": "user_001"
             }
         ]
@@ -418,7 +462,7 @@ async def generate_dummy_data():
     print(f"   - Today: {today}")
     print(f"   - Tomorrow: {tomorrow}")
     print("\n👥 Users: user_001, user_002")
-    print("🎯 Widget Types: alarm, todo")
+    print("🎯 Widget Types: alarm, todo-habit, todo-task, todo-event")
     print("📊 Categories: Health, Work, Productivity")
 
 # ============================================================================

@@ -36,15 +36,37 @@ WIDGET_TYPE_DEFINITIONS = {
             "is_snoozable": {"type": "boolean", "required": False, "default": True}
         }
     },
-    "todo": {
-        "id": "todo",
-        "name": "Todo Widget",
-        "description": "Manage tasks and habits with progress tracking and status updates",
+    "todo-habit": {
+        "id": "todo-habit",
+        "name": "Habit Widget",
+        "description": "Track daily habits and routines",
+        "category": "health",
+        "icon": "repeat",
+        "config_schema": {
+            "title": {"type": "string", "required": True},
+            "description": {"type": "string", "required": False}
+        }
+    },
+    "todo-task": {
+        "id": "todo-task",
+        "name": "Task Widget",
+        "description": "Manage tasks with due dates and progress tracking",
         "category": "work",
         "icon": "check-square",
         "config_schema": {
             "title": {"type": "string", "required": True},
-            "todo_type": {"type": "string", "enum": ["task", "habit"], "required": True},
+            "description": {"type": "string", "required": False},
+            "due_date": {"type": "date", "required": False}
+        }
+    },
+    "todo-event": {
+        "id": "todo-event",
+        "name": "Event Widget",
+        "description": "Track events and milestones",
+        "category": "productivity",
+        "icon": "calendar",
+        "config_schema": {
+            "title": {"type": "string", "required": True},
             "description": {"type": "string", "required": False},
             "due_date": {"type": "date", "required": False}
         }
@@ -153,7 +175,7 @@ class WidgetService:
             # Create corresponding details table entry based on widget type
             if request.widget_type == "alarm":
                 await self._create_alarm_details(widget.id, request, user_id)
-            elif request.widget_type == "todo":
+            elif request.widget_type in ["todo-habit", "todo-task", "todo-event"]:
                 await self._create_todo_details(widget.id, request, user_id)
             
             await self.db.commit()
@@ -188,12 +210,28 @@ class WidgetService:
 
     async def _create_todo_details(self, widget_id: str, request: CreateWidgetRequest, user_id: str) -> None:
         """Create todo details."""
+        # Map widget_type to todo_type
+        todo_type_mapping = {
+            "todo-habit": "todo-habit",
+            "todo-task": "todo-task", 
+            "todo-event": "todo-event"
+        }
+        
+        # Parse due_date if provided
+        due_date = None
+        if request.due_date:
+            try:
+                from datetime import datetime
+                due_date = datetime.strptime(request.due_date, "%Y-%m-%d").date()
+            except ValueError:
+                due_date = None
+        
         todo_details = TodoDetails(
             widget_id=widget_id,
             title=request.title,
-            todo_type=request.todo_type or "task",
+            todo_type=todo_type_mapping.get(request.widget_type, "todo-task"),
             description=request.description,
-            due_date=request.due_date
+            due_date=due_date
         )
         
         self.db.add(todo_details)
