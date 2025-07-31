@@ -1,22 +1,19 @@
 """
-Dependency injection configuration.
+Database dependency injection.
 """
-from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import AsyncSession
-from .session import AsyncSessionLocal
 
-async def get_db_session_dependency() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency for getting database session.
-    
-    Yields:
-        AsyncSession: Database session
-    """
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close() 
+# ============================================================================
+# IMPORTS
+# ============================================================================
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.session import get_session
+
+# ============================================================================
+# DEPENDENCY FUNCTIONS
+# ============================================================================
+async def get_db_session_dependency() -> AsyncSession:
+    """Get database session dependency."""
+    async for session in get_session():
+        yield session 

@@ -1,12 +1,29 @@
 """
-Widgets routes for listing available widget types.
+Widgets routes for user widget management.
 """
-from typing import List
-from fastapi import APIRouter
+
+# ============================================================================
+# IMPORTS
+# ============================================================================
+from typing import List, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
+from db.dependency import get_db_session_dependency
+from services.widget_service import WidgetService
+
+# ============================================================================
+# CONSTANTS
+# ============================================================================
 router = APIRouter()
 
+# Default user for development
+DEFAULT_USER_ID = "user_001"
+
+# ============================================================================
+# MODELS
+# ============================================================================
 class WidgetType(BaseModel):
     """Widget type information."""
     id: str
@@ -14,70 +31,52 @@ class WidgetType(BaseModel):
     description: str
     category: str
     icon: str
+    count: int
     config_schema: dict
 
-@router.get("/", response_model=List[WidgetType])
-async def get_available_widgets():
-    """Get list of all available widget types."""
-    widgets = [
-        WidgetType(
-            id="alarm",
-            name="Alarm Widget",
-            description="Set up alarms and reminders with custom times and snooze functionality",
-            category="reminders",
-            icon="alarm",
-            config_schema={
-                "title": {"type": "string", "required": True},
-                "description": {"type": "string", "required": False},
-                "alarm_times": {"type": "array", "items": {"type": "string"}, "required": True},
-                "target_value": {"type": "string", "required": False},
-                "is_snoozable": {"type": "boolean", "required": False, "default": True}
-            }
-        )
-    ]
-    
-    return widgets
+# ============================================================================
+# WIDGET ENDPOINTS
+# ============================================================================
+@router.get("/")
+async def get_user_widgets(
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Get all widgets for the current user."""
+    service = WidgetService(db)
+    return await service.get_user_widgets(DEFAULT_USER_ID)
 
 @router.get("/categories")
-async def get_widget_categories():
+async def get_widget_categories(
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
     """Get list of widget categories."""
-    categories = [
-        {
-            "id": "reminders",
-            "name": "Reminders",
-            "description": "Alarms, notifications, and time-based reminders"
-        }
-    ]
-    
-    return categories
+    service = WidgetService(db)
+    return await service.get_widget_categories()
 
-@router.get("/{widget_type_id}", response_model=WidgetType)
-async def get_widget_type(widget_type_id: str):
-    """Get specific widget type information."""
-    # This would typically fetch from a database or configuration
-    # For now, we'll return a simple response
-    widget_types = {
-        "alarm": WidgetType(
-            id="alarm",
-            name="Alarm Widget",
-            description="Set up alarms and reminders with custom times and snooze functionality",
-            category="reminders",
-            icon="alarm",
-            config_schema={
-                "title": {"type": "string", "required": True},
-                "description": {"type": "string", "required": False},
-                "alarm_times": {"type": "array", "items": {"type": "string"}, "required": True},
-                "target_value": {"type": "string", "required": False},
-                "is_snoozable": {"type": "boolean", "required": False, "default": True}
-            }
-        )
-    }
-    
-    if widget_type_id not in widget_types:
-        from fastapi import HTTPException, status
+@router.get("/{widget_id}")
+async def get_widget_details(
+    widget_id: str,
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Get specific widget details for the current user."""
+    try:
+        service = WidgetService(db)
+        widgets = await service.get_user_widgets(DEFAULT_USER_ID)
+        
+        # Find the specific widget
+        widget = next((w for w in widgets if w["id"] == widget_id), None)
+        
+        if not widget:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Widget {widget_id} not found for user"
+            )
+        
+        return widget
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Widget type '{widget_type_id}' not found"
-        )
-    
-    return widget_types[widget_type_id] 
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get widget details: {str(e)}"
+        ) 

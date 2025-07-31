@@ -1,48 +1,85 @@
 """
 Main FastAPI application entry point.
 """
+
+# ============================================================================
+# IMPORTS
+# ============================================================================
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routes import alarm, widgets
 
-# Create FastAPI app
+# ============================================================================
+# CONSTANTS
+# ============================================================================
+APP_TITLE = "Brainboard Backend"
+APP_DESCRIPTION = "Modular backend for Brainboard application"
+APP_VERSION = "1.0.0"
+
+# CORS settings
+CORS_ORIGINS = ["*"]  # Configure this properly for production
+CORS_CREDENTIALS = True
+CORS_METHODS = ["*"]
+CORS_HEADERS = ["*"]
+
+# API settings
+API_PREFIX_ALARMS = "/api/v1/alarms"
+API_PREFIX_WIDGETS = "/api/v1/widgets"
+API_TAG_ALARMS = "alarm"
+API_TAG_WIDGETS = "widgets"
+
+# Server settings
+HOST = "0.0.0.0"
+PORT = 8000
+
+# ============================================================================
+# FASTAPI APP
+# ============================================================================
 app = FastAPI(
-    title="Brainboard Backend",
-    description="Modular backend for Brainboard application",
-    version="1.0.0"
+    title=APP_TITLE,
+    description=APP_DESCRIPTION,
+    version=APP_VERSION
 )
 
-# Add CORS middleware
+# ============================================================================
+# MIDDLEWARE
+# ============================================================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this properly for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=CORS_CREDENTIALS,
+    allow_methods=CORS_METHODS,
+    allow_headers=CORS_HEADERS,
 )
 
-# Include routers
-app.include_router(alarm.router, prefix="/api/v1/alarms", tags=["alarm"])
-app.include_router(widgets.router, prefix="/api/v1/widgets", tags=["widgets"])
+# ============================================================================
+# ROUTERS
+# ============================================================================
+app.include_router(alarm.router, prefix=API_PREFIX_ALARMS, tags=[API_TAG_ALARMS])
+app.include_router(widgets.router, prefix=API_PREFIX_WIDGETS, tags=[API_TAG_WIDGETS])
 
-# Health check endpoint
+# ============================================================================
+# ENDPOINTS
+# ============================================================================
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "message": "Brainboard backend is running"}
+    return {"status": "healthy", "message": f"{APP_TITLE} is running"}
 
-# Root endpoint
 @app.get("/")
 async def root():
     """Root endpoint with API information."""
     return {
-        "message": "Brainboard Backend API",
-        "version": "1.0.0",
+        "message": f"{APP_TITLE} API",
+        "version": APP_VERSION,
         "docs": "/docs",
         "health": "/health"
     }
 
+# ============================================================================
+# MAIN
+# ============================================================================
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host=HOST, port=PORT) 

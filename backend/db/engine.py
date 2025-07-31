@@ -1,25 +1,42 @@
 """
 Database engine configuration.
 """
+
+# ============================================================================
+# IMPORTS
+# ============================================================================
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy.pool import StaticPool
-import os
 
-# Database URL - use environment variable or default to SQLite
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./brainboard.db")
+# ============================================================================
+# CONSTANTS
+# ============================================================================
+# Database URL for SQLite
+DATABASE_URL = "sqlite+aiosqlite:///./brainboard.db"
 
-# Create async engine
+# Engine settings
+ENGINE_ECHO = False  # Set to True for SQL query logging
+
+# SQLite specific settings
+SQLITE_CHECK_SAME_THREAD = False
+
+# ============================================================================
+# ENGINE CONFIGURATION
+# ============================================================================
 engine: AsyncEngine = create_async_engine(
     DATABASE_URL,
-    echo=False,  # Set to True for SQL query logging
+    echo=ENGINE_ECHO,
     poolclass=StaticPool,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+    connect_args={"check_same_thread": SQLITE_CHECK_SAME_THREAD}
 )
 
+# ============================================================================
+# ENGINE FUNCTIONS
+# ============================================================================
 async def get_engine() -> AsyncEngine:
     """Get the database engine."""
     return engine
 
-async def dispose_engine():
-    """Dispose of the database engine."""
+async def close_engine():
+    """Close the database engine."""
     await engine.dispose() 
