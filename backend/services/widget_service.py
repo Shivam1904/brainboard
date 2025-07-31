@@ -11,7 +11,8 @@ from typing import List, Dict, Any, Optional
 import logging
 
 from models.dashboard_widget_details import DashboardWidgetDetails
-from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse
+from models.alarm_details import AlarmDetails
+from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse
 
 # ============================================================================
 # CONSTANTS
@@ -115,4 +116,56 @@ class WidgetService:
             return [WidgetResponse.model_validate(widget) for widget in widgets]
         except Exception as e:
             logger.error(f"Error getting user widgets: {e}")
-            raise 
+            raise
+
+    async def create_widget(self, request: CreateWidgetRequest, user_id: str) -> CreateWidgetResponse:
+        """Create a new dashboard widget with all necessary details."""
+        try:
+            # Create new dashboard widget
+            widget = DashboardWidgetDetails(
+                user_id=user_id,
+                widget_type=request.widget_type,
+                frequency=request.frequency,
+                importance=request.importance,
+                title=request.title,
+                category=request.category,
+                created_by=user_id
+            )
+            
+            self.db.add(widget)
+            await self.db.commit()
+            await self.db.refresh(widget)
+            
+            # Create corresponding details table entry based on widget type
+            if request.widget_type == "alarm":
+                await self._create_alarm_details(widget.id, request, user_id)
+            
+            await self.db.commit()
+            
+            return CreateWidgetResponse(
+                success=True,
+                message="Widget created successfully",
+                widget_id=widget.id,
+                widget_type=widget.widget_type,
+                title=widget.title
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to create widget for user {user_id}: {e}")
+            await self.db.rollback()
+            raise
+
+    async def _create_alarm_details(self, widget_id: str, request: CreateWidgetRequest, user_id: str) -> None:
+        """Create alarm details."""
+        # Use provided alarm time or default to 09:00
+        alarm_times = [request.alarm_time] if request.alarm_time else ["09:00"]
+        
+        alarm_details = AlarmDetails(
+            widget_id=widget_id,
+            title=request.title,
+            alarm_times=alarm_times
+        )
+        
+        self.db.add(alarm_details)
+        await self.db.commit()
+        await self.db.refresh(alarm_details) 
