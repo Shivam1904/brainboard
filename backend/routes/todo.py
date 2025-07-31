@@ -134,4 +134,17 @@ async def get_user_todos(
         service = TodoService(db)
         return await service.get_user_todos(user_id)
     except Exception as e:
-        raise raise_database_error(f"Failed to get user todos: {str(e)}") 
+        raise raise_database_error(f"Failed to get user todos: {str(e)}")
+
+@router.get("/getTodoList/{todo_type}")
+async def get_todo_list_by_type(
+    todo_type: str,
+    user_id: str = Depends(get_default_user_id),
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Get todos by type (todo-habit, todo-task, todo-event)."""
+    try:
+        service = TodoService(db)
+        return await service.get_todos_by_type(user_id, todo_type)
+    except Exception as e:
+        raise raise_database_error(f"Failed to get todos by type: {str(e)}") 

@@ -42,6 +42,13 @@ class CreateWidgetRequest(BaseModel):
     # Alarm-specific fields
     alarm_time: Optional[str] = Field(None, description="Time of day for alarm (HH:MM format)")
 
+class UpdateWidgetRequest(BaseModel):
+    """Request schema for updating a dashboard widget"""
+    frequency: Optional[Frequency] = None
+    importance: Optional[float] = Field(None, ge=0.0, le=1.0)
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    category: Optional[str] = Field(None, max_length=50)
+
 # ============================================================================
 # RESPONSE SCHEMAS
 # ============================================================================

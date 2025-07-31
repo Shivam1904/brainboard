@@ -288,6 +288,41 @@ class TodoService:
             logger.error(f"Error getting user todos: {e}")
             return {"success": False, "message": f"Failed to get user todos: {str(e)}"}
 
+    async def get_todos_by_type(self, user_id: str, todo_type: str) -> Dict[str, Any]:
+        """Get todos by type (todo-habit, todo-task, todo-event)."""
+        try:
+            from models.dashboard_widget_details import DashboardWidgetDetails
+            
+            # Get todos of specific type for the user
+            stmt = select(TodoDetails).join(DashboardWidgetDetails).where(
+                DashboardWidgetDetails.user_id == user_id,
+                TodoDetails.todo_type == todo_type
+            )
+            result = await self.db.execute(stmt)
+            todos = result.scalars().all()
+            
+            return {
+                "success": True,
+                "todo_type": todo_type,
+                "todos": [
+                    {
+                        "id": todo.id,
+                        "widget_id": todo.widget_id,
+                        "title": todo.title,
+                        "todo_type": todo.todo_type,
+                        "description": todo.description,
+                        "due_date": todo.due_date.isoformat() if todo.due_date else None,
+                        "created_at": todo.created_at.isoformat() if todo.created_at else None,
+                        "updated_at": todo.updated_at.isoformat() if todo.updated_at else None
+                    }
+                    for todo in todos
+                ]
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting todos by type: {e}")
+            return {"success": False, "message": f"Failed to get todos by type: {str(e)}"}
+
     async def update_todo_details(self, todo_details_id: str, user_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update todo details."""
         try:

@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from db.dependency import get_db_session_dependency
 from services.widget_service import WidgetService
-from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse
+from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse, UpdateWidgetRequest
 from utils.errors import raise_not_found, raise_database_error
 
 # ============================================================================
@@ -74,4 +74,17 @@ async def get_widget_details(
     except HTTPException:
         raise
     except Exception as e:
-        raise raise_database_error(f"Failed to get widget details: {str(e)}") 
+        raise raise_database_error(f"Failed to get widget details: {str(e)}")
+
+@router.post("/updateDetails/{widget_id}")
+async def update_widget_details(
+    widget_id: str,
+    request: UpdateWidgetRequest,
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Update widget details."""
+    try:
+        service = WidgetService(db)
+        return await service.update_widget(widget_id, request, DEFAULT_USER_ID)
+    except Exception as e:
+        raise raise_database_error(f"Failed to update widget: {str(e)}") 

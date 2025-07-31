@@ -13,7 +13,7 @@ import logging
 from models.dashboard_widget_details import DashboardWidgetDetails
 from models.alarm_details import AlarmDetails
 from models.todo_details import TodoDetails
-from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse
+from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse, UpdateWidgetRequest
 
 # ============================================================================
 # CONSTANTS
@@ -236,4 +236,46 @@ class WidgetService:
         
         self.db.add(todo_details)
         await self.db.commit()
-        await self.db.refresh(todo_details) 
+        await self.db.refresh(todo_details)
+
+    async def update_widget(self, widget_id: str, request: UpdateWidgetRequest, user_id: str) -> Dict[str, Any]:
+        """Update widget details."""
+        try:
+            # Get the widget
+            stmt = select(DashboardWidgetDetails).where(
+                DashboardWidgetDetails.id == widget_id,
+                DashboardWidgetDetails.user_id == user_id
+            )
+            result = await self.db.execute(stmt)
+            widget = result.scalar_one_or_none()
+            
+            if not widget:
+                raise ValueError(f"Widget {widget_id} not found for user {user_id}")
+            
+            # Update fields if provided
+            if request.frequency is not None:
+                widget.frequency = request.frequency
+            if request.importance is not None:
+                widget.importance = request.importance
+            if request.title is not None:
+                widget.title = request.title
+            if request.category is not None:
+                widget.category = request.category
+            
+            widget.updated_by = user_id
+            
+            await self.db.commit()
+            await self.db.refresh(widget)
+            
+            return {
+                "success": True,
+                "message": "Widget updated successfully",
+                "widget_id": widget.id,
+                "widget_type": widget.widget_type,
+                "title": widget.title
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to update widget {widget_id} for user {user_id}: {e}")
+            await self.db.rollback()
+            raise 
