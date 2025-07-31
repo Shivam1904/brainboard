@@ -370,7 +370,7 @@ class TodoService:
             
             # Get today's daily widgets for this todo type
             stmt = select(DailyWidget).where(
-                DailyWidget.widget_type == todo_type,
+                DailyWidget.widget_type == 'todo-'+todo_type,
                 DailyWidget.date == today
             )
             result = await self.db.execute(stmt)
@@ -463,4 +463,57 @@ class TodoService:
             }
         except Exception as e:
             logger.error(f"Error getting todo item details and activity: {e}")
-            return {"success": False, "message": f"Failed to get todo item details and activity: {str(e)}"} 
+            return {"success": False, "message": f"Failed to get todo item details and activity: {str(e)}"}
+
+    async def create_todo_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Create todo activity entry for today's dashboard"""
+        try:
+            # Get todo details for the widget
+            stmt = select(TodoDetails).where(TodoDetails.widget_id == widget_id)
+            result = await self.db.execute(stmt)
+            todo_details = result.scalars().first()
+            
+            if not todo_details:
+                logger.warning(f"No todo details found for widget {widget_id}")
+                return None
+            
+            # Check if activity already exists for this widget in this daily widget
+            stmt = select(TodoItemActivity).where(
+                TodoItemActivity.daily_widget_id == daily_widget_id,
+                TodoItemActivity.widget_id == widget_id
+            )
+            result = await self.db.execute(stmt)
+            existing_activity = result.scalars().first()
+            
+            if existing_activity:
+                logger.info(f"Todo activity already exists for widget {widget_id} in daily widget {daily_widget_id}")
+                return {
+                    "activity_id": existing_activity.id,
+                    "status": existing_activity.status,
+                    "progress": existing_activity.progress
+                }
+            
+            # Create new activity entry
+            activity = TodoItemActivity(
+                daily_widget_id=daily_widget_id,
+                widget_id=widget_id,
+                tododetails_id=todo_details.id,
+                status="pending",
+                progress=0,
+                created_by=user_id
+            )
+            
+            self.db.add(activity)
+            await self.db.flush()  # Get the ID
+            
+            logger.info(f"Created todo activity {activity.id} for widget {widget_id}")
+            
+            return {
+                "activity_id": activity.id,
+                "status": activity.status,
+                "progress": activity.progress
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating todo activity for widget {widget_id}: {e}")
+            return None 

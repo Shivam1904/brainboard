@@ -17,11 +17,11 @@ export const API_CONFIG = {
   
   // Todo widget endpoints
   todo: {
-    getTodayTodoList: '/api/v1/widgets/todo/getTodayTodoList', // Get today's todo list
-    updateActivity: '/api/v1/widgets/todo/updateActivity', // Update todo activity
-    getTodoItemDetailsAndActivity: '/api/v1/widgets/todo/getTodoItemDetailsAndActivity', // Get todo details and activity
-    getTodoDetails: '/api/v1/widgets/todo/getTodoDetails', // Get todo details
-    updateDetails: '/api/v1/widgets/todo/updateDetails', // Update todo details
+    getTodayTodoList: '/api/v1/todo/getTodayTodoList', // Get today's todo list
+    updateActivity: '/api/v1/todo/updateActivity', // Update todo activity
+    getTodoItemDetailsAndActivity: '/api/v1/todo/getTodoItemDetailsAndActivity', // Get todo details and activity
+    getTodoDetails: '/api/v1/todo/getTodoDetails', // Get todo details
+    updateDetails: '/api/v1/todo/updateDetails', // Update todo details
   },
   
   // Alarm widget endpoints

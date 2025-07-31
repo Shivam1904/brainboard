@@ -4,6 +4,7 @@ Service Factory for creating service instances
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from .alarm_service import AlarmService
+from .todo_service import TodoService
 
 class ServiceFactory:
     """Factory for creating service instances"""
@@ -46,15 +47,6 @@ class ServiceFactory:
             self._websearch_service = WebSearchService(self.db)
         return self._websearch_service
 
-# Placeholder services for now
-class TodoService:
-    def __init__(self, db: AsyncSession):
-        self.db = db
-    
-    async def create_todo_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str):
-        """Placeholder for todo activity creation"""
-        # TODO: Implement when todo models are available
-        return None
 
 class SingleItemTrackerService:
     def __init__(self, db: AsyncSession):
