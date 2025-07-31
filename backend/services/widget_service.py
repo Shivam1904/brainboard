@@ -12,6 +12,7 @@ import logging
 
 from models.dashboard_widget_details import DashboardWidgetDetails
 from models.alarm_details import AlarmDetails
+from models.todo_details import TodoDetails
 from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse
 
 # ============================================================================
@@ -33,6 +34,19 @@ WIDGET_TYPE_DEFINITIONS = {
             "alarm_times": {"type": "array", "items": {"type": "string"}, "required": True},
             "target_value": {"type": "string", "required": False},
             "is_snoozable": {"type": "boolean", "required": False, "default": True}
+        }
+    },
+    "todo": {
+        "id": "todo",
+        "name": "Todo Widget",
+        "description": "Manage tasks and habits with progress tracking and status updates",
+        "category": "work",
+        "icon": "check-square",
+        "config_schema": {
+            "title": {"type": "string", "required": True},
+            "todo_type": {"type": "string", "enum": ["task", "habit"], "required": True},
+            "description": {"type": "string", "required": False},
+            "due_date": {"type": "date", "required": False}
         }
     }
 }
@@ -139,6 +153,8 @@ class WidgetService:
             # Create corresponding details table entry based on widget type
             if request.widget_type == "alarm":
                 await self._create_alarm_details(widget.id, request, user_id)
+            elif request.widget_type == "todo":
+                await self._create_todo_details(widget.id, request, user_id)
             
             await self.db.commit()
             
@@ -168,4 +184,18 @@ class WidgetService:
         
         self.db.add(alarm_details)
         await self.db.commit()
-        await self.db.refresh(alarm_details) 
+        await self.db.refresh(alarm_details)
+
+    async def _create_todo_details(self, widget_id: str, request: CreateWidgetRequest, user_id: str) -> None:
+        """Create todo details."""
+        todo_details = TodoDetails(
+            widget_id=widget_id,
+            title=request.title,
+            todo_type=request.todo_type or "task",
+            description=request.description,
+            due_date=request.due_date
+        )
+        
+        self.db.add(todo_details)
+        await self.db.commit()
+        await self.db.refresh(todo_details) 
