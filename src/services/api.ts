@@ -2,8 +2,6 @@
 // This service matches the actual backend API endpoints exactly
 
 import { 
-  TodayWidgetsResponse,
-  AllWidgetsResponse,
   TodoTodayResponse,
   TodoDetailsAndActivityResponse,
   TodoDetailsResponse,
@@ -16,17 +14,17 @@ import {
   WebSearchAISummaryResponse,
   ApiWidgetType,
   ApiFrequency,
-  ApiPriority,
   ApiCategory,
   TodoStatus,
-  WebSearchStatus
+  WebSearchStatus,
+  DailyWidget
 } from '../types';
-
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+import { API_CONFIG, buildApiUrl } from '../config/api';
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    // Check if endpoint is already a full URL (starts with http)
+    const url = endpoint.startsWith('http') ? endpoint : buildApiUrl(endpoint);
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
@@ -47,14 +45,15 @@ class ApiService {
   // ============================================================================
 
   // GET /api/v1/dashboard/getTodayWidgetList
-  async getTodayWidgetList(targetDate?: string): Promise<TodayWidgetsResponse> {
-    const params = targetDate ? `?target_date=${targetDate}` : '';
-    return this.request<TodayWidgetsResponse>(`/dashboard/getTodayWidgetList${params}`);
+  async getTodayWidgetList(targetDate?: string): Promise<DailyWidget[]> {
+    const params = targetDate ? { target_date: targetDate } : undefined;
+    const url = buildApiUrl(API_CONFIG.dashboard.getTodayWidgets, params);
+    return this.request<DailyWidget[]>(url);
   }
 
   // GET /api/v1/dashboard/getAllWidgetList
-  async getAllWidgetList(): Promise<AllWidgetsResponse> {
-    return this.request<AllWidgetsResponse>('/dashboard/getAllWidgetList');
+  async getAllWidgetList(): Promise<DailyWidget[]> {
+    return this.request<DailyWidget[]>(API_CONFIG.dashboard.getAllWidgets);
   }
 
   // POST /api/v1/dashboard/widget/addnew
@@ -77,7 +76,7 @@ class ApiService {
     widget_type: string;
     title: string;
   }> {
-    return this.request('/dashboard/widget/addnew', {
+    return this.request(API_CONFIG.dashboard.addNewWidget, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -91,7 +90,8 @@ class ApiService {
     widget_type: string;
     title: string;
   }> {
-    return this.request(`/dashboard/widget/addtotoday/${widgetId}`, {
+    const url = buildApiUrl(`${API_CONFIG.dashboard.addWidgetToToday}/${widgetId}`);
+    return this.request(url, {
       method: 'POST',
     });
   }
@@ -116,7 +116,8 @@ class ApiService {
     widget_type: string;
     title: string;
   }> {
-    return this.request(`/dashboard/widget/updateWidgetDetails/${widgetId}`, {
+    const url = buildApiUrl(`${API_CONFIG.dashboard.updateWidget}/${widgetId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -134,7 +135,8 @@ class ApiService {
     widget_type: string;
     title: string;
   }> {
-    return this.request(`/dashboard/widget/updateDetails/${widgetId}`, {
+    const url = buildApiUrl(`${API_CONFIG.dashboard.updateWidgetDetails}/${widgetId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -146,9 +148,9 @@ class ApiService {
     daily_widget_id: string;
     is_active: boolean;
   }> {
-    return this.request(`/dashboard/widgets/updateDailyWidget/${dailyWidgetId}`, {
-      method: 'POST',
-      body: JSON.stringify({ is_active: isActive }),
+    const url = buildApiUrl(`${API_CONFIG.dashboard.removeWidgetFromToday}/${dailyWidgetId}`);
+    return this.request(url, {
+      method: 'POST'
     });
   }
 
@@ -165,7 +167,8 @@ class ApiService {
     }>;
     total_todos: number;
   }> {
-    return this.request(`/dashboard/getTodoList/${todoType}`);
+    const url = buildApiUrl(`${API_CONFIG.dashboard.getTodoList}/${todoType}`);
+    return this.request(url);
   }
 
   // ============================================================================
@@ -174,7 +177,8 @@ class ApiService {
 
   // GET /api/v1/widgets/todo/getTodayTodoList/{todo_type}
   async getTodayTodoList(todoType: 'habit' | 'task' | 'event'): Promise<TodoTodayResponse> {
-    return this.request<TodoTodayResponse>(`/widgets/todo/getTodayTodoList/${todoType}`);
+    const url = buildApiUrl(`${API_CONFIG.todo.getTodayTodoList}/${todoType}`);
+    return this.request<TodoTodayResponse>(url);
   }
 
   // POST /api/v1/widgets/todo/updateActivity/{activity_id}
@@ -188,7 +192,8 @@ class ApiService {
     progress: number;
     updated_at: string;
   }> {
-    return this.request(`/widgets/todo/updateActivity/${activityId}`, {
+    const url = buildApiUrl(`${API_CONFIG.todo.updateActivity}/${activityId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -196,12 +201,14 @@ class ApiService {
 
   // GET /api/v1/widgets/todo/getTodoItemDetailsAndActivity/{daily_widget_id}/{widget_id}
   async getTodoItemDetailsAndActivity(dailyWidgetId: string, widgetId: string): Promise<TodoDetailsAndActivityResponse> {
-    return this.request<TodoDetailsAndActivityResponse>(`/widgets/todo/getTodoItemDetailsAndActivity/${dailyWidgetId}/${widgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.todo.getTodoItemDetailsAndActivity}/${dailyWidgetId}/${widgetId}`);
+    return this.request<TodoDetailsAndActivityResponse>(url);
   }
 
   // GET /api/v1/widgets/todo/getTodoDetails/{widget_id}
   async getTodoDetails(widgetId: string): Promise<TodoDetailsResponse> {
-    return this.request<TodoDetailsResponse>(`/widgets/todo/getTodoDetails/${widgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.todo.getTodoDetails}/${widgetId}`);
+    return this.request<TodoDetailsResponse>(url);
   }
 
   // POST /api/v1/widgets/todo/updateDetails/{todo_details_id}
@@ -211,7 +218,8 @@ class ApiService {
     due_date: string;
     todo_type: 'habit' | 'task' | 'event';
   }): Promise<TodoDetailsResponse> {
-    return this.request(`/widgets/todo/updateDetails/${todoDetailsId}`, {
+    const url = buildApiUrl(`${API_CONFIG.todo.updateDetails}/${todoDetailsId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -223,7 +231,8 @@ class ApiService {
 
   // GET /api/v1/widgets/alarm/getAlarmDetailsAndActivity/{widget_id}
   async getAlarmDetailsAndActivity(widgetId: string): Promise<AlarmDetailsAndActivityResponse> {
-    return this.request<AlarmDetailsAndActivityResponse>(`/widgets/alarm/getAlarmDetailsAndActivity/${widgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.alarm.getAlarmDetailsAndActivity}/${widgetId}`);
+    return this.request<AlarmDetailsAndActivityResponse>(url);
   }
 
   // POST /api/v1/widgets/alarm/snoozeAlarm/{activity_id}
@@ -234,7 +243,8 @@ class ApiService {
     snooze_count: number;
     updated_at: string;
   }> {
-    return this.request(`/widgets/alarm/snoozeAlarm/${activityId}?snooze_minutes=${snoozeMinutes}`, {
+    const url = buildApiUrl(`${API_CONFIG.alarm.snoozeAlarm}/${activityId}`, { snooze_minutes: snoozeMinutes.toString() });
+    return this.request(url, {
       method: 'POST',
     });
   }
@@ -246,7 +256,8 @@ class ApiService {
     snooze_until: null;
     updated_at: string;
   }> {
-    return this.request(`/widgets/alarm/stopAlarm/${activityId}`, {
+    const url = buildApiUrl(`${API_CONFIG.alarm.stopAlarm}/${activityId}`);
+    return this.request(url, {
       method: 'POST',
     });
   }
@@ -262,7 +273,8 @@ class ApiService {
     snoozed_at?: string;
     updated_at: string;
   }> {
-    return this.request(`/widgets/alarm/updateActivity/${activityId}`, {
+    const url = buildApiUrl(`${API_CONFIG.alarm.updateActivity}/${activityId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -270,7 +282,8 @@ class ApiService {
 
   // GET /api/v1/widgets/alarm/getAlarmDetails/{widget_id}
   async getAlarmDetails(widgetId: string): Promise<AlarmDetailsResponse> {
-    return this.request<AlarmDetailsResponse>(`/widgets/alarm/getAlarmDetails/${widgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.alarm.getAlarmDetails}/${widgetId}`);
+    return this.request<AlarmDetailsResponse>(url);
   }
 
   // POST /api/v1/widgets/alarm/updateDetails/{alarm_details_id}
@@ -281,7 +294,8 @@ class ApiService {
     target_value?: string;
     is_snoozable?: boolean;
   }): Promise<AlarmDetailsResponse> {
-    return this.request(`/widgets/alarm/updateDetails/${alarmDetailsId}`, {
+    const url = buildApiUrl(`${API_CONFIG.alarm.updateDetails}/${alarmDetailsId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -293,7 +307,8 @@ class ApiService {
 
   // GET /api/v1/widgets/single-item-tracker/getTrackerDetailsAndActivity/{widget_id}
   async getTrackerDetailsAndActivity(widgetId: string): Promise<TrackerDetailsAndActivityResponse> {
-    return this.request<TrackerDetailsAndActivityResponse>(`/widgets/single-item-tracker/getTrackerDetailsAndActivity/${widgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.getTrackerDetailsAndActivity}/${widgetId}`);
+    return this.request<TrackerDetailsAndActivityResponse>(url);
   }
 
   // POST /api/v1/widgets/single-item-tracker/updateActivity/{activity_id}
@@ -307,7 +322,8 @@ class ApiService {
     time_added?: string;
     updated_at: string;
   }> {
-    return this.request(`/widgets/single-item-tracker/updateActivity/${activityId}`, {
+    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.updateActivity}/${activityId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -315,7 +331,8 @@ class ApiService {
 
   // GET /api/v1/widgets/single-item-tracker/getTrackerDetails/{widget_id}
   async getTrackerDetails(widgetId: string): Promise<TrackerDetailsResponse> {
-    return this.request<TrackerDetailsResponse>(`/widgets/single-item-tracker/getTrackerDetails/${widgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.getTrackerDetails}/${widgetId}`);
+    return this.request<TrackerDetailsResponse>(url);
   }
 
   // POST /api/v1/widgets/single-item-tracker/updateDetails/{tracker_details_id}
@@ -325,7 +342,8 @@ class ApiService {
     value_unit: string;
     target_value: string;
   }): Promise<TrackerDetailsResponse> {
-    return this.request(`/widgets/single-item-tracker/updateDetails/${trackerDetailsId}`, {
+    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.updateDetails}/${trackerDetailsId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -337,7 +355,8 @@ class ApiService {
 
   // GET /api/v1/widgets/websearch/getSummaryAndActivity/{widget_id}
   async getWebSearchSummaryAndActivity(widgetId: string): Promise<WebSearchSummaryAndActivityResponse> {
-    return this.request<WebSearchSummaryAndActivityResponse>(`/widgets/websearch/getSummaryAndActivity/${widgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.webSearch.getSummaryAndActivity}/${widgetId}`);
+    return this.request<WebSearchSummaryAndActivityResponse>(url);
   }
 
   // POST /api/v1/widgets/websearch/updateActivity/{activity_id}
@@ -355,7 +374,8 @@ class ApiService {
     source_json?: any;
     updated_at: string;
   }> {
-    return this.request(`/widgets/websearch/updateActivity/${activityId}`, {
+    const url = buildApiUrl(`${API_CONFIG.webSearch.updateActivity}/${activityId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -363,14 +383,16 @@ class ApiService {
 
   // GET /api/v1/widgets/websearch/getWebsearchDetails/{widget_id}
   async getWebSearchDetails(widgetId: string): Promise<WebSearchDetailsResponse> {
-    return this.request<WebSearchDetailsResponse>(`/widgets/websearch/getWebsearchDetails/${widgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.webSearch.getWebsearchDetails}/${widgetId}`);
+    return this.request<WebSearchDetailsResponse>(url);
   }
 
   // POST /api/v1/widgets/websearch/updateDetails/{websearch_details_id}
   async updateWebSearchDetails(webSearchDetailsId: string, data: {
     title: string;
   }): Promise<WebSearchDetailsResponse> {
-    return this.request(`/widgets/websearch/updateDetails/${webSearchDetailsId}`, {
+    const url = buildApiUrl(`${API_CONFIG.webSearch.updateDetails}/${webSearchDetailsId}`);
+    return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -378,7 +400,8 @@ class ApiService {
 
   // GET /api/v1/widgets/websearch/getaisummary/{widget_id}
   async getWebSearchAISummary(widgetId: string): Promise<WebSearchAISummaryResponse> {
-    return this.request<WebSearchAISummaryResponse>(`/widgets/websearch/getaisummary/${widgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.webSearch.getAISummary}/${widgetId}`);
+    return this.request<WebSearchAISummaryResponse>(url);
   }
 
   // ============================================================================
@@ -391,7 +414,7 @@ class ApiService {
     service: string;
     version: string;
   }> {
-    return this.request('/health');
+    return this.request(API_CONFIG.health.getHealth);
   }
 
   // GET /api/v1/health/detailed
@@ -404,7 +427,7 @@ class ApiService {
       ai_services: string;
     };
   }> {
-    return this.request('/health/detailed');
+    return this.request(API_CONFIG.health.getDetailedHealth);
   }
 }
 

@@ -23,6 +23,23 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
   const [addingToToday, setAddingToToday] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
+  // Helper function to extract today widget IDs from API response
+  const extractTodayWidgetIds = (todayWidgetsResponse: any[]): string[] => {
+    let todayIds: string[] = [];
+    if (Array.isArray(todayWidgetsResponse)) {
+      todayWidgetsResponse.forEach((dailyWidget: any) => {
+        if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
+          // Old structure: dailyWidget.widget_ids is an array
+          todayIds.push(...dailyWidget.widget_ids);
+        } else if (dailyWidget.widget_id) {
+          // New structure: dailyWidget.widget_id is a single ID
+          todayIds.push(dailyWidget.widget_id);
+        }
+      });
+    }
+    return todayIds;
+  };
+
   // Load widgets from API using getAllWidgetList
   useEffect(() => {
     const loadWidgets = async () => {
@@ -37,24 +54,20 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
         ]);
         
         console.log('All widgets response:', allWidgetsResponse);
-        console.log('Today widgets response:', todayWidgetsResponse);
         
         // Extract widget IDs that are already in today's dashboard
-        const todayIds: string[] = [];
-        todayWidgetsResponse.widgets.forEach((dailyWidget: any) => {
-          if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
-            todayIds.push(...dailyWidget.widget_ids);
-          }
-        });
+        const todayIds = extractTodayWidgetIds(todayWidgetsResponse);
         setTodayWidgetIds(todayIds);
+        console.log('Today widgets ids:', todayIds);
+        console.log('Today widgets response:', todayWidgetsResponse);
         
         // If no widgets from API, use dummy data
-        if (allWidgetsResponse.widgets.length === 0) {
+        if (allWidgetsResponse.length === 0) {
           console.log('No widgets found, using dummy data');
           const dummyWidgets = getDummyAllSchedulesWidgets();
           setWidgets(dummyWidgets as any);
         } else {
-          setWidgets(allWidgetsResponse.widgets);
+          setWidgets(allWidgetsResponse);
         }
       } catch (err) {
         console.error('Failed to load widgets:', err);
@@ -163,7 +176,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
   const handleFormSuccess = async () => {
     try {
       const response = await dashboardService.getAllWidgets();
-      setWidgets(response.widgets);
+      setWidgets(response);
     } catch (err) {
       console.error('Failed to refresh widgets after edit:', err);
     }
@@ -179,12 +192,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
       
       // Refresh today's widgets to update the list
       const todayWidgetsResponse = await dashboardService.getTodayWidgets();
-      const todayIds: string[] = [];
-      todayWidgetsResponse.widgets.forEach((dailyWidget: any) => {
-        if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
-          todayIds.push(...dailyWidget.widget_ids);
-        }
-      });
+      const todayIds = extractTodayWidgetIds(todayWidgetsResponse);
       setTodayWidgetIds(todayIds);
       
       // Show success message

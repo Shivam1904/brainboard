@@ -70,9 +70,9 @@ async def add_widget_to_today(
     except Exception as e:
         raise raise_database_error(f"Failed to add widget to today: {str(e)}")
 
-@router.delete("/widget/removefromtoday/{widget_id}", response_model=RemoveWidgetFromTodayResponse)
+@router.post("/widget/removefromtoday/{daily_widget_id}", response_model=RemoveWidgetFromTodayResponse)
 async def remove_widget_from_today(
-    widget_id: str,
+    daily_widget_id: str,
     target_date: Optional[date] = Query(None, description="Date to remove widget from (defaults to today)"),
     user_id: str = Depends(get_default_user_id),
     db: AsyncSession = Depends(get_db_session_dependency)
@@ -83,6 +83,6 @@ async def remove_widget_from_today(
             target_date = date.today()
         
         service = DailyWidgetService(db)
-        return await service.remove_widget_from_today(widget_id, user_id, target_date)
+        return await service.remove_widget_from_today(daily_widget_id, user_id, target_date)
     except Exception as e:
         raise raise_database_error(f"Failed to remove widget from today: {str(e)}") 

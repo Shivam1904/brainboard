@@ -41,7 +41,8 @@ class ChatOrchestrator:
         self, 
         user_message: str, 
         user_id: str, 
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
+        websocket_callback: Optional[callable] = None
     ) -> Dict[str, Any]:
         """
         Process a user message and return AI response.
@@ -55,6 +56,10 @@ class ChatOrchestrator:
             Response dictionary with message, session info, and status
         """
         try:
+            # Send session management step
+            if websocket_callback:
+                await websocket_callback("session_management", "Initializing session...")
+            
             # Get or create session
             session = self.session_service.get_or_create_session(session_id, user_id)
             
@@ -64,10 +69,10 @@ class ChatOrchestrator:
             # Determine if this is a new conversation or continuation
             if not session.current_intent:
                 # New conversation - recognize intent
-                return await self._handle_new_conversation(session, user_message)
+                return await self._handle_new_conversation(session, user_message, websocket_callback)
             else:
                 # Continuing conversation - extract parameters
-                return await self._handle_continuing_conversation(session, user_message)
+                return await self._handle_continuing_conversation(session, user_message, websocket_callback)
                 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
@@ -78,13 +83,20 @@ class ChatOrchestrator:
                 "error": str(e)
             }
     
-    async def _handle_new_conversation(self, session: SessionMemory, user_message: str) -> Dict[str, Any]:
+    async def _handle_new_conversation(self, session: SessionMemory, user_message: str, websocket_callback: Optional[callable] = None) -> Dict[str, Any]:
         """Handle a new conversation by recognizing intent."""
+        # Send intent recognition step
+        if websocket_callback:
+            await websocket_callback("intent_recognition", "Analyzing your request...")
+        
         # Try intent recognition with fallback mechanism
         max_fallback_attempts = 3
         intent_response = None
         
         for attempt in range(max_fallback_attempts + 1):
+            if attempt > 0 and websocket_callback:
+                await websocket_callback("intent_processing", f"Retrying intent recognition (attempt {attempt + 1})...")
+            
             intent_response = await self.intent_service.recognize_intent(user_message, attempt)
             
             if intent_response and intent_response.intent != "unknown":
@@ -113,6 +125,10 @@ class ChatOrchestrator:
                 "fallback_attempt": max_fallback_attempts
             }
         
+        # Send parameter extraction step
+        if websocket_callback:
+            await websocket_callback("parameter_extraction", "Extracting parameters from your request...")
+        
         # Store intent and parameters
         session.current_intent = intent_response.intent
         session.original_message = user_message
@@ -128,6 +144,10 @@ class ChatOrchestrator:
         self.session_service.save_session(session)
         
         if missing_params:
+            # Send follow-up generation step
+            if websocket_callback:
+                await websocket_callback("response_generation", "Generating follow-up question...")
+            
             # Generate follow-up question
             followup_question = await self.ai_service.generate_followup_question(
                 intent_response.intent, missing_params, user_message
@@ -148,10 +168,14 @@ class ChatOrchestrator:
             }
         else:
             # Execute tool
-            return await self._execute_tool_and_respond(session)
+            return await self._execute_tool_and_respond(session, websocket_callback)
     
-    async def _handle_continuing_conversation(self, session: SessionMemory, user_message: str) -> Dict[str, Any]:
+    async def _handle_continuing_conversation(self, session: SessionMemory, user_message: str, websocket_callback: Optional[callable] = None) -> Dict[str, Any]:
         """Handle continuing conversation by extracting parameters."""
+        # Send parameter extraction step
+        if websocket_callback:
+            await websocket_callback("parameter_extraction", "Extracting additional parameters...")
+        
         # Extract additional parameters from follow-up message
         param_response = await self.intent_service.extract_parameters(
             user_message, 
@@ -175,6 +199,10 @@ class ChatOrchestrator:
         self.session_service.save_session(session)
         
         if missing_params:
+            # Send follow-up generation step
+            if websocket_callback:
+                await websocket_callback("response_generation", "Generating follow-up question...")
+            
             # Still missing parameters - generate follow-up question
             followup_question = await self.ai_service.generate_followup_question(
                 session.current_intent, missing_params, user_message
@@ -195,11 +223,15 @@ class ChatOrchestrator:
             }
         else:
             # Execute tool
-            return await self._execute_tool_and_respond(session)
+            return await self._execute_tool_and_respond(session, websocket_callback)
     
-    async def _execute_tool_and_respond(self, session: SessionMemory) -> Dict[str, Any]:
+    async def _execute_tool_and_respond(self, session: SessionMemory, websocket_callback: Optional[callable] = None) -> Dict[str, Any]:
         """Execute tool and generate response."""
         try:
+            # Send tool execution step
+            if websocket_callback:
+                await websocket_callback("tool_execution", "Executing your request...")
+            
             # Prepare parameters for tool execution
             tool_params = {
                 "intent": session.current_intent,
@@ -208,6 +240,10 @@ class ChatOrchestrator:
             
             # Execute tool
             result = await self.tool_registry.execute_tool("alarm_tool", tool_params, session.user_id)
+            
+            # Send response generation step
+            if websocket_callback:
+                await websocket_callback("response_generation", "Generating final response...")
             
             # Generate confirmation message
             confirmation = await self.ai_service.generate_confirmation(session.current_intent, result)

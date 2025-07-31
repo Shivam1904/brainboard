@@ -26,13 +26,15 @@ DEFAULT_USER_ID = "user_001"
 # ============================================================================
 # WIDGET ENDPOINTS
 # ============================================================================
-@router.get("/", response_model=List[WidgetResponse])
+@router.get("/getAllWidgetList", response_model=List[WidgetResponse])
 async def get_user_widgets(
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
     """Get all widgets for the current user."""
     service = WidgetService(db)
     return await service.get_user_widgets(DEFAULT_USER_ID)
+
+
 
 @router.get("/categories", response_model=List[WidgetCategoryResponse])
 async def get_widget_categories(

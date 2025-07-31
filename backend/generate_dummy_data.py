@@ -184,7 +184,7 @@ async def generate_dummy_data():
         daily_widget_configs = [
             # Today's daily widgets
             {
-                "widget_ids": [dashboard_widgets[0].id, dashboard_widgets[1].id],  # Morning + Lunch
+                "widget_ids": [dashboard_widgets[0].id],  # Morning + Lunch
                 "widget_type": "alarm",
                 "priority": "HIGH",
                 "reasoning": "Important daily routines for health and work",
@@ -203,7 +203,7 @@ async def generate_dummy_data():
             },
             # Yesterday's daily widgets
             {
-                "widget_ids": [dashboard_widgets[0].id, dashboard_widgets[3].id],  # Morning + Standup
+                "widget_ids": [dashboard_widgets[0].id],  # Morning + Standup
                 "widget_type": "alarm",
                 "priority": "HIGH",
                 "reasoning": "Daily morning routine and team meeting",
@@ -213,7 +213,7 @@ async def generate_dummy_data():
             },
             # Tomorrow's daily widgets
             {
-                "widget_ids": [dashboard_widgets[0].id, dashboard_widgets[4].id],  # Morning + Weekly Review
+                "widget_ids": [dashboard_widgets[0].id],  # Morning + Weekly Review
                 "widget_type": "alarm",
                 "priority": "HIGH",
                 "reasoning": "Morning routine and weekly planning",

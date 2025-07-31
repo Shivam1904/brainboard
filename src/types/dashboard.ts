@@ -1,33 +1,36 @@
 // API Response Types - Single Source of Truth
 // These types match exactly what the backend API returns
 
-// Main dashboard response from /api/v1/dashboard/getTodayWidgetList
-export interface TodayWidgetsResponse {
-  date: string;
-  widgets: DailyWidget[];
-  total_widgets: number;
-  ai_generated: boolean;
-  last_updated: string;
-}
+import { Layout } from "react-grid-layout";
 
-// Daily widget structure from API
+// Main dashboard response from /api/v1/dashboard/getTodayWidgetList
+// Updated to match new API response structure - direct array
+export type TodayWidgetsResponse = DailyWidget[];
+
+// Daily widget structure from API - Updated to match new response
 export interface DailyWidget {
+  id: string;
   daily_widget_id: string;
   widget_ids: string[];
   widget_type: string;
-  priority: 'HIGH' | 'LOW';
+  priority: string;
   reasoning: string;
   date: string;
+  layout: Layout;
+  title: string;
+  category: string;
+  frequency: string;
+  importance: number;
+  is_permanent: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 // All widgets response from /api/v1/dashboard/getAllWidgetList
-export interface AllWidgetsResponse {
-  widgets: DashboardWidget[];
-  total_widgets: number;
-}
+// Updated to match new API response structure - direct array
+export type AllWidgetsResponse = DailyWidget[];
 
-// Dashboard widget structure from API
+// Dashboard widget structure from API (keeping for backward compatibility)
 export interface DashboardWidget {
   id: string;
   widget_type: string;
