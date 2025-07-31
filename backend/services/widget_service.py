@@ -13,6 +13,7 @@ import logging
 from models.dashboard_widget_details import DashboardWidgetDetails
 from models.alarm_details import AlarmDetails
 from models.todo_details import TodoDetails
+from models.single_item_tracker_details import SingleItemTrackerDetails
 from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse, CreateWidgetRequest, CreateWidgetResponse, UpdateWidgetRequest
 
 # ============================================================================
@@ -59,18 +60,31 @@ WIDGET_TYPE_DEFINITIONS = {
             "due_date": {"type": "date", "required": False}
         }
     },
-    "todo-event": {
-        "id": "todo-event",
-        "name": "Event Widget",
-        "description": "Track events and milestones",
-        "category": "productivity",
-        "icon": "calendar",
-        "config_schema": {
-            "title": {"type": "string", "required": True},
-            "description": {"type": "string", "required": False},
-            "due_date": {"type": "date", "required": False}
+            "todo-event": {
+            "id": "todo-event",
+            "name": "Event Widget",
+            "description": "Track events and milestones",
+            "category": "productivity",
+            "icon": "calendar",
+            "config_schema": {
+                "title": {"type": "string", "required": True},
+                "description": {"type": "string", "required": False},
+                "due_date": {"type": "date", "required": False}
+            }
+        },
+        "singleitemtracker": {
+            "id": "singleitemtracker",
+            "name": "Single Item Tracker",
+            "description": "Track single values over time (weight, steps, pages read, etc.)",
+            "category": "health",
+            "icon": "trending-up",
+            "config_schema": {
+                "title": {"type": "string", "required": True},
+                "value_type": {"type": "string", "required": True, "enum": ["number", "text", "decimal"]},
+                "value_unit": {"type": "string", "required": False},
+                "target_value": {"type": "string", "required": False}
+            }
         }
-    }
 }
 
 # Category definitions
@@ -177,6 +191,8 @@ class WidgetService:
                 await self._create_alarm_details(widget.id, request, user_id)
             elif request.widget_type in ["todo-habit", "todo-task", "todo-event"]:
                 await self._create_todo_details(widget.id, request, user_id)
+            elif request.widget_type == "singleitemtracker":
+                await self._create_single_item_tracker_details(widget.id, request, user_id)
             
             await self.db.commit()
             
@@ -237,6 +253,21 @@ class WidgetService:
         self.db.add(todo_details)
         await self.db.commit()
         await self.db.refresh(todo_details)
+
+    async def _create_single_item_tracker_details(self, widget_id: str, request: CreateWidgetRequest, user_id: str) -> None:
+        """Create single item tracker details."""
+        tracker_details = SingleItemTrackerDetails(
+            widget_id=widget_id,
+            title=request.title,
+            value_type=request.value_type or "number",
+            value_unit=request.value_unit,
+            target_value=request.target_value,
+            created_by=user_id
+        )
+        
+        self.db.add(tracker_details)
+        await self.db.commit()
+        await self.db.refresh(tracker_details)
 
     async def update_widget(self, widget_id: str, request: UpdateWidgetRequest, user_id: str) -> Dict[str, Any]:
         """Update widget details."""
