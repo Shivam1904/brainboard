@@ -21,9 +21,9 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Default configuration
-DEFAULT_MODEL = "gpt-3.5-turbo"
+DEFAULT_MODEL = "gpt-3.5-turbo"  # Most cost-effective model
 DEFAULT_TEMPERATURE = 0.7
-DEFAULT_MAX_TOKENS = 150
+DEFAULT_MAX_TOKENS = 100  # Reduced for small tasks
 DEFAULT_RETRY_ATTEMPTS = 3
 
 # ============================================================================

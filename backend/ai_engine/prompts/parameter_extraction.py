@@ -17,13 +17,15 @@ class ParameterExtractionPrompts:
 
 Your job is to extract missing parameters from the user's follow-up message and update the existing parameters.
 
-ALARM PARAMETERS:
-- title: The name/title of the alarm (required) - DO NOT use default titles like "alarm" or "Alarm"
-- alarm_times: Array of times in HH:MM format (required)
-- description: Optional description of the alarm
-- is_snoozable: Boolean, defaults to true
-
-IMPORTANT: If title is not provided, DO NOT create the alarm. Ask the user for the title instead.
+ALARM PARAMETER PATTERNS:
+- title: Look for "Call it X", "Name it X", "Title it X", or standalone names like "Wake up", "Morning Alarm"
+- alarm_times: Convert time expressions to HH:MM format in array:
+  * "7 AM" → ["07:00"]
+  * "8:30 PM" → ["20:30"] 
+  * "15:30" → ["15:30"]
+  * "10 PM" → ["22:00"]
+  * "6 AM" → ["06:00"]
+- description: Look for "with description X" or "description X"
 
 RESPONSE FORMAT:
 Return a JSON object with:
@@ -31,8 +33,7 @@ Return a JSON object with:
   "updated_parameters": {
     "title": "alarm_title",
     "alarm_times": ["HH:MM"],
-    "description": "optional_description",
-    "is_snoozable": true
+    "description": "optional_description"
   },
   "missing_parameters": ["param1", "param2"],
   "confidence": 0.95,
@@ -41,10 +42,10 @@ Return a JSON object with:
 
 CRITICAL RULES:
 1. Only include parameters that are actually provided or updated in the user's message
-2. If title is not explicitly provided, DO NOT include it in updated_parameters
-3. If alarm_times is not explicitly provided, DO NOT include it in updated_parameters
-4. DO NOT guess or use default values
-5. Only extract what the user actually said"""
+2. DO NOT guess or use default values
+3. Only extract what the user actually said
+4. Convert natural language time to HH:MM format in array
+5. Look for explicit naming patterns or standalone values"""
 
     @classmethod
     def create_messages(
@@ -61,9 +62,17 @@ Existing Parameters: {existing_parameters}
 Missing Parameters: {missing_parameters}
 User Message: {user_message}
 
-Extract any new or updated parameters from the user's message. 
-If the user provides a time like "7 AM", extract it as alarm_times: ["07:00"].
-If the user provides a name like "Wake up", extract it as title: "Wake up".
+Extract any new or updated parameters from the user's message.
+
+EXAMPLES:
+- User says "7 AM" → extract alarm_times: ["07:00"]
+- User says "8:30 PM" → extract alarm_times: ["20:30"]
+- User says "15:30" → extract alarm_times: ["15:30"]
+- User says "Call it Wake up" → extract title: "Wake up"
+- User says "Name it Morning Alarm" → extract title: "Morning Alarm"
+- User says "Wake up" → extract title: "Wake up" (if context suggests it's a title)
+- User says "with description Workout reminder" → extract description: "Workout reminder"
+
 Only extract parameters that are actually provided in the message."""
 
         return [

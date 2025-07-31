@@ -23,10 +23,13 @@ RESPONSE FORMAT:
 Return only the question text, no JSON or additional formatting.
 
 EXAMPLES:
-- "What should I call this alarm?"
-- "What time should it ring?"
-- "Would you like to add a description to this alarm?"
-- "Should this alarm be snoozable?" """
+- For missing title: "What should I call this alarm?"
+- For missing time: "What time should the alarm ring?"
+- For missing both: "What should I call this alarm and what time should it ring?"
+- For missing time when title exists: "What time should the 'Wake up' alarm ring?"
+- For missing title when time exists: "What should I call the 7 AM alarm?"
+
+PRIORITY: Ask for the most critical missing parameter first. If both title and alarm_times are missing, ask for both."""
 
     @classmethod
     def create_messages(cls, intent: str, missing_parameters: List[str], current_context: str = "") -> List[dict]:
@@ -36,7 +39,14 @@ EXAMPLES:
 Missing Parameters: {missing_parameters}
 Current Context: {current_context}
 
-Generate a natural follow-up question to get the missing information. Focus on the most important missing parameter first."""
+Generate a natural follow-up question to get the missing information. 
+
+For ALARMS:
+- If title and alarm_times are missing, ask for both
+- If only title is missing, ask "What should I call this alarm?"
+- If only alarm_times is missing, ask "What time should the alarm ring?"
+
+Use the existing context to make the question more specific."""
 
         return [
             {"role": "system", "content": cls.SYSTEM_PROMPT},
@@ -54,17 +64,12 @@ Generate a natural follow-up question to get the missing information. Focus on t
             ],
             "alarm_times": [
                 "What time should the alarm ring?",
-                "When do you want this alarm to go off?",
-                "What time should I set this for?"
+                "When should the alarm go off?",
+                "What time should I set the alarm for?"
             ],
             "description": [
                 "Would you like to add a description to this alarm?",
                 "Any additional notes for this alarm?",
                 "Should I add any details to this alarm?"
-            ],
-            "is_snoozable": [
-                "Should this alarm be snoozable?",
-                "Do you want to be able to snooze this alarm?",
-                "Can you snooze this alarm when it rings?"
             ]
         } 

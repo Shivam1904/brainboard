@@ -106,7 +106,7 @@ class ChatOrchestrator:
         # If we still don't have a valid intent after all attempts
         if not intent_response or intent_response.intent == "unknown":
             return {
-                "message": "I'm sorry, but I couldn't understand your request. Please try using the manual form instead.",
+                "message": "I'm sorry, but I can only help with alarm-related requests. I don't have tools available for other types of requests. Please try asking about alarms instead.",
                 "session_id": session.session_id,
                 "is_complete": True,
                 "intent": "unknown",

@@ -126,7 +126,7 @@ async def cleanup_test_alarms(db_session: AsyncSession, user_id: str):
     except Exception as e:
         print(f"❌ Error cleaning up test data: {e}")
 
-async def test_chat_functionality():
+async def test_chat_functionality(test_types=None):
     """Test the chat functionality with real AI calls and database verification."""
     
     # Check if OpenAI API key is set
@@ -137,8 +137,14 @@ async def test_chat_functionality():
         print("OPENAI_API_KEY=your_actual_api_key_here")
         return
     
+    # Default to all test types if none specified
+    if test_types is None:
+        test_types = ["single_shot", "two_step", "five_step"]
+    
     print("🧪 Testing AI Chat Functionality with Real AI and Database Verification")
     print("=" * 70)
+    print(f"🎯 Running tests for: {', '.join(test_types)}")
+    print()
     
     # Test user ID
     test_user_id = "test_user_001"
@@ -148,7 +154,7 @@ async def test_chat_functionality():
         await cleanup_test_alarms(db_session, test_user_id)
         break
     
-    # Test scenarios - starting with single-shot commands only
+    # Test scenarios - configurable by test_type
     test_scenarios = [
         {
             "name": "Single Shot - Complete Information",
@@ -170,10 +176,65 @@ async def test_chat_functionality():
             "expected_title": "Gym",
             "expected_times": ["06:00"],
             "test_type": "single_shot"
+        },
+        {
+            "name": "2-Step - Complete Success",
+            "messages": ["Create an alarm", "7 AM called Wake up"],
+            "expected_title": "Wake up",
+            "expected_times": ["07:00"],
+            "test_type": "two_step",
+            "should_succeed": True
+        },
+        {
+            "name": "2-Step - Missing Title (Should Fail)",
+            "messages": ["Create an alarm", "7 AM"],
+            "expected_title": None,
+            "expected_times": None,
+            "test_type": "two_step",
+            "should_succeed": False
+        },
+        {
+            "name": "2-Step - Missing Time (Should Fail)",
+            "messages": ["Create an alarm", "Call it Morning Alarm"],
+            "expected_title": None,
+            "expected_times": None,
+            "test_type": "two_step",
+            "should_succeed": False
+        },
+        {
+            "name": "5-Step - Gradual Parameter Collection",
+            "messages": [
+                "Create an alarm",
+                "7 AM",
+                "Call it Wake up",
+                "with description Morning workout",
+                "Make it snoozable"
+            ],
+            "expected_title": "Wake up",
+            "expected_times": ["07:00"],
+            "test_type": "five_step"
+        },
+        {
+            "name": "5-Step - Mixed Parameter Order",
+            "messages": [
+                "Set up an alarm",
+                "Call it Bedtime",
+                "10 PM",
+                "with description Sleep reminder",
+                "Not snoozable"
+            ],
+            "expected_title": "Bedtime",
+            "expected_times": ["22:00"],
+            "test_type": "five_step"
         }
     ]
     
-    for scenario in test_scenarios:
+    # Filter scenarios by test type
+    filtered_scenarios = [s for s in test_scenarios if s["test_type"] in test_types]
+    print(f"📊 Running {len(filtered_scenarios)} scenarios out of {len(test_scenarios)} total")
+    print()
+    
+    for scenario in filtered_scenarios:
         print(f"\n📝 Testing: {scenario['name']}")
         print("-" * 50)
         
@@ -182,76 +243,257 @@ async def test_chat_functionality():
             await cleanup_test_alarms(db_session, test_user_id)
             break
         
-        # For single-shot tests, we expect one message to complete the task
-        message = scenario["messages"][0]  # Single message for single-shot
-        print(f"User: {message}")
-        
-        try:
-            # Get a fresh database session for each test
-            async for db_session in get_session():
-                # Create orchestrator with real database session
-                orchestrator = ChatOrchestrator(db_session)
-                
-                # Process the single message
-                result = await orchestrator.process_message(
-                    user_message=message,
-                    user_id=test_user_id,
-                    session_id=None  # No session for single-shot
-                )
-                
-                print(f"AI: {result['message']}")
-                print(f"Session: {result['session_id']}")
-                print(f"Complete: {result['is_complete']}")
-                print(f"Intent: {result.get('intent')}")
-                
-                if result.get('missing_parameters'):
-                    print(f"Missing: {result['missing_parameters']}")
-                    print(f"❌ SINGLE-SHOT FAILED - Missing parameters in complete command")
-                
-                # For single-shot, we expect immediate completion
-                if result['is_complete'] and result.get('success'):
-                    print(f"\n🔍 Verifying alarm creation via API...")
-                    print(f"   Expected title: '{scenario['expected_title']}'")
-                    print(f"   Expected times: {scenario['expected_times']}")
-                    print(f"   AI success: {result.get('success')}")
-                    print(f"   Created resource: {result.get('created_resource')}")
-                    print(f"   Test type: {scenario['test_type']}")
+        # Handle different test types
+        if scenario["test_type"] == "single_shot":
+            # For single-shot tests, we expect one message to complete the task
+            message = scenario["messages"][0]
+            print(f"User: {message}")
+            
+            try:
+                # Get a fresh database session for each test
+                async for db_session in get_session():
+                    # Create orchestrator with real database session
+                    orchestrator = ChatOrchestrator(db_session)
                     
-                    # Commit any pending transactions
-                    await db_session.commit()
-                    
-                    # Verify the alarm was actually created via API
-                    verification_success = await verify_alarm_creation_via_api(
-                        test_user_id, 
-                        scenario["expected_title"], 
-                        scenario["expected_times"]
+                    # Process the single message
+                    result = await orchestrator.process_message(
+                        user_message=message,
+                        user_id=test_user_id,
+                        session_id=None  # No session for single-shot
                     )
                     
-                    if verification_success:
-                        print("✅ SINGLE-SHOT SUCCESS - Alarm created and verified!")
-                    else:
-                        print("❌ SINGLE-SHOT FAILED - Alarm creation verification failed!")
+                    print(f"AI: {result['message']}")
+                    print(f"Session: {result['session_id']}")
+                    print(f"Complete: {result['is_complete']}")
+                    print(f"Intent: {result.get('intent')}")
+                    
+                    if result.get('missing_parameters'):
+                        print(f"Missing: {result['missing_parameters']}")
+                        print(f"❌ SINGLE-SHOT FAILED - Missing parameters in complete command")
+                    
+                    # For single-shot, we expect immediate completion
+                    if result['is_complete'] and result.get('success'):
+                        print(f"\n🔍 Verifying alarm creation via API...")
+                        print(f"   Expected title: '{scenario['expected_title']}'")
+                        print(f"   Expected times: {scenario['expected_times']}")
+                        print(f"   AI success: {result.get('success')}")
+                        print(f"   Created resource: {result.get('created_resource')}")
+                        print(f"   Test type: {scenario['test_type']}")
                         
-                elif result['is_complete']:
-                    print(f"\n❌ SINGLE-SHOT FAILED - Conversation complete but not successful:")
-                    print(f"   Success: {result.get('success')}")
-                    print(f"   Error: {result.get('error')}")
-                    print(f"   Test type: {scenario['test_type']}")
-                else:
-                    print(f"\n❌ SINGLE-SHOT FAILED - Conversation not complete:")
-                    print(f"   Complete: {result['is_complete']}")
-                    print(f"   Missing parameters: {result.get('missing_parameters', [])}")
-                    print(f"   Test type: {scenario['test_type']}")
+                        # Commit any pending transactions
+                        await db_session.commit()
+                        
+                        # Verify the alarm was actually created via API
+                        verification_success = await verify_alarm_creation_via_api(
+                            test_user_id, 
+                            scenario["expected_title"], 
+                            scenario["expected_times"]
+                        )
+                        
+                        if verification_success:
+                            print("✅ SINGLE-SHOT SUCCESS - Alarm created and verified!")
+                        else:
+                            print("❌ SINGLE-SHOT FAILED - Alarm creation verification failed!")
+                            
+                    elif result['is_complete']:
+                        print(f"\n❌ SINGLE-SHOT FAILED - Conversation complete but not successful:")
+                        print(f"   Success: {result.get('success')}")
+                        print(f"   Error: {result.get('error')}")
+                        print(f"   Test type: {scenario['test_type']}")
+                    else:
+                        print(f"\n❌ SINGLE-SHOT FAILED - Conversation not complete:")
+                        print(f"   Complete: {result['is_complete']}")
+                        print(f"   Missing parameters: {result.get('missing_parameters', [])}")
+                        print(f"   Test type: {scenario['test_type']}")
+                    
+                    break  # Exit the async for loop
+                    
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                print("This might be due to:")
+                print("1. Invalid OpenAI API key")
+                print("2. Network connectivity issues")
+                print("3. Database connection issues")
+                print("4. OpenAI API rate limits")
+                
+        elif scenario["test_type"] == "two_step":
+            # For 2-step tests, we process multiple messages with session continuity
+            session_id = None
+            
+            # Create a single orchestrator instance for the entire scenario
+            async for db_session in get_session():
+                orchestrator = ChatOrchestrator(db_session)
+                
+                for i, message in enumerate(scenario["messages"]):
+                    print(f"User: {message}")
+                    
+                    try:
+                        # Process the message with session continuity
+                        result = await orchestrator.process_message(
+                            user_message=message,
+                            user_id=test_user_id,
+                            session_id=session_id
+                        )
+                        
+                        # Update session_id for next message to maintain continuity
+                        session_id = result['session_id']
+                        
+                        print(f"AI: {result['message']}")
+                        print(f"Session: {result['session_id']}")
+                        print(f"Complete: {result['is_complete']}")
+                        print(f"Intent: {result.get('intent')}")
+                        
+                        if result.get('missing_parameters'):
+                            print(f"Missing: {result['missing_parameters']}")
+                        
+                        # Check if this is the last message in the 2-step scenario
+                        if i == len(scenario["messages"]) - 1:
+                            should_succeed = scenario.get("should_succeed", True)
+                            
+                            if result['is_complete'] and result.get('success'):
+                                if should_succeed:
+                                    print(f"\n🔍 Verifying alarm creation via API...")
+                                    print(f"   Expected title: '{scenario['expected_title']}'")
+                                    print(f"   Expected times: {scenario['expected_times']}")
+                                    print(f"   AI success: {result.get('success')}")
+                                    print(f"   Created resource: {result.get('created_resource')}")
+                                    print(f"   Test type: {scenario['test_type']}")
+                                    print(f"   Steps completed: {i + 1}")
+                                    
+                                    # Commit any pending transactions
+                                    await db_session.commit()
+                                    
+                                    # Verify the alarm was actually created via API
+                                    verification_success = await verify_alarm_creation_via_api(
+                                        test_user_id, 
+                                        scenario["expected_title"], 
+                                        scenario["expected_times"]
+                                    )
+                                    
+                                    if verification_success:
+                                        print("✅ TWO-STEP SUCCESS - Alarm created and verified!")
+                                    else:
+                                        print("❌ TWO-STEP FAILED - Alarm creation verification failed!")
+                                else:
+                                    print("❌ TWO-STEP FAILED - Should have failed but succeeded!")
+                                    print(f"   Expected to fail but got success: {result.get('success')}")
+                            elif not result['is_complete'] or not result.get('success'):
+                                if should_succeed:
+                                    print(f"\n❌ TWO-STEP FAILED - Should have succeeded but failed:")
+                                    print(f"   Complete: {result['is_complete']}")
+                                    print(f"   Success: {result.get('success')}")
+                                    print(f"   Missing parameters: {result.get('missing_parameters', [])}")
+                                    print(f"   Test type: {scenario['test_type']}")
+                                    print(f"   Steps completed: {i + 1}")
+                                else:
+                                    print("✅ TWO-STEP SUCCESS - Correctly failed as expected!")
+                                    print(f"   Complete: {result['is_complete']}")
+                                    print(f"   Success: {result.get('success')}")
+                                    print(f"   Missing parameters: {result.get('missing_parameters', [])}")
+                                    print(f"   Test type: {scenario['test_type']}")
+                                    print(f"   Steps completed: {i + 1}")
+                            else:
+                                print(f"\n❌ TWO-STEP UNEXPECTED - Unexpected state:")
+                                print(f"   Complete: {result['is_complete']}")
+                                print(f"   Success: {result.get('success')}")
+                                print(f"   Test type: {scenario['test_type']}")
+                                print(f"   Steps completed: {i + 1}")
+                        
+                    except Exception as e:
+                        print(f"❌ Error: {e}")
+                        print("This might be due to:")
+                        print("1. Invalid OpenAI API key")
+                        print("2. Network connectivity issues")
+                        print("3. Database connection issues")
+                        print("4. OpenAI API rate limits")
+                        break
                 
                 break  # Exit the async for loop
+        
+        elif scenario["test_type"] == "five_step":
+            # For 5-step tests, we process multiple messages with session continuity
+            session_id = None
+            
+            # Create a single orchestrator instance for the entire scenario
+            async for db_session in get_session():
+                orchestrator = ChatOrchestrator(db_session)
                 
-        except Exception as e:
-            print(f"❌ Error: {e}")
-            print("This might be due to:")
-            print("1. Invalid OpenAI API key")
-            print("2. Network connectivity issues")
-            print("3. Database connection issues")
-            print("4. OpenAI API rate limits")
+                for i, message in enumerate(scenario["messages"]):
+                    print(f"User: {message}")
+                    
+                    try:
+                        # Process the message with session continuity
+                        result = await orchestrator.process_message(
+                            user_message=message,
+                            user_id=test_user_id,
+                            session_id=session_id
+                        )
+                        
+                        # Update session_id for next message to maintain continuity
+                        session_id = result['session_id']
+                        
+                        print(f"AI: {result['message']}")
+                        print(f"Session: {result['session_id']}")
+                        print(f"Complete: {result['is_complete']}")
+                        print(f"Intent: {result.get('intent')}")
+                        
+                        if result.get('missing_parameters'):
+                            print(f"Missing: {result['missing_parameters']}")
+                        
+                        # Update session_id for next message
+                        session_id = result['session_id']
+                        
+                        # If conversation is complete and successful, verify alarm creation
+                        if result['is_complete'] and result.get('success'):
+                            print(f"\n🔍 Verifying alarm creation via API...")
+                            print(f"   Expected title: '{scenario['expected_title']}'")
+                            print(f"   Expected times: {scenario['expected_times']}")
+                            print(f"   AI success: {result.get('success')}")
+                            print(f"   Created resource: {result.get('created_resource')}")
+                            print(f"   Test type: {scenario['test_type']}")
+                            print(f"   Steps completed: {i + 1}")
+                            
+                            # Commit any pending transactions
+                            await db_session.commit()
+                            
+                            # Verify the alarm was actually created via API
+                            verification_success = await verify_alarm_creation_via_api(
+                                test_user_id, 
+                                scenario["expected_title"], 
+                                scenario["expected_times"]
+                            )
+                            
+                            if verification_success:
+                                print("✅ FIVE-STEP SUCCESS - Alarm created and verified!")
+                            else:
+                                print("❌ FIVE-STEP FAILED - Alarm creation verification failed!")
+                            
+                            break  # Exit the message loop
+                        elif result['is_complete']:
+                            print(f"\n❌ FIVE-STEP FAILED - Conversation complete but not successful:")
+                            print(f"   Success: {result.get('success')}")
+                            print(f"   Error: {result.get('error')}")
+                            print(f"   Test type: {scenario['test_type']}")
+                            print(f"   Steps completed: {i + 1}")
+                            break  # Exit the message loop
+                        elif i == len(scenario["messages"]) - 1:
+                            # Last message but conversation not complete
+                            print(f"\n❌ FIVE-STEP FAILED - Conversation not complete after all messages:")
+                            print(f"   Complete: {result['is_complete']}")
+                            print(f"   Missing parameters: {result.get('missing_parameters', [])}")
+                            print(f"   Test type: {scenario['test_type']}")
+                            print(f"   Steps completed: {i + 1}")
+                        
+                    except Exception as e:
+                        print(f"❌ Error: {e}")
+                        print("This might be due to:")
+                        print("1. Invalid OpenAI API key")
+                        print("2. Network connectivity issues")
+                        print("3. Database connection issues")
+                        print("4. OpenAI API rate limits")
+                        break
+                
+                break  # Exit the async for loop
         
         print()
 
@@ -304,7 +546,7 @@ if __name__ == "__main__":
     # Test architecture first
     test_architecture()
     
-    # Test chat functionality with verification
-    asyncio.run(test_chat_functionality())
+    # Test chat functionality with verification - run all test types
+    asyncio.run(test_chat_functionality(test_types=["single_shot", "two_step", "five_step"]))
     
     print("\n✨ Tests completed!") 
