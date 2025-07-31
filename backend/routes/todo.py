@@ -147,4 +147,31 @@ async def get_todo_list_by_type(
         service = TodoService(db)
         return await service.get_todos_by_type(user_id, todo_type)
     except Exception as e:
-        raise raise_database_error(f"Failed to get todos by type: {str(e)}") 
+        raise raise_database_error(f"Failed to get todos by type: {str(e)}")
+
+@router.get("/getTodayTodoList/{todo_type}")
+async def get_today_todo_list(
+    todo_type: str,
+    user_id: str = Depends(get_default_user_id),
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Get today's todo activities filtered by type (habit/task/event)."""
+    try:
+        service = TodoService(db)
+        return await service.get_today_todo_list(user_id, todo_type)
+    except Exception as e:
+        raise raise_database_error(f"Failed to get today's todo list: {str(e)}")
+
+@router.get("/getTodoItemDetailsAndActivity/{daily_widget_id}/{widget_id}")
+async def get_todo_item_details_and_activity(
+    daily_widget_id: str,
+    widget_id: str,
+    user_id: str = Depends(get_default_user_id),
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Get todo item details and activity for a specific widget."""
+    try:
+        service = TodoService(db)
+        return await service.get_todo_item_details_and_activity(daily_widget_id, widget_id, user_id)
+    except Exception as e:
+        raise raise_database_error(f"Failed to get todo item details and activity: {str(e)}") 

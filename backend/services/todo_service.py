@@ -357,4 +357,110 @@ class TodoService:
             }
         except Exception as e:
             logger.error(f"Error updating todo details: {e}")
-            raise 
+            raise
+
+    async def get_today_todo_list(self, user_id: str, todo_type: str) -> Dict[str, Any]:
+        """Get today's todo activities filtered by type (habit/task/event)."""
+        try:
+            from models.daily_widget import DailyWidget
+            from models.dashboard_widget_details import DashboardWidgetDetails
+            
+            # Get today's date
+            today = datetime.now().date()
+            
+            # Get today's daily widgets for this todo type
+            stmt = select(DailyWidget).where(
+                DailyWidget.widget_type == todo_type,
+                DailyWidget.date == today
+            )
+            result = await self.db.execute(stmt)
+            daily_widgets = result.scalars().all()
+            
+            if not daily_widgets:
+                return {
+                    "todo_type": todo_type,
+                    "todos": [],
+                    "total_todos": 0
+                }
+            
+            # Get all todo activities for today's daily widgets
+            all_todos = []
+            for daily_widget in daily_widgets:
+                stmt = select(TodoItemActivity).where(
+                    TodoItemActivity.daily_widget_id == daily_widget.id
+                )
+                result = await self.db.execute(stmt)
+                activities = result.scalars().all()
+                
+                for activity in activities:
+                    # Get todo details for this activity
+                    stmt = select(TodoDetails).where(TodoDetails.id == activity.tododetails_id)
+                    result = await self.db.execute(stmt)
+                    todo_details = result.scalars().first()
+                    
+                    if todo_details:
+                        all_todos.append({
+                            "id": activity.id,
+                            "daily_widget_id": activity.daily_widget_id,
+                            "widget_id": activity.widget_id,
+                            "tododetails_id": activity.tododetails_id,
+                            "title": todo_details.title,
+                            "todo_type": todo_details.todo_type,
+                            "description": todo_details.description,
+                            "due_date": todo_details.due_date.isoformat() if todo_details.due_date else None,
+                            "status": activity.status,
+                            "progress": activity.progress,
+                            "created_at": activity.created_at.isoformat() if activity.created_at else None,
+                            "updated_at": activity.updated_at.isoformat() if activity.updated_at else None
+                        })
+            
+            return {
+                "todo_type": todo_type,
+                "todos": all_todos,
+                "total_todos": len(all_todos)
+            }
+        except Exception as e:
+            logger.error(f"Error getting today's todo list: {e}")
+            return {"success": False, "message": f"Failed to get today's todo list: {str(e)}"}
+
+    async def get_todo_item_details_and_activity(self, daily_widget_id: str, widget_id: str, user_id: str) -> Dict[str, Any]:
+        """Get todo item details and activity for a specific widget."""
+        try:
+            # Get todo details
+            stmt = select(TodoDetails).where(TodoDetails.widget_id == widget_id)
+            result = await self.db.execute(stmt)
+            todo_details = result.scalars().first()
+
+            if not todo_details:
+                return {"todo_details": None, "activity": None}
+
+            # Get activity for this specific daily widget and todo
+            stmt = select(TodoItemActivity).where(
+                TodoItemActivity.daily_widget_id == daily_widget_id,
+                TodoItemActivity.tododetails_id == todo_details.id
+            )
+            result = await self.db.execute(stmt)
+            activity = result.scalars().first()
+
+            return {
+                "todo_details": {
+                    "id": todo_details.id,
+                    "widget_id": todo_details.widget_id,
+                    "title": todo_details.title,
+                    "todo_type": todo_details.todo_type,
+                    "description": todo_details.description,
+                    "due_date": todo_details.due_date.isoformat() if todo_details.due_date else None,
+                    "created_at": todo_details.created_at.isoformat() if todo_details.created_at else None,
+                    "updated_at": todo_details.updated_at.isoformat() if todo_details.updated_at else None
+                },
+                "activity": {
+                    "id": activity.id,
+                    "status": activity.status,
+                    "progress": activity.progress,
+                    "created_at": activity.created_at.isoformat() if activity.created_at else None,
+                    "updated_at": activity.updated_at.isoformat() if activity.updated_at else None
+                } if activity else None
+            }
+        except Exception as e:
+            logger.error(f"Error getting todo item details and activity: {e}")
+            return {"success": False, "message": f"Failed to get todo item details and activity: {str(e)}"} 

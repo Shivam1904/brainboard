@@ -101,6 +101,39 @@ async def test_get_user_todos(session: aiohttp.ClientSession, user_id: str) -> D
         print(f"Response: {json.dumps(data, indent=2, default=str)}")
         return data
 
+async def test_get_todo_list_by_type(session: aiohttp.ClientSession, todo_type: str) -> Dict[str, Any]:
+    """Test getting todos by type."""
+    print(f"\n📋 Testing getTodoList for type: {todo_type}")
+    
+    url = f"{TODO_BASE_URL}/getTodoList/{todo_type}"
+    async with session.get(url) as response:
+        data = await response.json()
+        print(f"Status: {response.status}")
+        print(f"Response: {json.dumps(data, indent=2, default=str)}")
+        return data
+
+async def test_get_today_todo_list(session: aiohttp.ClientSession, todo_type: str) -> Dict[str, Any]:
+    """Test getting today's todo list by type."""
+    print(f"\n📅 Testing getTodayTodoList for type: {todo_type}")
+    
+    url = f"{TODO_BASE_URL}/getTodayTodoList/{todo_type}"
+    async with session.get(url) as response:
+        data = await response.json()
+        print(f"Status: {response.status}")
+        print(f"Response: {json.dumps(data, indent=2, default=str)}")
+        return data
+
+async def test_get_todo_item_details_and_activity(session: aiohttp.ClientSession, daily_widget_id: str, widget_id: str) -> Dict[str, Any]:
+    """Test getting todo item details and activity."""
+    print(f"\n🔍 Testing getTodoItemDetailsAndActivity for daily_widget: {daily_widget_id}, widget: {widget_id}")
+    
+    url = f"{TODO_BASE_URL}/getTodoItemDetailsAndActivity/{daily_widget_id}/{widget_id}"
+    async with session.get(url) as response:
+        data = await response.json()
+        print(f"Status: {response.status}")
+        print(f"Response: {json.dumps(data, indent=2, default=str)}")
+        return data
+
 # ============================================================================
 # MAIN TEST RUNNER
 # ============================================================================
@@ -113,6 +146,29 @@ async def run_todo_tests():
         # Test 1: Get user todos first to find widget IDs
         user_todos = await test_get_user_todos(session, DEFAULT_USER_ID)
         
+        # Test 2: Test getTodoList by type
+        print("\n" + "=" * 30)
+        print("📋 Testing getTodoList by type")
+        await test_get_todo_list_by_type(session, "todo-task")
+        await test_get_todo_list_by_type(session, "todo-habit")
+        await test_get_todo_list_by_type(session, "todo-event")
+        
+        # Test 3: Test getTodayTodoList by type
+        print("\n" + "=" * 30)
+        print("📅 Testing getTodayTodoList by type")
+        today_task_todos = await test_get_today_todo_list(session, "todo-task")
+        today_habit_todos = await test_get_today_todo_list(session, "todo-habit")
+        today_event_todos = await test_get_today_todo_list(session, "todo-event")
+        
+        # Test 4: Test getTodoItemDetailsAndActivity if we have data
+        if today_task_todos.get("todos"):
+            first_todo = today_task_todos["todos"][0]
+            daily_widget_id = first_todo["daily_widget_id"]
+            widget_id = first_todo["widget_id"]
+            print("\n" + "=" * 30)
+            print("🔍 Testing getTodoItemDetailsAndActivity")
+            await test_get_todo_item_details_and_activity(session, daily_widget_id, widget_id)
+        
         if user_todos.get("success") and user_todos.get("todos"):
             todo_widgets = user_todos["todos"]
             print(f"\n📋 Found {len(todo_widgets)} todo widgets")
@@ -122,14 +178,14 @@ async def run_todo_tests():
                 todo_id = todo["id"]
                 print(f"\n🎯 Testing Todo {i+1}: {todo['title']} (ID: {todo_id})")
                 
-                # Test 2: Get todo details and activity
+                # Test 5: Get todo details and activity
                 details_and_activity = await test_get_todo_details_and_activity(session, widget_id)
                 
                 if details_and_activity.get("todo_details"):
-                    # Test 3: Get todo details
+                    # Test 6: Get todo details
                     await test_get_todo_details(session, widget_id)
                     
-                    # Test 4: Update todo details
+                    # Test 7: Update todo details
                     update_data = {
                         "description": f"Updated description for {todo['title']}",
                         "due_date": date.today().isoformat()
@@ -137,14 +193,14 @@ async def run_todo_tests():
                     await test_update_todo_details(session, todo_id, update_data)
                 
                 if details_and_activity.get("activities"):
-                    # Test 5: Update activity status
+                    # Test 8: Update activity status
                     activity = details_and_activity["activities"][0]
                     activity_id = activity["id"]
                     
                     await test_update_status(session, activity_id, "completed")
                     await test_update_progress(session, activity_id, 75)
                     
-                    # Test 6: Update activity with custom data
+                    # Test 9: Update activity with custom data
                     activity_update = {
                         "status": "in progress",
                         "progress": 50
