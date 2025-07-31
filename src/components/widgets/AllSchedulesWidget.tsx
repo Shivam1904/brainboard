@@ -41,20 +41,23 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
         
         // Extract widget IDs that are already in today's dashboard
         const todayIds: string[] = [];
-        todayWidgetsResponse.widgets.forEach((dailyWidget: any) => {
-          if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
-            todayIds.push(...dailyWidget.widget_ids);
+        
+        // Handle new API response structure - direct array
+        todayWidgetsResponse.forEach((dailyWidget: any) => {
+          // Use the widget.id directly
+          if (dailyWidget.widget_id) {
+            todayIds.push(dailyWidget.widget_id);
           }
         });
         setTodayWidgetIds(todayIds);
         
         // If no widgets from API, use dummy data
-        if (allWidgetsResponse.widgets.length === 0) {
+        if (allWidgetsResponse.length === 0) {
           console.log('No widgets found, using dummy data');
           const dummyWidgets = getDummyAllSchedulesWidgets();
           setWidgets(dummyWidgets as any);
         } else {
-          setWidgets(allWidgetsResponse.widgets);
+          setWidgets(allWidgetsResponse);
         }
       } catch (err) {
         console.error('Failed to load widgets:', err);
@@ -163,7 +166,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
   const handleFormSuccess = async () => {
     try {
       const response = await dashboardService.getAllWidgets();
-      setWidgets(response.widgets);
+      setWidgets(response);
     } catch (err) {
       console.error('Failed to refresh widgets after edit:', err);
     }
@@ -180,9 +183,12 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
       // Refresh today's widgets to update the list
       const todayWidgetsResponse = await dashboardService.getTodayWidgets();
       const todayIds: string[] = [];
-      todayWidgetsResponse.widgets.forEach((dailyWidget: any) => {
-        if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
-          todayIds.push(...dailyWidget.widget_ids);
+      
+      // Handle new API response structure - direct array
+      todayWidgetsResponse.forEach((dailyWidget: any) => {
+        // Use the widget.id directly
+        if (dailyWidget.widget_id) {
+          todayIds.push(dailyWidget.widget_id);
         }
       });
       setTodayWidgetIds(todayIds);

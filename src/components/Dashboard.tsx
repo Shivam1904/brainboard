@@ -11,31 +11,20 @@ import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties, findEmptyPosition } from '../config/grid'
 import { dashboardService } from '../services/dashboard'
 import { 
-  TodayWidgetsResponse,
   DailyWidget,
   ApiWidgetType,
   ApiFrequency,
-  ApiCategory
+  ApiCategory,
+  UIWidget
 } from '../types'
 import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
 import HabitListWidget from './widgets/HabitListWidget';
 import EventTrackerWidget from './widgets/EventTrackerWidget';
+import AiChatWidget from './widgets/AiChatWidget';
 import { apiService } from '../services/api';
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
-
-// Simple widget interface for UI layout
-interface UIWidget {
-  daily_widget_id: string;
-  widget_ids: string[];
-  widget_type: string;
-  priority: string;
-  reasoning: string;
-  date: string;
-  created_at: string;
-  layout: Layout;
-}
 
 const Dashboard = () => {
   const [showGridLines, setShowGridLines] = useState(false)
@@ -99,8 +88,8 @@ const Dashboard = () => {
       setDashboardError(null)
       
       // Try to fetch from API first
-      let data: TodayWidgetsResponse;
-      let dummyData: TodayWidgetsResponse;
+      let data: DailyWidget[];
+      let dummyData: DailyWidget[];
       dummyData = getDummyTodayWidgets();
       
       try {
@@ -120,17 +109,23 @@ const Dashboard = () => {
       // Convert API widgets to UI widgets with proper placement
       const uiWidgets: UIWidget[] = [];
       
-      data.widgets.forEach((widget: DailyWidget) => {
+      data.forEach((widget: DailyWidget) => {
         const config = getWidgetConfig(widget.widget_type);
         const defaultSize = config?.defaultSize || { w: 10, h: 10 };
         
         // Find optimal position for this widget
         const position = findOptimalPosition(widget.widget_type, uiWidgets);
         
+        // Convert new API structure to UIWidget format
         const uiWidget: UIWidget = {
           ...widget,
+          daily_widget_id: widget.id, // Map id to daily_widget_id for UI compatibility
+          priority: widget.importance >= 0.7 ? 'HIGH' : 'LOW', // Derive priority from importance
+          reasoning: 'Widget from today\'s dashboard', // Default reasoning
+          date: new Date().toISOString().split('T')[0], // Current date
+          created_at: widget.created_at,
           layout: {
-            i: widget.daily_widget_id,
+            i: widget.id, // Use widget.id as layout identifier
             x: position.x,
             y: position.y,
             w: defaultSize.w,
@@ -402,6 +397,13 @@ const Dashboard = () => {
       case 'calendar':
         return (
           <CalendarWidget
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+        );
+      case 'aiChat':
+        return (
+          <AiChatWidget
             widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />

@@ -2,19 +2,11 @@
 // This dummy data matches the actual API response structures exactly
 
 import {
-  TodayWidgetsResponse,
   DailyWidget,
   TodoTodayResponse,
-  TodoActivity,
   AlarmDetailsAndActivityResponse,
-  AlarmDetails,
-  AlarmActivity,
   TrackerDetailsAndActivityResponse,
-  TrackerDetails,
-  TrackerActivity,
   WebSearchSummaryAndActivityResponse,
-  WebSearchDetails,
-  WebSearchActivity,
   WebSearchAISummaryResponse
 } from '../types';
 
@@ -22,69 +14,75 @@ import {
 // DASHBOARD DUMMY DATA
 // ============================================================================
 
-export const getDummyTodayWidgets = (): TodayWidgetsResponse => {
-  return {
-    date: new Date().toISOString().split('T')[0],
-    widgets: [
-      {
-        daily_widget_id: "daily-todo-habit-001",
-        widget_ids: ["widget-todo-habit-001"],
-        widget_type: "todo-habit",
-        priority: "HIGH",
-        reasoning: "Habit tracker is essential for daily routines",
-        date: new Date().toISOString().split('T')[0],
-        created_at: "2024-01-15T10:00:00Z"
-      },
-      {
-        daily_widget_id: "daily-todo-task-001",
-        widget_ids: ["widget-todo-task-001"],
-        widget_type: "todo-task",
-        priority: "HIGH",
-        reasoning: "Task list is essential for daily productivity",
-        date: new Date().toISOString().split('T')[0],
-        created_at: "2024-01-15T10:00:00Z"
-      },
-      {
-        daily_widget_id: "daily-todo-event-001",
-        widget_ids: ["widget-todo-event-001"],
-        widget_type: "todo-event",
-        priority: "LOW",
-        reasoning: "Event tracker for important appointments",
-        date: new Date().toISOString().split('T')[0],
-        created_at: "2024-01-15T10:00:00Z"
-      },
-      {
-        daily_widget_id: "daily-alarm-001",
-        widget_ids: ["widget-alarm-001"],
-        widget_type: "alarm",
-        priority: "HIGH",
-        reasoning: "Alarm widget for important reminders",
-        date: new Date().toISOString().split('T')[0],
-        created_at: "2024-01-15T10:00:00Z"
-      },
-      {
-        daily_widget_id: "daily-tracker-001",
-        widget_ids: ["widget-tracker-001"],
-        widget_type: "singleitemtracker",
-        priority: "LOW",
-        reasoning: "Tracker widget for health monitoring",
-        date: new Date().toISOString().split('T')[0],
-        created_at: "2024-01-15T10:00:00Z"
-      },
-      {
-        daily_widget_id: "daily-websearch-001",
-        widget_ids: ["widget-websearch-001"],
-        widget_type: "websearch",
-        priority: "LOW",
-        reasoning: "Web search widget for research tasks",
-        date: new Date().toISOString().split('T')[0],
-        created_at: "2024-01-15T10:00:00Z"
-      }
-    ],
-    total_widgets: 6,
-    ai_generated: true,
-    last_updated: "2024-01-15T10:00:00Z"
-  };
+export const getDummyTodayWidgets = (): DailyWidget[] => {
+  return [
+    {
+      id: "1576dc2e-f206-460d-bdd7-9da070936c26",
+      widget_type: "alarm",
+      title: "Evening Exercise",
+      category: "Health",
+      frequency: "daily",
+      importance: 0.9,
+      is_permanent: true,
+      created_at: "2025-07-31T03:47:03.978252",
+      updated_at: "2025-07-31T03:47:03.978252"
+    },
+    {
+      id: "e47bddd3-8468-4f7a-90b2-fb0726dc43af",
+      widget_type: "alarm",
+      title: "Morning Wake Up",
+      category: "Health",
+      frequency: "daily",
+      importance: 0.8,
+      is_permanent: true,
+      created_at: "2025-07-31T03:47:03.978241",
+      updated_at: "2025-07-31T03:47:03.978245"
+    },
+    {
+      id: "172f4b3f-0d5f-4969-8396-83ca8e3d8f65",
+      widget_type: "alarm",
+      title: "Lunch Break",
+      category: "Work",
+      frequency: "daily",
+      importance: 0.6,
+      is_permanent: false,
+      created_at: "2025-07-31T03:47:03.978249",
+      updated_at: "2025-07-31T03:47:03.978249"
+    },
+    {
+      id: "daily-todo-habit-001",
+      widget_type: "todo-habit",
+      title: "Daily Habits",
+      category: "Health",
+      frequency: "daily",
+      importance: 0.9,
+      is_permanent: true,
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: "daily-todo-task-001",
+      widget_type: "todo-task",
+      title: "Daily Tasks",
+      category: "Productivity",
+      frequency: "daily",
+      importance: 0.8,
+      is_permanent: true,
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: "daily-tracker-001",
+      widget_type: "singleitemtracker",
+      title: "Water Intake",
+      category: "Health",
+      frequency: "daily",
+      importance: 0.7,
+      is_permanent: false,
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
+    }
+  ];
 };
 
 // ============================================================================
@@ -171,6 +169,8 @@ export const getDummyAlarmDetailsAndActivity = (widgetId: string): AlarmDetailsA
       id: "alarm-activity-001",
       started_at: "",
       snoozed_at: "",
+      snooze_until: "",
+      snooze_count: 0,
       created_at: "2024-01-15T10:00:00Z",
       updated_at: "2024-01-15T10:00:00Z"
     }
@@ -518,9 +518,86 @@ const generateMonthMilestones = (year: number, month: number) => {
   ];
 };
 
-export const getDummyAllSchedulesWidgets = () => {
-  // AllSchedules widget is UI-only, so we return empty data
-  return [];
+export const getDummyAllSchedulesWidgets = (): DailyWidget[] => {
+  return [
+    {
+      id: "e47bddd3-8468-4f7a-90b2-fb0726dc43af",
+      widget_type: "alarm",
+      title: "Morning Wake Up",
+      category: "Health",
+      frequency: "daily",
+      importance: 0.8,
+      is_permanent: true,
+      created_at: "2025-07-31T03:47:03.978241",
+      updated_at: "2025-07-31T03:47:03.978245"
+    },
+    {
+      id: "172f4b3f-0d5f-4969-8396-83ca8e3d8f65",
+      widget_type: "alarm",
+      title: "Lunch Break",
+      category: "Work",
+      frequency: "daily",
+      importance: 0.6,
+      is_permanent: false,
+      created_at: "2025-07-31T03:47:03.978249",
+      updated_at: "2025-07-31T03:47:03.978249"
+    },
+    {
+      id: "1576dc2e-f206-460d-bdd7-9da070936c26",
+      widget_type: "alarm",
+      title: "Evening Exercise",
+      category: "Health",
+      frequency: "daily",
+      importance: 0.9,
+      is_permanent: true,
+      created_at: "2025-07-31T03:47:03.978252",
+      updated_at: "2025-07-31T03:47:03.978252"
+    },
+    {
+      id: "daily-todo-habit-001",
+      widget_type: "todo-habit",
+      title: "Daily Habits",
+      category: "Health",
+      frequency: "daily",
+      importance: 0.9,
+      is_permanent: true,
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: "daily-todo-task-001",
+      widget_type: "todo-task",
+      title: "Daily Tasks",
+      category: "Productivity",
+      frequency: "daily",
+      importance: 0.8,
+      is_permanent: true,
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: "daily-tracker-001",
+      widget_type: "singleitemtracker",
+      title: "Water Intake",
+      category: "Health",
+      frequency: "daily",
+      importance: 0.7,
+      is_permanent: false,
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: "daily-websearch-001",
+      widget_type: "websearch",
+      title: "AI Research",
+      category: "Information",
+      frequency: "weekly",
+      importance: 0.5,
+      is_permanent: false,
+      created_at: "2024-01-15T10:00:00Z",
+      updated_at: "2024-01-15T10:00:00Z"
+    }
+  ];
 };
 
 export const getDummyWebSummary = (query: string) => {

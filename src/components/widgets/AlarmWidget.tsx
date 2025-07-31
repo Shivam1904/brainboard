@@ -70,7 +70,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
       setError(null);
       
       // Get the widget_id from the widget_ids array (first one for alarm widgets)
-      const widgetId = widget.widget_ids[0];
+      const widgetId = widget.widget_ids?.[0] || '111111';
       
       // Call the real API
       const response = await apiService.getAlarmDetailsAndActivity(widgetId);
@@ -142,7 +142,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
       }
       
       // Check if any alarm times are triggered
-      alarmData.alarm_details.alarm_times.forEach((alarmTime) => {
+      alarmData.alarm_details?.alarm_times.forEach((alarmTime) => {
         if (isAlarmTriggered(alarmTime)) {
           shouldAlert = true;
         }
@@ -252,7 +252,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
 
   const getNextAlarmTime = (alarm_times: string[]): string => {
     const now = new Date();
-    const nextAlarmTime = alarm_times.find(time => {
+    const nextAlarmTime = alarm_times?.find(time => {
       const [hours, minutes] = time.split(':').map(Number);
       const alarmDate = new Date();
       alarmDate.setHours(hours, minutes, 0, 0);
@@ -284,7 +284,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
             <div className="flex items-center gap-2">
               <Clock className={`h-5 w-5 ${isAlerting ? 'text-white' : 'text-blue-600'}`} />
               <span className={`text-sm font-medium ${isAlerting ? 'text-white' : 'text-blue-800'}`}>
-                Next Alarm at {getNextAlarmTime(alarmData.alarm_details.alarm_times)}
+                Next Alarm at {getNextAlarmTime(alarmData.alarm_details?.alarm_times)}
               </span>
             </div>
             {isAlerting && (
@@ -295,7 +295,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
           </div>
           
           <div className={`text-lg font-bold mb-3 ${isAlerting ? 'text-white' : 'text-blue-900'}`}>
-            {alarmData.alarm_details.title}
+            {alarmData.alarm_details?.title}
           </div>
 
           {/* Snooze countdown */}

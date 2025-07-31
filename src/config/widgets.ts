@@ -83,7 +83,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'AlarmWidget',
     minSize: { w: 6, h: 4 },
     maxSize: { w: 20, h: 28 },
-    defaultSize: { w: 12, h: 10 },
+    defaultSize: { w: 12, h: 6 },
     deletable: true,
     resizable: true,
     category: 'productivity',
@@ -151,6 +151,21 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     resizable: true,
     category: 'productivity',
     icon: '⚙️'
+  },
+
+  aiChat: { 
+    id: 'aiChat',
+    apiWidgetType: 'aiChat',
+    title: 'Brainy AI',
+    description: 'AI-powered chat widget',
+    component: 'AIChatWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 20, h: 24 },
+    defaultSize: { w: 14, h: 14 },
+    deletable: true,
+    resizable: true,
+    category: 'information',
+    icon: '🤖'
   }
 };
 
@@ -178,6 +193,7 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
     WIDGET_CONFIGS.websearch,
     WIDGET_CONFIGS.allSchedules, // UI-only widget
     WIDGET_CONFIGS.calendar,
+    WIDGET_CONFIGS.aiChat,
   ];
 };
 

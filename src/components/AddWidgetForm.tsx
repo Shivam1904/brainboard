@@ -85,8 +85,8 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
     }
     
     return {
-      title: 'calendar'==widgetConfig?.apiWidgetType  ? 'My Calendar' : 'allSchedules'==widgetConfig?.apiWidgetType  ? 'My Schedules' : '',
-      is_permanent: ['calendar', 'allSchedules'].includes(widgetConfig?.apiWidgetType as string) ? true : false,
+      title: 'calendar'==widgetConfig?.apiWidgetType  ? 'My Calendar' : 'allSchedules'==widgetConfig?.apiWidgetType  ? 'My Schedules' : 'aiChat'==widgetConfig?.apiWidgetType  ? 'Brainy AI' : '',
+      is_permanent: ['calendar', 'allSchedules', 'aiChat'].includes(widgetConfig?.apiWidgetType as string) ? true : false,
       frequency: {
         frequencySet: 'BALANCED',
         frequencySetValue: 0.6,

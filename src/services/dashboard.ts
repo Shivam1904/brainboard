@@ -3,23 +3,23 @@
 
 import { apiService } from './api';
 import { 
-  TodayWidgetsResponse,
-  AllWidgetsResponse,
+  DailyWidget,
   ApiWidgetType,
   ApiFrequency,
   ApiCategory,
   TodoTodayResponse,
-  TodoDetailsAndActivityResponse
+  TodoDetailsAndActivityResponse,
+  DashboardWidget
 } from '../types';
 
 export class DashboardService {
   // Get today's widget list from API
-  async getTodayWidgets(targetDate?: string): Promise<TodayWidgetsResponse> {
+  async getTodayWidgets(targetDate?: string): Promise<DailyWidget[]> {
     return apiService.getTodayWidgetList(targetDate);
   }
 
   // Get all widgets list from API
-  async getAllWidgets(): Promise<AllWidgetsResponse> {
+  async getAllWidgets(): Promise<DashboardWidget[]> {
     return apiService.getAllWidgetList();
   }
 
