@@ -4,10 +4,11 @@ export const API_CONFIG = {
   
   // Dashboard endpoints
   dashboard: {
-    getTodayWidgets: '/api/v1/widgets/getTodayWidgetList', // Get today's widget configuration
+    getTodayWidgets: '/api/v1/dashboard/getTodayWidgetList', // Get today's widget configuration
     getAllWidgets: '/api/v1/widgets/getAllWidgetList', // Get all widgets
-    addNewWidget: '/api/v1/widget/addnew', // Add new widget
-    addWidgetToToday: '/api/v1/widget/addtotoday', // Add widget to today
+    addNewWidget: '/api/v1/widgets/create', // Add new widget
+    addWidgetToToday: '/api/v1/dashboard/widget/addtotoday', // Add widget to today
+    removeWidgetFromToday: '/api/v1/dashboard/widget/removefromtoday', // Remove widget from today
     updateWidget: '/api/v1/widget/updateWidgetDetails', // Update widget
     updateWidgetDetails: '/api/v1/widget/updateDetails', // Update widget details
     updateDailyWidget: '/api/v1/widgets/updateDailyWidget', // Update daily widget active status

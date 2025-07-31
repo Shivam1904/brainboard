@@ -66,25 +66,6 @@ class WidgetService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_user_today_widgets(self, user_id: str) -> List[WidgetResponse]:
-        """Get today's widgets for a user (daily frequency or permanent widgets)."""
-        try:
-            stmt = select(DashboardWidgetDetails).where(
-                DashboardWidgetDetails.user_id == user_id,
-                DashboardWidgetDetails.delete_flag == False,
-                (DashboardWidgetDetails.frequency == "daily") | 
-                (DashboardWidgetDetails.is_permanent == True)
-            ).order_by(DashboardWidgetDetails.importance.desc())
-            
-            result = await self.db.execute(stmt)
-            widgets = result.scalars().all()
-            
-            # Use Pydantic auto-conversion
-            return [WidgetResponse.model_validate(widget) for widget in widgets]
-        except Exception as e:
-            logger.error(f"Error getting today's widgets for user {user_id}: {e}")
-            raise
-
     async def get_available_widget_types(self) -> List[WidgetTypeResponse]:
         """Get available widget types with counts."""
         try:

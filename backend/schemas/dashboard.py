@@ -17,6 +17,7 @@ class TodayWidgetListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     id: str
+    daily_widget_id: str
     widget_ids: List[str]
     widget_type: str
     priority: str
@@ -37,3 +38,4 @@ class RemoveWidgetFromTodayResponse(BaseModel):
     message: str
     daily_widget_id: Optional[str] = None
     remaining_widgets: Optional[List[str]] = None 
+    is_active: Optional[bool] = None

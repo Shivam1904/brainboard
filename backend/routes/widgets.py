@@ -34,14 +34,6 @@ async def get_user_widgets(
     service = WidgetService(db)
     return await service.get_user_widgets(DEFAULT_USER_ID)
 
-@router.get("/getTodayWidgetList", response_model=List[WidgetResponse])
-async def get_today_widget_list(
-    db: AsyncSession = Depends(get_db_session_dependency)
-):
-    """Get all widgets for the current user."""
-    service = WidgetService(db)
-    return await service.get_user_today_widgets(DEFAULT_USER_ID)
-
 
 
 @router.get("/categories", response_model=List[WidgetCategoryResponse])

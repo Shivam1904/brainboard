@@ -281,10 +281,15 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
             : 'bg-blue-50 border border-blue-200'
         }`}>
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-row items-center gap-2">
               <Clock className={`h-5 w-5 ${isAlerting ? 'text-white' : 'text-blue-600'}`} />
               <span className={`text-sm font-medium ${isAlerting ? 'text-white' : 'text-blue-800'}`}>
                 Next Alarm at {getNextAlarmTime(alarmData.alarm_details?.alarm_times)}
+              </span>
+              </div>
+              <span className={`text-sm font-medium ${isAlerting ? 'text-white' : 'text-blue-800'}`}>
+                All Alarms: {alarmData.alarm_details?.alarm_times.join(', ')}
               </span>
             </div>
             {isAlerting && (

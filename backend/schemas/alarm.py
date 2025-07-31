@@ -59,4 +59,4 @@ class AlarmActivityResponse(BaseModel):
 class AlarmDetailsAndActivityResponse(BaseModel):
     """Response schema for alarm details and activity."""
     alarm_details: Optional[AlarmDetailsResponse]
-    activities: List[AlarmActivityResponse] 
+    activity: Optional[AlarmActivityResponse] 

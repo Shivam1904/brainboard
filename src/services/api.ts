@@ -148,10 +148,9 @@ class ApiService {
     daily_widget_id: string;
     is_active: boolean;
   }> {
-    const url = buildApiUrl(`${API_CONFIG.dashboard.updateDailyWidget}/${dailyWidgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.dashboard.removeWidgetFromToday}/${dailyWidgetId}`);
     return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify({ is_active: isActive }),
+      method: 'POST'
     });
   }
 

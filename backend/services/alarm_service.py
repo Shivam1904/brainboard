@@ -49,11 +49,11 @@ class AlarmService:
             # Get today's activities
             today = datetime.now().date()
             stmt = select(AlarmItemActivity).where(
-                AlarmItemActivity.alarmdetails_id == alarm_details.id,
+                AlarmItemActivity.widget_id == widget_id,
                 AlarmItemActivity.created_at >= today
             )
             result = await self.db.execute(stmt)
-            activities = result.scalars().all()
+            activity = result.scalars().first()
 
             return {
                 "alarm_details": {
@@ -65,7 +65,7 @@ class AlarmService:
                     "created_at": alarm_details.created_at,
                     "updated_at": alarm_details.updated_at
                 },
-                "activities": [
+                "activity": 
                     {
                         "id": activity.id,
                         "widget_id": activity.widget_id,
@@ -77,8 +77,6 @@ class AlarmService:
                         "created_at": activity.created_at,
                         "updated_at": activity.updated_at
                     }
-                    for activity in activities
-                ]
             }
         except Exception as e:
             logger.error(f"Error getting alarm details and activity: {e}")
