@@ -115,6 +115,14 @@ class DailyWidgetService:
                 await self.db.commit()
                 await self.db.refresh(existing_daily_widget)  # Refresh the object
                 
+                # Create alarm activity for today if it's an alarm widget
+                if widget.widget_type == "alarm":
+                    from services.alarm_service import AlarmService
+                    alarm_service = AlarmService(self.db)
+                    activity_result = await alarm_service.create_alarm_activity_for_today(existing_daily_widget.id, widget_id, user_id)
+                    if not activity_result:
+                        logger.warning(f"Failed to create alarm activity for widget {widget_id}")
+                
                 return {
                     "success": True,
                     "message": f"Widget added to existing {widget.widget_type} group",
@@ -135,6 +143,14 @@ class DailyWidgetService:
                 self.db.add(new_daily_widget)
                 await self.db.commit()
                 await self.db.refresh(new_daily_widget)
+                
+                # Create alarm activity for today if it's an alarm widget
+                if widget.widget_type == "alarm":
+                    from services.alarm_service import AlarmService
+                    alarm_service = AlarmService(self.db)
+                    activity_result = await alarm_service.create_alarm_activity_for_today(new_daily_widget.id, widget_id, user_id)
+                    if not activity_result:
+                        logger.warning(f"Failed to create alarm activity for widget {widget_id}")
                 
                 return {
                     "success": True,
