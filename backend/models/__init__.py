@@ -9,6 +9,9 @@ from .todo_details import TodoDetails
 from .todo_item_activity import TodoItemActivity
 from .single_item_tracker_details import SingleItemTrackerDetails
 from .single_item_tracker_item_activity import SingleItemTrackerItemActivity
+from .websearch_details import WebSearchDetails
+from .websearch_item_activity import WebSearchItemActivity
+from .websearch_summary_ai_output import WebSearchSummaryAIOutput
 
 __all__ = [
     "AlarmDetails",
@@ -18,5 +21,8 @@ __all__ = [
     "TodoDetails",
     "TodoItemActivity",
     "SingleItemTrackerDetails",
-    "SingleItemTrackerItemActivity"
+    "SingleItemTrackerItemActivity",
+    "WebSearchDetails",
+    "WebSearchItemActivity",
+    "WebSearchSummaryAIOutput"
 ] 

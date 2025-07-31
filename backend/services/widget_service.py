@@ -84,6 +84,16 @@ WIDGET_TYPE_DEFINITIONS = {
                 "value_unit": {"type": "string", "required": False},
                 "target_value": {"type": "string", "required": False}
             }
+        },
+        "websearch": {
+            "id": "websearch",
+            "name": "WebSearch Widget",
+            "description": "Perform web searches and generate AI summaries",
+            "category": "research",
+            "icon": "search",
+            "config_schema": {
+                "title": {"type": "string", "required": True}
+            }
         }
 }
 
@@ -106,6 +116,12 @@ CATEGORY_DEFINITIONS = {
         "name": "Work & Productivity",
         "description": "Task management, productivity, and work-related widgets",
         "icon": "briefcase"
+    },
+    "research": {
+        "id": "research",
+        "name": "Research & Information",
+        "description": "Web search, information gathering, and research widgets",
+        "icon": "search"
     }
 }
 
@@ -193,6 +209,8 @@ class WidgetService:
                 await self._create_todo_details(widget.id, request, user_id)
             elif request.widget_type == "singleitemtracker":
                 await self._create_single_item_tracker_details(widget.id, request, user_id)
+            elif request.widget_type == "websearch":
+                await self._create_websearch_details(widget.id, request, user_id)
             
             await self.db.commit()
             
@@ -268,6 +286,20 @@ class WidgetService:
         self.db.add(tracker_details)
         await self.db.commit()
         await self.db.refresh(tracker_details)
+
+    async def _create_websearch_details(self, widget_id: str, request: CreateWidgetRequest, user_id: str) -> None:
+        """Create websearch details."""
+        from models.websearch_details import WebSearchDetails
+        
+        websearch_details = WebSearchDetails(
+            widget_id=widget_id,
+            title=request.title,
+            created_by=user_id
+        )
+        
+        self.db.add(websearch_details)
+        await self.db.commit()
+        await self.db.refresh(websearch_details)
 
     async def update_widget(self, widget_id: str, request: UpdateWidgetRequest, user_id: str) -> Dict[str, Any]:
         """Update widget details."""

@@ -8,6 +8,9 @@ from models.base import Base
 from models.alarm_details import AlarmDetails
 from models.alarm_item_activity import AlarmItemActivity
 from models.dashboard_widget_details import DashboardWidgetDetails
+from models.websearch_details import WebSearchDetails
+from models.websearch_item_activity import WebSearchItemActivity
+from models.websearch_summary_ai_output import WebSearchSummaryAIOutput
 from db.engine import DATABASE_URL
 
 async def init_database():
@@ -30,6 +33,9 @@ async def init_database():
     print(f"   - {DashboardWidgetDetails.__tablename__}")
     print(f"   - {AlarmDetails.__tablename__}")
     print(f"   - {AlarmItemActivity.__tablename__}")
+    print(f"   - {WebSearchDetails.__tablename__}")
+    print(f"   - {WebSearchItemActivity.__tablename__}")
+    print(f"   - {WebSearchSummaryAIOutput.__tablename__}")
     
     await engine.dispose()
 

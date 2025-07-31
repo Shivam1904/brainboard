@@ -19,4 +19,5 @@ class DailyWidget(BaseModel):
     # Relationships
     alarm_activities = relationship("AlarmItemActivity", back_populates="daily_widget", cascade="all, delete-orphan")
     todo_activities = relationship("TodoItemActivity", back_populates="daily_widget", cascade="all, delete-orphan")
-    single_item_tracker_activities = relationship("SingleItemTrackerItemActivity", back_populates="daily_widget", cascade="all, delete-orphan") 
+    single_item_tracker_activities = relationship("SingleItemTrackerItemActivity", back_populates="daily_widget", cascade="all, delete-orphan")
+    websearch_activities = relationship("WebSearchItemActivity", back_populates="daily_widget", cascade="all, delete-orphan") 

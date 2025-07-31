@@ -20,4 +20,5 @@ class DashboardWidgetDetails(BaseModel):
     # Relationships
     alarm_details = relationship("AlarmDetails", back_populates="dashboard_widget", cascade="all, delete-orphan")
     single_item_tracker_details = relationship("SingleItemTrackerDetails", back_populates="dashboard_widget", cascade="all, delete-orphan")
-    todo_details = relationship("TodoDetails", back_populates="dashboard_widget", cascade="all, delete-orphan") 
+    todo_details = relationship("TodoDetails", back_populates="dashboard_widget", cascade="all, delete-orphan")
+    websearch_details = relationship("WebSearchDetails", back_populates="dashboard_widget", cascade="all, delete-orphan") 
