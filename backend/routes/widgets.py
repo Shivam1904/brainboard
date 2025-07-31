@@ -12,6 +12,8 @@ from pydantic import BaseModel
 
 from db.dependency import get_db_session_dependency
 from services.widget_service import WidgetService
+from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse
+from utils.errors import raise_not_found, raise_database_error
 
 # ============================================================================
 # CONSTANTS
@@ -22,22 +24,9 @@ router = APIRouter()
 DEFAULT_USER_ID = "user_001"
 
 # ============================================================================
-# MODELS
-# ============================================================================
-class WidgetType(BaseModel):
-    """Widget type information."""
-    id: str
-    name: str
-    description: str
-    category: str
-    icon: str
-    count: int
-    config_schema: dict
-
-# ============================================================================
 # WIDGET ENDPOINTS
 # ============================================================================
-@router.get("/")
+@router.get("/", response_model=List[WidgetResponse])
 async def get_user_widgets(
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
@@ -45,7 +34,7 @@ async def get_user_widgets(
     service = WidgetService(db)
     return await service.get_user_widgets(DEFAULT_USER_ID)
 
-@router.get("/categories")
+@router.get("/categories", response_model=List[WidgetCategoryResponse])
 async def get_widget_categories(
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
@@ -53,7 +42,7 @@ async def get_widget_categories(
     service = WidgetService(db)
     return await service.get_widget_categories()
 
-@router.get("/{widget_id}")
+@router.get("/{widget_id}", response_model=WidgetResponse)
 async def get_widget_details(
     widget_id: str,
     db: AsyncSession = Depends(get_db_session_dependency)
@@ -64,19 +53,13 @@ async def get_widget_details(
         widgets = await service.get_user_widgets(DEFAULT_USER_ID)
         
         # Find the specific widget
-        widget = next((w for w in widgets if w["id"] == widget_id), None)
+        widget = next((w for w in widgets if w.id == widget_id), None)
         
         if not widget:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Widget {widget_id} not found for user"
-            )
+            raise raise_not_found(f"Widget {widget_id} not found for user")
         
         return widget
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get widget details: {str(e)}"
-        ) 
+        raise raise_database_error(f"Failed to get widget details: {str(e)}") 

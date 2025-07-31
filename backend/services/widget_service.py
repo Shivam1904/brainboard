@@ -7,10 +7,11 @@ Widget service for business logic.
 # ============================================================================
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
 
 from models.dashboard_widget_details import DashboardWidgetDetails
+from schemas.widget import WidgetResponse, WidgetTypeResponse, WidgetCategoryResponse
 
 # ============================================================================
 # CONSTANTS
@@ -64,7 +65,7 @@ class WidgetService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_available_widget_types(self) -> List[Dict[str, Any]]:
+    async def get_available_widget_types(self) -> List[WidgetTypeResponse]:
         """Get available widget types with counts."""
         try:
             # Get counts for each widget type
@@ -77,28 +78,31 @@ class WidgetService:
             for widget_type in widget_types:
                 type_counts[widget_type] = type_counts.get(widget_type, 0) + 1
             
-            # Build response with counts
+            # Build response with counts using Pydantic models
             available_types = []
             for widget_id, definition in WIDGET_TYPE_DEFINITIONS.items():
-                available_types.append({
+                available_types.append(WidgetTypeResponse(
                     **definition,
-                    "count": type_counts.get(widget_id, 0)
-                })
+                    count=type_counts.get(widget_id, 0)
+                ))
             
             return available_types
         except Exception as e:
             logger.error(f"Error getting available widget types: {e}")
             raise
 
-    async def get_widget_categories(self) -> List[Dict[str, Any]]:
+    async def get_widget_categories(self) -> List[WidgetCategoryResponse]:
         """Get widget categories."""
-        return list(CATEGORY_DEFINITIONS.values())
+        return [WidgetCategoryResponse(**category) for category in CATEGORY_DEFINITIONS.values()]
 
-    async def get_widget_type(self, widget_type_id: str) -> Dict[str, Any]:
+    async def get_widget_type(self, widget_type_id: str) -> Optional[WidgetTypeResponse]:
         """Get specific widget type information."""
-        return WIDGET_TYPE_DEFINITIONS.get(widget_type_id)
+        definition = WIDGET_TYPE_DEFINITIONS.get(widget_type_id)
+        if definition:
+            return WidgetTypeResponse(**definition)
+        return None
 
-    async def get_user_widgets(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_widgets(self, user_id: str) -> List[WidgetResponse]:
         """Get all widgets for a user."""
         try:
             stmt = select(DashboardWidgetDetails).where(
@@ -107,20 +111,8 @@ class WidgetService:
             result = await self.db.execute(stmt)
             widgets = result.scalars().all()
             
-            return [
-                {
-                    "id": widget.id,
-                    "widget_type": widget.widget_type,
-                    "title": widget.title,
-                    "category": widget.category,
-                    "frequency": widget.frequency,
-                    "importance": widget.importance,
-                    "is_permanent": widget.is_permanent,
-                    "created_at": widget.created_at,
-                    "updated_at": widget.updated_at
-                }
-                for widget in widgets
-            ]
+            # Use Pydantic auto-conversion
+            return [WidgetResponse.model_validate(widget) for widget in widgets]
         except Exception as e:
             logger.error(f"Error getting user widgets: {e}")
             raise 

@@ -1,56 +1,49 @@
 #!/bin/bash
 
-# Script to run commands with the brainboard-ai conda environment
+# ============================================================================
+# CONSTANTS
+# ============================================================================
+CONDA_ENV_NAME="brainboard-ai"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-CONDA_ENV="brainboard-ai"
-PYTHON_PATH="/opt/homebrew/Caskroom/miniconda/base/envs/brainboard-ai/bin/python"
-
-# Function to show usage
-show_usage() {
-    echo "Usage: $0 <command>"
-    echo ""
-    echo "Available commands:"
-    echo "  server   - Start the server"
-    echo "  init-db  - Initialize database"
-    echo "  data     - Generate test data"
-    echo "  python   - Run Python with conda environment"
-    echo ""
-    echo "Examples:"
-    echo "  $0 server"
-    echo "  $0 data"
-    echo "  $0 python -c 'import fastapi; print(\"FastAPI version:\", fastapi.__version__)'"
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+activate_conda_env() {
+    echo "🚀 Activating conda environment: $CONDA_ENV_NAME"
+    source "$(conda info --base)/etc/profile.d/conda.sh"
+    conda activate "$CONDA_ENV_NAME"
 }
 
-# Check if command is provided
-if [ $# -eq 0 ]; then
-    show_usage
-    exit 1
-fi
-
-COMMAND=$1
-shift
-
-case $COMMAND in
+# ============================================================================
+# COMMAND HANDLING
+# ============================================================================
+case "$1" in
     "server")
-        echo "🚀 Starting server with $CONDA_ENV environment..."
+        activate_conda_env
         cd "$(dirname "$0")"
-        $PYTHON_PATH run.py
-        ;;
-    "init-db")
-        echo "🔧 Initializing database with $CONDA_ENV environment..."
-        $PYTHON_PATH init_db.py
+        echo "🚀 Starting server with $CONDA_ENV_NAME environment..."
+        python run.py
         ;;
     "data")
-        echo "📊 Generating test data with $CONDA_ENV environment..."
-        $PYTHON_PATH generate_test_data.py
+        activate_conda_env
+        cd "$(dirname "$0")"
+        echo "🔧 Generating dummy data with $CONDA_ENV_NAME environment..."
+        python generate_dummy_data.py
         ;;
-    "python")
-        echo "🐍 Running Python with $CONDA_ENV environment..."
-        $PYTHON_PATH "$@"
+    "setup")
+        activate_conda_env
+        cd "$(dirname "$0")"
+        echo "🔧 Setting up database with $CONDA_ENV_NAME environment..."
+        python init_db.py
         ;;
     *)
-        echo "❌ Unknown command: $COMMAND"
-        show_usage
+        echo "Usage: $0 {server|data|setup}"
+        echo ""
+        echo "Commands:"
+        echo "  server  - Start the FastAPI server"
+        echo "  data    - Generate dummy data"
+        echo "  setup   - Initialize database tables"
         exit 1
         ;;
 esac 

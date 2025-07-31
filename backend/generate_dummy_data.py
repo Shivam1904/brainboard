@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 """
-Generate realistic test data for the backend.
+Generate realistic dummy data for the backend.
 """
+
+# ============================================================================
+# IMPORTS
+# ============================================================================
 import asyncio
 import json
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+
 from models.base import Base
 from models.dashboard_widget_details import DashboardWidgetDetails
 from models.alarm_details import AlarmDetails
 from models.alarm_item_activity import AlarmItemActivity
 from db.engine import DATABASE_URL
 
-async def generate_test_data():
-    """Generate realistic test data."""
-    print("🔧 Generating test data...")
+# ============================================================================
+# DATA GENERATION
+# ============================================================================
+async def generate_dummy_data():
+    """Generate realistic dummy data."""
+    print("🔧 Generating dummy data...")
     
     # Create engine
     engine = create_async_engine(
@@ -177,12 +185,15 @@ async def generate_test_data():
         print(f"✅ Created {len(activity_configs)} alarm activities")
     
     await engine.dispose()
-    print("🎉 Test data generation complete!")
+    print("🎉 Dummy data generation complete!")
     print("\n📊 Generated data:")
     print(f"   - {len(dashboard_widgets)} dashboard widgets")
     print(f"   - {len(alarm_details)} alarm details") 
     print(f"   - {len(activity_configs)} alarm activities")
     print("\n🔗 All foreign key constraints satisfied!")
 
+# ============================================================================
+# MAIN
+# ============================================================================
 if __name__ == "__main__":
-    asyncio.run(generate_test_data()) 
+    asyncio.run(generate_dummy_data()) 
