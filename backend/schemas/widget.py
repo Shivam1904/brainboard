@@ -18,6 +18,7 @@ class WidgetType(str, Enum):
     TODO_HABIT = "todo-habit"
     TODO_TASK = "todo-task"
     TODO_EVENT = "todo-event"
+    SINGLEITEMTRACKER = "singleitemtracker"
     AI_CHAT = "aiChat"
 
 class Frequency(str, Enum):
@@ -42,6 +43,11 @@ class CreateWidgetRequest(BaseModel):
     
     # Alarm-specific fields
     alarm_time: Optional[str] = Field(None, description="Time of day for alarm (HH:MM format)")
+    
+    # SingleItemTracker-specific fields
+    value_type: Optional[str] = Field(None, description="Type of value to track: number, text, decimal")
+    value_unit: Optional[str] = Field(None, description="Unit for tracker values: kg, pages, steps, etc.")
+    target_value: Optional[str] = Field(None, description="Target value for tracker")
 
 class UpdateWidgetRequest(BaseModel):
     """Request schema for updating a dashboard widget"""

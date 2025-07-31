@@ -19,6 +19,8 @@ from models.daily_widget import DailyWidget
 from models.alarm_item_activity import AlarmItemActivity
 from models.todo_details import TodoDetails
 from models.todo_item_activity import TodoItemActivity
+from models.single_item_tracker_details import SingleItemTrackerDetails
+from models.single_item_tracker_item_activity import SingleItemTrackerItemActivity
 from db.engine import DATABASE_URL
 
 # ============================================================================
@@ -130,6 +132,36 @@ async def generate_dummy_data():
                 "category": "Productivity",
                 "is_permanent": False,
                 "created_by": "user_001"
+            },
+            {
+                "user_id": "user_001",
+                "widget_type": "singleitemtracker",
+                "frequency": "daily",
+                "importance": 0.8,
+                "title": "Weight Tracker",
+                "category": "Health",
+                "is_permanent": True,
+                "created_by": "user_001"
+            },
+            {
+                "user_id": "user_001",
+                "widget_type": "singleitemtracker",
+                "frequency": "daily",
+                "importance": 0.7,
+                "title": "Steps Tracker",
+                "category": "Health",
+                "is_permanent": True,
+                "created_by": "user_001"
+            },
+            {
+                "user_id": "user_002",
+                "widget_type": "singleitemtracker",
+                "frequency": "daily",
+                "importance": 0.6,
+                "title": "Reading Tracker",
+                "category": "Productivity",
+                "is_permanent": False,
+                "created_by": "user_002"
             }
         ]
         
@@ -246,6 +278,47 @@ async def generate_dummy_data():
         print(f"✅ Created {len(todo_details)} todo details")
         
         # ============================================================================
+        # 4. GENERATE SINGLEITEMTRACKER_DETAILS (Child of DashboardWidgetDetails)
+        # ============================================================================
+        print("📊 Creating single item tracker details...")
+        tracker_details = []
+        
+        tracker_configs = [
+            {
+                "widget_id": dashboard_widgets[8].id,  # Weight Tracker
+                "title": "Weight Tracker",
+                "value_type": "decimal",
+                "value_unit": "kg",
+                "target_value": "70.0",
+                "created_by": "user_001"
+            },
+            {
+                "widget_id": dashboard_widgets[9].id,  # Steps Tracker
+                "title": "Steps Tracker",
+                "value_type": "number",
+                "value_unit": "steps",
+                "target_value": "10000",
+                "created_by": "user_001"
+            },
+            {
+                "widget_id": dashboard_widgets[10].id,  # Reading Tracker
+                "title": "Reading Tracker",
+                "value_type": "number",
+                "value_unit": "pages",
+                "target_value": "30",
+                "created_by": "user_002"
+            }
+        ]
+        
+        for config in tracker_configs:
+            tracker = SingleItemTrackerDetails(**config)
+            tracker_details.append(tracker)
+            session.add(tracker)
+        
+        await session.commit()
+        print(f"✅ Created {len(tracker_details)} single item tracker details")
+        
+        # ============================================================================
         # 4. GENERATE DAILY_WIDGETS (Daily widget selections)
         # ============================================================================
         print("📅 Creating daily widgets...")
@@ -297,6 +370,24 @@ async def generate_dummy_data():
                 "widget_type": "todo-event",
                 "priority": "MEDIUM",
                 "reasoning": "Weekly event tracking",
+                "date": today,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            {
+                "widget_ids": [dashboard_widgets[8].id],  # Weight Tracker
+                "widget_type": "singleitemtracker",
+                "priority": "HIGH",
+                "reasoning": "Daily weight tracking for health goals",
+                "date": today,
+                "is_active": True,
+                "created_by": "user_001"
+            },
+            {
+                "widget_ids": [dashboard_widgets[9].id],  # Steps Tracker
+                "widget_type": "singleitemtracker",
+                "priority": "MEDIUM",
+                "reasoning": "Daily step tracking for fitness",
                 "date": today,
                 "is_active": True,
                 "created_by": "user_001"
@@ -441,6 +532,40 @@ async def generate_dummy_data():
         
         await session.commit()
         print(f"✅ Created {len(todo_activities)} todo activities")
+        
+        # ============================================================================
+        # 7. GENERATE SINGLEITEMTRACKER_ITEM_ACTIVITIES (Tracker activity tracking)
+        # ============================================================================
+        print("📊 Creating single item tracker activities...")
+        tracker_activities = []
+        
+        tracker_activity_configs = [
+            # Today's activities
+            {
+                "daily_widget_id": daily_widgets[6].id,  # Today's weight tracker group
+                "widget_id": dashboard_widgets[8].id,  # Weight Tracker
+                "singleitemtrackerdetails_id": tracker_details[0].id,
+                "value": "72.5",
+                "time_added": datetime.combine(today, datetime.strptime("08:00", "%H:%M").time()),
+                "created_by": "user_001"
+            },
+            {
+                "daily_widget_id": daily_widgets[7].id,  # Today's steps tracker group
+                "widget_id": dashboard_widgets[9].id,  # Steps Tracker
+                "singleitemtrackerdetails_id": tracker_details[1].id,
+                "value": "8500",
+                "time_added": datetime.combine(today, datetime.strptime("20:00", "%H:%M").time()),
+                "created_by": "user_001"
+            }
+        ]
+        
+        for config in tracker_activity_configs:
+            activity = SingleItemTrackerItemActivity(**config)
+            tracker_activities.append(activity)
+            session.add(activity)
+        
+        await session.commit()
+        print(f"✅ Created {len(tracker_activities)} single item tracker activities")
     
     await engine.dispose()
     
@@ -456,13 +581,14 @@ async def generate_dummy_data():
     print(f"   📅 Daily Widgets: {len(daily_widgets)}")
     print(f"   📈 Alarm Activities: {len(alarm_activities)}")
     print(f"   📋 Todo Activities: {len(todo_activities)}")
+    print(f"   📊 SingleItemTracker Activities: {len(tracker_activities)}")
     print("\n🔗 All foreign key relationships satisfied!")
     print("\n📅 Date ranges:")
     print(f"   - Yesterday: {yesterday}")
     print(f"   - Today: {today}")
     print(f"   - Tomorrow: {tomorrow}")
     print("\n👥 Users: user_001, user_002")
-    print("🎯 Widget Types: alarm, todo-habit, todo-task, todo-event")
+    print("🎯 Widget Types: alarm, todo-habit, todo-task, todo-event, singleitemtracker")
     print("📊 Categories: Health, Work, Productivity")
 
 # ============================================================================
