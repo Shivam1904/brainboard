@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     max_summary_tokens: int = 400
     
     # Widget Configuration
-    default_user_id: str = "default_user"
+    default_user_id: str = "user_001"
     widget_max_summaries_history: int = 50
     
     # AWS (for future migration)

@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { UIWidget } from '../../types';
 import { socketService } from '../../services/socket';
-import { renderAiChatComponent, AiChatComponent } from './ai-chat/AiChatComponents';
-import { AIResponseGenerator, AIResponse } from '../../services/aiResponseGenerator';
 
 interface Message {
   id: string;
@@ -11,7 +9,6 @@ interface Message {
   content: string;
   timestamp: Date;
   thinkingSteps?: string[];
-  components?: AiChatComponent[];
   isComplete?: boolean;
 }
 
@@ -25,7 +22,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     {
       id: '1',
       type: 'ai',
-      content: 'Hello! I\'m your AI assistant. I can help you with various tasks and provide real-time insights. What would you like to work on today?',
+      content: 'Hello! I\'m your AI assistant. I can help you with various tasks. What would you like to do?',
       timestamp: new Date(),
       isComplete: true
     }
@@ -33,16 +30,19 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Connect to socket service on mount
   useEffect(() => {
     const handleConnection = (data: any) => {
+      console.log('Connection status:', data);
       setIsConnected(data.status === 'connected');
     };
 
     const handleThinking = (data: any) => {
+      console.log('Thinking step:', data);
       setMessages(prev => 
         prev.map(msg => 
           msg.type === 'thinking' 
@@ -53,13 +53,13 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     };
 
     const handleResponse = (data: any) => {
+      console.log('AI Response:', data);
       const aiResponse: Message = {
         id: Date.now().toString(),
         type: 'ai',
         content: data.content,
         timestamp: new Date(),
-        components: data.components,
-        isComplete: true
+        isComplete: data.is_complete
       };
 
       setMessages(prev => 
@@ -69,12 +69,25 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
             : msg
         ).concat(aiResponse)
       );
+      
+      setCurrentSessionId(data.session_id);
       setIsTyping(false);
     };
 
     const handleError = (data: any) => {
       console.error('Socket error:', data);
       setIsTyping(false);
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: `Error: ${data.error || 'Something went wrong'}`,
+        timestamp: new Date(),
+        isComplete: true
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
     };
 
     // Subscribe to socket events
@@ -132,54 +145,29 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
 
     setMessages(prev => [...prev, thinkingMessage]);
 
-    // Send message via socket if connected, otherwise simulate
+    // Send message via socket if connected, otherwise show fallback
     if (isConnected) {
-      socketService.sendChatMessage(inputValue.trim());
+      socketService.sendChatMessage(inputValue.trim(), currentSessionId || undefined);
     } else {
-      // Fallback simulation when socket is not connected
-      const thinkingSteps = [
-        'Analyzing your request...',
-        'Gathering relevant information...',
-        'Processing context and constraints...',
-        'Generating response...',
-        'Preparing interactive components...'
-      ];
+      // Simple fallback when socket is not connected
+      setTimeout(() => {
+        const fallbackResponse: Message = {
+          id: (Date.now() + 2).toString(),
+          type: 'ai',
+          content: 'Sorry, I\'m not connected to the server right now. Please try again later.',
+          timestamp: new Date(),
+          isComplete: true
+        };
 
-      for (let i = 0; i < thinkingSteps.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 800));
         setMessages(prev => 
           prev.map(msg => 
             msg.id === thinkingMessage.id 
-              ? { ...msg, thinkingSteps: thinkingSteps.slice(0, i + 1) }
+              ? { ...msg, isComplete: true }
               : msg
-          )
+          ).concat(fallbackResponse)
         );
-      }
-
-      // Simulate AI response with interactive components
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Generate AI response using the response generator
-      const aiResponseData = AIResponseGenerator.generateResponse(inputValue.trim());
-      
-      const aiResponse: Message = {
-        id: (Date.now() + 2).toString(),
-        type: 'ai',
-        content: aiResponseData.response,
-        timestamp: new Date(),
-        components: aiResponseData.components,
-        isComplete: true
-      };
-
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === thinkingMessage.id 
-            ? { ...msg, isComplete: true }
-            : msg
-        ).concat(aiResponse)
-      );
-
-      setIsTyping(false);
+        setIsTyping(false);
+      }, 1000);
     }
   };
 
@@ -187,60 +175,6 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
-    }
-  };
-
-  const handleInteractiveAction = async (componentId: string, action: string, data: any) => {
-    console.log('Interactive action:', componentId, action, data);
-    
-    if (isConnected) {
-      socketService.sendInteractiveAction(componentId, action, data);
-    } else {
-      // Generate follow-up response for offline mode
-      const followUpResponse = AIResponseGenerator.generateFollowUpResponse(componentId, action, data);
-      
-      // Add thinking message
-      const thinkingMessage: Message = {
-        id: Date.now().toString(),
-        type: 'thinking',
-        content: 'Processing your action...',
-        timestamp: new Date(),
-        thinkingSteps: [],
-        isComplete: false
-      };
-
-      setMessages(prev => [...prev, thinkingMessage]);
-
-      // Simulate thinking steps
-      for (let i = 0; i < followUpResponse.thinkingSteps.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 600));
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === thinkingMessage.id 
-              ? { ...msg, thinkingSteps: followUpResponse.thinkingSteps.slice(0, i + 1) }
-              : msg
-          )
-        );
-      }
-
-      // Add AI response
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'ai',
-        content: followUpResponse.response,
-        timestamp: new Date(),
-        components: followUpResponse.components,
-        isComplete: true
-      };
-
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === thinkingMessage.id 
-            ? { ...msg, isComplete: true }
-            : msg
-        ).concat(aiResponse)
-      );
     }
   };
 
@@ -268,17 +202,6 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
                 </div>
                 <p className="text-sm">{message.content}</p>
               </div>
-              
-              {message.components && (
-                <div className="mt-3 space-y-2">
-                  {message.components.map(component => (
-                    <div key={component.id}>
-                      {renderAiChatComponent(component, handleInteractiveAction)}
-                    </div>
-                  ))}
-                </div>
-              )}
-              
               <span className="text-xs text-muted-foreground mt-2 block">
                 {message.timestamp.toLocaleTimeString()}
               </span>
@@ -299,27 +222,27 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
                     AI is thinking...
                   </p>
                   
-                                     {message.thinkingSteps && (
-                     <div className="space-y-1">
-                       {message.thinkingSteps.map((step, index) => (
-                         <div key={index} className="flex items-center gap-2 animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${index * 100}ms` }}>
-                           <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                           <span className="text-xs text-muted-foreground">{step}</span>
-                         </div>
-                       ))}
-                     </div>
-                   )}
+                  {message.thinkingSteps && message.thinkingSteps.length > 0 && (
+                    <div className="space-y-1">
+                      {message.thinkingSteps.map((step, index) => (
+                        <div key={index} className="flex items-center gap-2 animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${index * 100}ms` }}>
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-muted-foreground">{step}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   
-                                     {!message.isComplete && (
-                     <div className="flex items-center gap-1 mt-2">
-                       <div className="flex space-x-1">
-                         <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
-                         <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                         <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                       </div>
-                       <span className="text-xs text-muted-foreground ml-2">Processing...</span>
-                     </div>
-                   )}
+                  {!message.isComplete && (
+                    <div className="flex items-center gap-1 mt-2">
+                      <div className="flex space-x-1">
+                        <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
+                        <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                      <span className="text-xs text-muted-foreground ml-2">Processing...</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

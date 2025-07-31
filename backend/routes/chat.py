@@ -5,23 +5,198 @@ Chat routes for AI chat functionality.
 # ============================================================================
 # IMPORTS
 # ============================================================================
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+import json
+import uuid
+import logging
+from datetime import datetime
 
 from schemas.chat import ChatRequest, ChatResponse, SessionInfo, ChatSessionList
 from orchestrators.chat_orchestrator import ChatOrchestrator
 from services.session_service import SessionService
-from db.session import get_session
+from db.session import get_session, AsyncSessionLocal
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # CONSTANTS
 # ============================================================================
 router = APIRouter()
 
+# Connection management
+active_connections: Dict[str, WebSocket] = {}
+
+class ConnectionManager:
+    """Manages WebSocket connections and provides utility methods."""
+    
+    def __init__(self):
+        self.active_connections: Dict[str, WebSocket] = {}
+    
+    async def connect(self, websocket: WebSocket, connection_id: str):
+        """Accept a new WebSocket connection."""
+        await websocket.accept()
+        self.active_connections[connection_id] = websocket
+        logger.info(f"WebSocket connected: {connection_id}")
+    
+    def disconnect(self, connection_id: str):
+        """Remove a WebSocket connection."""
+        if connection_id in self.active_connections:
+            del self.active_connections[connection_id]
+            logger.info(f"WebSocket disconnected: {connection_id}")
+    
+    async def send_message(self, connection_id: str, message: Dict[str, Any]):
+        """Send a message to a specific WebSocket connection."""
+        if connection_id in self.active_connections:
+            try:
+                await self.active_connections[connection_id].send_text(json.dumps(message))
+            except Exception as e:
+                logger.error(f"Error sending message to {connection_id}: {e}")
+                self.disconnect(connection_id)
+    
+    async def send_thinking_step(self, connection_id: str, step: str, details: Optional[str] = None):
+        """Send a thinking step update to the client."""
+        message = {
+            "type": "thinking",
+            "step": step,
+            "details": details,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        await self.send_message(connection_id, message)
+    
+    async def send_response(self, connection_id: str, response: str, session_id: Optional[str] = None, is_complete: bool = False):
+        """Send the final AI response to the client."""
+        message = {
+            "type": "response",
+            "content": response,
+            "session_id": session_id,
+            "is_complete": is_complete,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        await self.send_message(connection_id, message)
+    
+    async def send_error(self, connection_id: str, error: str):
+        """Send an error message to the client."""
+        message = {
+            "type": "error",
+            "error": error,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        await self.send_message(connection_id, message)
+
+# Global connection manager
+manager = ConnectionManager()
+
 # ============================================================================
 # ROUTES
 # ============================================================================
+
+@router.websocket("/ws/chat")
+async def websocket_chat(websocket: WebSocket):
+    """WebSocket endpoint for real-time chat communication."""
+    connection_id = str(uuid.uuid4())
+    
+    try:
+        # Accept the connection
+        await manager.connect(websocket, connection_id)
+        
+        # Send connection confirmation
+        await manager.send_message(connection_id, {
+            "type": "connection",
+            "connection_id": connection_id,
+            "message": "Connected to Brainboard Chat",
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        
+        # Initialize chat orchestrator
+        db_session = AsyncSessionLocal()
+        orchestrator = ChatOrchestrator(db_session)
+        
+        # Default user ID for development (you can modify this later)
+        user_id = "user_001"
+        current_session_id = None
+        
+        # Handle incoming messages
+        while True:
+            try:
+                # Receive message from client
+                data = await websocket.receive_text()
+                message_data = json.loads(data)
+                
+                user_message = message_data.get("message", "")
+                session_id = message_data.get("session_id")
+                
+                if not user_message.strip():
+                    await manager.send_error(connection_id, "Empty message received")
+                    continue
+                
+                # Send initial thinking step
+                await manager.send_thinking_step(connection_id, "session_management", "Processing your message...")
+                
+                # Process message with orchestrator
+                try:
+                    # Create a callback function for real-time updates
+                    async def websocket_callback(step: str, details: Optional[str] = None):
+                        await manager.send_thinking_step(connection_id, step, details)
+                    
+                    # Process the message
+                    response = await orchestrator.process_message(
+                        user_message=user_message,
+                        user_id=user_id,
+                        session_id=session_id,
+                        websocket_callback=websocket_callback
+                    )
+                    
+                    # Send final response
+                    await manager.send_response(
+                        connection_id=connection_id,
+                        response=response.get("message", "No response generated"),
+                        session_id=response.get("session_id"),
+                        is_complete=response.get("is_complete", True)
+                    )
+                    
+                    # Update current session ID
+                    current_session_id = response.get("session_id")
+                    
+                except Exception as e:
+                    logger.error(f"Error processing message: {e}")
+                    await manager.send_error(connection_id, f"Error processing message: {str(e)}")
+                
+            except json.JSONDecodeError:
+                await manager.send_error(connection_id, "Invalid JSON format")
+            except WebSocketDisconnect:
+                logger.info(f"WebSocket disconnected during message handling: {connection_id}")
+                break
+            except Exception as e:
+                logger.error(f"Error handling message: {e}")
+                try:
+                    await manager.send_error(connection_id, "Internal server error")
+                except:
+                    break
+                
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket disconnected: {connection_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+    finally:
+        # Clean up connection
+        manager.disconnect(connection_id)
+        try:
+            if 'db_session' in locals():
+                await db_session.close()
+        except:
+            pass
+
+@router.get("/health")
+async def chat_health():
+    """Health check endpoint for chat service."""
+    return {
+        "status": "healthy",
+        "active_connections": len(manager.active_connections),
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
 @router.post("/message", response_model=ChatResponse)
 async def chat_message(
     request: ChatRequest,

@@ -1,24 +1,75 @@
 // API Configuration for Brainboard widgets
 export const API_CONFIG = {
   baseUrl: 'http://localhost:8000', // Backend server URL
+  
+  // Dashboard endpoints
   dashboard: {
-    getTodayWidgets: '/api/v1/dashboard/widgets/today', // Get today's widget configuration
+    getTodayWidgets: '/api/v1/widgets/getTodayWidgetList', // Get today's widget configuration
+    getAllWidgets: '/api/v1/widgets/getAllWidgetList', // Get all widgets
+    addNewWidget: '/api/v1/widget/addnew', // Add new widget
+    addWidgetToToday: '/api/v1/widget/addtotoday', // Add widget to today
+    updateWidget: '/api/v1/widget/updateWidgetDetails', // Update widget
+    updateWidgetDetails: '/api/v1/widget/updateDetails', // Update widget details
+    updateDailyWidget: '/api/v1/widgets/updateDailyWidget', // Update daily widget active status
+    getTodoList: '/api/v1/getTodoList', // Get todo list by type
   },
+  
+  // Todo widget endpoints
+  todo: {
+    getTodayTodoList: '/api/v1/widgets/todo/getTodayTodoList', // Get today's todo list
+    updateActivity: '/api/v1/widgets/todo/updateActivity', // Update todo activity
+    getTodoItemDetailsAndActivity: '/api/v1/widgets/todo/getTodoItemDetailsAndActivity', // Get todo details and activity
+    getTodoDetails: '/api/v1/widgets/todo/getTodoDetails', // Get todo details
+    updateDetails: '/api/v1/widgets/todo/updateDetails', // Update todo details
+  },
+  
+  // Alarm widget endpoints
+  alarm: {
+    getAlarmDetailsAndActivity: '/api/v1/alarms/getAlarmDetailsAndActivity', // Get alarm details and activity
+    snoozeAlarm: '/api/v1/alarms/snoozeAlarm', // Snooze alarm
+    stopAlarm: '/api/v1/alarms/stopAlarm', // Stop alarm
+    updateActivity: '/api/v1/alarms/updateActivity', // Update alarm activity
+    getAlarmDetails: '/api/v1/alarms/getAlarmDetails', // Get alarm details
+    updateDetails: '/api/v1/alarms/updateDetails', // Update alarm details
+  },
+  
+  // Single item tracker endpoints
+  singleItemTracker: {
+    getTrackerDetailsAndActivity: '/api/v1/widgets/single-item-tracker/getTrackerDetailsAndActivity', // Get tracker details and activity
+    updateActivity: '/api/v1/widgets/single-item-tracker/updateActivity', // Update tracker activity
+    getTrackerDetails: '/api/v1/widgets/single-item-tracker/getTrackerDetails', // Get tracker details
+    updateDetails: '/api/v1/widgets/single-item-tracker/updateDetails', // Update tracker details
+  },
+  
+  // Web search endpoints
   webSearch: {
     getScheduledSearches: '/api/v1/web-search/scheduled',
     getSearchResult: '/api/v1/web-search/result',
+    getSummaryAndActivity: '/api/v1/widgets/websearch/getSummaryAndActivity', // Get web search summary and activity
+    updateActivity: '/api/v1/widgets/websearch/updateActivity', // Update web search activity
+    getWebsearchDetails: '/api/v1/widgets/websearch/getWebsearchDetails', // Get web search details
+    updateDetails: '/api/v1/widgets/websearch/updateDetails', // Update web search details
+    getAISummary: '/api/v1/widgets/websearch/getaisummary', // Get AI summary
   },
+  
+  // Health check endpoints
+  health: {
+    getHealth: '/api/v1/health', // Basic health check
+    getDetailedHealth: '/api/v1/health/detailed', // Detailed health check
+  },
+  
+  // Legacy endpoints (keeping for backward compatibility)
   tasks: {
     getTodayTasks: '/api/v1/widgets/todo/tasks/today', // Get today's tasks for todo widget
     updateTask: '/api/v1/widgets/todo/tasks/update', // Update task status
     addMission: '/api/v1/widgets/todo/tasks/mission', // Add new mission
   },
-  singleItemTracker: {
+  singleItemTrackerLegacy: {
     getTracker: '/api/v1/widgets/single-item-tracker/{widget_id}', // Get tracker with recent logs
     updateValue: '/api/v1/widgets/single-item-tracker/{widget_id}/update-value', // Update tracker value
     getWidgetData: '/api/v1/widgets/single-item-tracker/{widget_id}', // Get complete widget data
   },
-  alarm: {
+  alarmLegacy: {
     getAlarms: '/api/v1/widgets/alarm/{widget_id}', // Get all alarms for widget
     createAlarm: '/api/v1/widgets/alarm/create', // Create new alarm
     updateAlarmStatus: '/api/v1/widgets/alarm/{widget_id}/updateStatus', // Snooze or activate alarm

@@ -89,7 +89,8 @@ class SocketService {
 
         this.socket.onmessage = (event) => {
           try {
-            const message: SocketMessage = JSON.parse(event.data);
+            const message = JSON.parse(event.data);
+            console.log('Received WebSocket message:', message);
             this.handleMessage(message);
           } catch (error) {
             console.error('Failed to parse WebSocket message:', error);
@@ -153,12 +154,18 @@ class SocketService {
   }
 
   // Send chat message to AI
-  public sendChatMessage(message: string, context?: any): void {
-    this.send('chat_message', {
+  public sendChatMessage(message: string, sessionId?: string): void {
+    // Send message in the format expected by our backend
+    const messageData = {
       message,
-      context,
-      timestamp: new Date().toISOString()
-    });
+      session_id: sessionId
+    };
+    
+    if (this.socket && this.isConnected) {
+      this.socket.send(JSON.stringify(messageData));
+    } else {
+      console.error('WebSocket not connected');
+    }
   }
 
   // Send interactive component action
@@ -205,22 +212,40 @@ class SocketService {
   }
 
   // Handle incoming messages
-  private handleMessage(message: SocketMessage): void {
+  private handleMessage(message: any): void {
+    // Handle the format sent by our backend
     switch (message.type) {
       case 'thinking':
-        this.emit('thinking', message.data);
+        this.emit('thinking', {
+          step: message.step,
+          details: message.details,
+          timestamp: message.timestamp
+        });
         break;
       case 'response':
-        this.emit('response', message.data);
-        break;
-      case 'interactive':
-        this.emit('interactive', message.data);
+        this.emit('response', {
+          content: message.content,
+          session_id: message.session_id,
+          is_complete: message.is_complete,
+          timestamp: message.timestamp
+        });
         break;
       case 'error':
-        this.emit('error', message.data);
+        this.emit('error', {
+          error: message.error,
+          timestamp: message.timestamp
+        });
         break;
       case 'connection':
-        this.emit('connection', message.data);
+        // Set connection status to connected when we receive connection message
+        this.isConnected = true;
+        this.connectionStatus = 'connected';
+        this.emit('connection', {
+          status: 'connected',
+          connection_id: message.connection_id,
+          message: message.message,
+          timestamp: message.timestamp
+        });
         break;
       default:
         console.warn('Unknown message type:', message.type);
@@ -250,7 +275,7 @@ class SocketService {
       ? 'localhost:8000' 
       : window.location.host;
     
-    return `${protocol}//${host}/ws/ai-chat`;
+    return `${protocol}//${host}/api/v1/chat/ws/chat`;
   }
 
   // Get connection status
