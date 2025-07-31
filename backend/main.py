@@ -7,8 +7,12 @@ Main FastAPI application entry point.
 # ============================================================================
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
-from routes import alarm, widgets
+from routes import alarm, widgets, chat
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ============================================================================
 # CONSTANTS
@@ -26,8 +30,10 @@ CORS_HEADERS = ["*"]
 # API settings
 API_PREFIX_ALARMS = "/api/v1/alarms"
 API_PREFIX_WIDGETS = "/api/v1/widgets"
+API_PREFIX_CHAT = "/api/v1/chat"
 API_TAG_ALARMS = "alarm"
 API_TAG_WIDGETS = "widgets"
+API_TAG_CHAT = "chat"
 
 # Server settings
 HOST = "0.0.0.0"
@@ -58,6 +64,7 @@ app.add_middleware(
 # ============================================================================
 app.include_router(alarm.router, prefix=API_PREFIX_ALARMS, tags=[API_TAG_ALARMS])
 app.include_router(widgets.router, prefix=API_PREFIX_WIDGETS, tags=[API_TAG_WIDGETS])
+app.include_router(chat.router, prefix=API_PREFIX_CHAT, tags=[API_TAG_CHAT])
 
 # ============================================================================
 # ENDPOINTS

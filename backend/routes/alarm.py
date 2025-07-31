@@ -123,4 +123,16 @@ async def update_alarm_details(
         service = AlarmService(db)
         return await service.update_alarm_details(alarm_details_id, user_id, update_data.dict(exclude_unset=True))
     except Exception as e:
-        raise raise_database_error(f"Failed to update alarm details: {str(e)}") 
+        raise raise_database_error(f"Failed to update alarm details: {str(e)}")
+
+@router.get("/user/{user_id}")
+async def get_user_alarms(
+    user_id: str,
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Get all alarms for a user."""
+    try:
+        service = AlarmService(db)
+        return await service.get_user_alarms(user_id)
+    except Exception as e:
+        raise raise_database_error(f"Failed to get user alarms: {str(e)}") 

@@ -206,6 +206,92 @@ class AlarmService:
             logger.error(f"Error getting alarm details: {e}")
             raise
 
+    async def create_alarm(self, user_id: str, alarm_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new alarm."""
+        try:
+            from models.dashboard_widget_details import DashboardWidgetDetails
+            import uuid
+            
+            # Create widget first
+            widget_id = str(uuid.uuid4())
+            widget = DashboardWidgetDetails(
+                id=widget_id,
+                user_id=user_id,
+                widget_type="alarm",
+                frequency="daily",
+                importance=0.5,
+                title=alarm_data.get("title", "Alarm"),
+                category="Productivity",
+                is_permanent=False
+            )
+            self.db.add(widget)
+            
+            # Create alarm details
+            alarm_details = AlarmDetails(
+                widget_id=widget_id,
+                title=alarm_data.get("title", "Alarm"),
+                description=alarm_data.get("description"),
+                alarm_times=alarm_data.get("alarm_times", []),
+                is_snoozable=alarm_data.get("is_snoozable", True)
+            )
+            self.db.add(alarm_details)
+            
+            await self.db.commit()
+            await self.db.refresh(alarm_details)
+            
+            return {
+                "success": True,
+                "message": f"Alarm '{alarm_details.title}' created successfully",
+                "data": {
+                    "widget_id": widget_id,
+                    "alarm_id": alarm_details.id,
+                    "alarm": {
+                        "title": alarm_details.title,
+                        "alarm_times": alarm_details.alarm_times,
+                        "description": alarm_details.description,
+                        "is_snoozable": alarm_details.is_snoozable
+                    }
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating alarm: {e}")
+            await self.db.rollback()
+            return {"success": False, "message": f"Failed to create alarm: {str(e)}"}
+
+    async def get_user_alarms(self, user_id: str) -> Dict[str, Any]:
+        """Get all alarms for a user."""
+        try:
+            from models.dashboard_widget_details import DashboardWidgetDetails
+            
+            # Get all alarm widgets for the user
+            stmt = select(AlarmDetails).join(DashboardWidgetDetails).where(
+                DashboardWidgetDetails.user_id == user_id
+            )
+            result = await self.db.execute(stmt)
+            alarms = result.scalars().all()
+            
+            return {
+                "success": True,
+                "alarms": [
+                    {
+                        "id": alarm.id,
+                        "widget_id": alarm.widget_id,
+                        "title": alarm.title,
+                        "alarm_times": alarm.alarm_times,
+                        "description": alarm.description,
+                        "is_snoozable": alarm.is_snoozable,
+                        "created_at": alarm.created_at.isoformat() if alarm.created_at else None,
+                        "updated_at": alarm.updated_at.isoformat() if alarm.updated_at else None
+                    }
+                    for alarm in alarms
+                ]
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting user alarms: {e}")
+            return {"success": False, "message": f"Failed to get user alarms: {str(e)}"}
+
     async def update_alarm_details(self, alarm_details_id: str, user_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update alarm details."""
         try:
