@@ -78,3 +78,8 @@ htmlcov/
 
 ## pyenv
 .python-version
+
+## Database files
+*.db
+brainboard.db
+**/brainboard.db

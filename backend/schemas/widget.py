@@ -19,6 +19,7 @@ class WidgetType(str, Enum):
     TODO_TASK = "todo-task"
     TODO_EVENT = "todo-event"
     SINGLEITEMTRACKER = "singleitemtracker"
+    WEBSEARCH = "websearch"
     AI_CHAT = "aiChat"
     CALENDAR = "calendar"
 

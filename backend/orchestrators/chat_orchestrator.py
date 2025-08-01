@@ -88,8 +88,16 @@ class ChatOrchestrator:
     def _register_tools(self):
         """Register available tools."""
         from ai_engine.tools.alarm_tool import AlarmTool
-        alarm_tool = AlarmTool(self.db_session)
+        from ai_engine.tools.daily_plan_tool import DailyPlanTool
+        from ai_engine.tools.web_summary_tool import WebSummaryTool
+        
+        alarm_tool = AlarmTool(db_session)
+        daily_plan_tool = DailyPlanTool(db_session)
+        web_summary_tool = WebSummaryTool(db_session)
+        
         self.tool_registry.register_tool(alarm_tool)
+        self.tool_registry.register_tool(daily_plan_tool)
+        self.tool_registry.register_tool(web_summary_tool)
     
     async def process_message(
         self, 
