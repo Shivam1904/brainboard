@@ -12,6 +12,7 @@ from .single_item_tracker_item_activity import SingleItemTrackerItemActivity
 from .websearch_details import WebSearchDetails
 from .websearch_item_activity import WebSearchItemActivity
 from .websearch_summary_ai_output import WebSearchSummaryAIOutput
+from .daily_widgets_ai_output import DailyWidgetsAIOutput
 
 __all__ = [
     "AlarmDetails",
@@ -24,5 +25,6 @@ __all__ = [
     "SingleItemTrackerItemActivity",
     "WebSearchDetails",
     "WebSearchItemActivity",
-    "WebSearchSummaryAIOutput"
+    "WebSearchSummaryAIOutput",
+    "DailyWidgetsAIOutput"
 ] 

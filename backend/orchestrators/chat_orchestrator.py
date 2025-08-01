@@ -34,8 +34,16 @@ class ChatOrchestrator:
         
         # Register tools
         from ai_engine.tools.alarm_tool import AlarmTool
+        from ai_engine.tools.daily_plan_tool import DailyPlanTool
+        from ai_engine.tools.web_summary_tool import WebSummaryTool
+        
         alarm_tool = AlarmTool(db_session)
+        daily_plan_tool = DailyPlanTool(db_session)
+        web_summary_tool = WebSummaryTool(db_session)
+        
         self.tool_registry.register_tool(alarm_tool)
+        self.tool_registry.register_tool(daily_plan_tool)
+        self.tool_registry.register_tool(web_summary_tool)
     
     async def process_message(
         self, 
@@ -118,7 +126,7 @@ class ChatOrchestrator:
         # If we still don't have a valid intent after all attempts
         if not intent_response or intent_response.intent == "unknown":
             return {
-                "message": "I'm sorry, but I can only help with alarm-related requests. I don't have tools available for other types of requests. Please try asking about alarms instead.",
+                "message": "I'm sorry, but I can only help with specific requests. I have tools available for alarms, daily plan generation, and web summary generation. Please try asking about these topics instead.",
                 "session_id": session.session_id,
                 "is_complete": True,
                 "intent": "unknown",

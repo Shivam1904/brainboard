@@ -11,6 +11,7 @@ from models.dashboard_widget_details import DashboardWidgetDetails
 from models.websearch_details import WebSearchDetails
 from models.websearch_item_activity import WebSearchItemActivity
 from models.websearch_summary_ai_output import WebSearchSummaryAIOutput
+from models.daily_widgets_ai_output import DailyWidgetsAIOutput
 from db.engine import DATABASE_URL
 
 async def init_database():
@@ -36,6 +37,7 @@ async def init_database():
     print(f"   - {WebSearchDetails.__tablename__}")
     print(f"   - {WebSearchItemActivity.__tablename__}")
     print(f"   - {WebSearchSummaryAIOutput.__tablename__}")
+    print(f"   - {DailyWidgetsAIOutput.__tablename__}")
     
     await engine.dispose()
 

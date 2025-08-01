@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routes import alarm, widgets, chat, single_item_tracker, dashboard, todo, websearch
+from routes import alarm, widgets, chat, single_item_tracker, dashboard, todo, websearch, ai_router
 
 # Load environment variables from .env file
 load_dotenv()
@@ -77,6 +77,7 @@ app.include_router(single_item_tracker.router, prefix=API_PREFIX_SINGLE_ITEM_TRA
 app.include_router(dashboard.router, prefix=API_PREFIX_DASHBOARD, tags=[API_TAG_DASHBOARD])
 app.include_router(todo.router, prefix=API_PREFIX_TODO, tags=[API_TAG_TODO])
 app.include_router(websearch.router, prefix=API_PREFIX_WEBSEARCH, tags=[API_TAG_WEBSEARCH])
+app.include_router(ai_router, tags=["AI Operations"])
 
 # ============================================================================
 # ENDPOINTS

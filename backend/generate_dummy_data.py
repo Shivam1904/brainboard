@@ -24,6 +24,7 @@ from models.single_item_tracker_item_activity import SingleItemTrackerItemActivi
 from models.websearch_details import WebSearchDetails
 from models.websearch_item_activity import WebSearchItemActivity
 from models.websearch_summary_ai_output import WebSearchSummaryAIOutput
+from models.daily_widgets_ai_output import DailyWidgetsAIOutput
 from db.engine import DATABASE_URL
 
 # ============================================================================
@@ -784,6 +785,113 @@ async def generate_dummy_data():
         
         await session.commit()
         print(f"✅ Created {len(websearch_ai_outputs)} websearch AI outputs")
+        
+        # ============================================================================
+        # 8. GENERATE DAILY_WIDGETS_AI_OUTPUT
+        # ============================================================================
+        print("🤖 Creating daily widgets AI outputs...")
+        daily_widgets_ai_outputs = []
+        
+        daily_widgets_ai_configs = [
+            {
+                "widget_id": dashboard_widgets[1].id,  # Lunch Break
+                "priority": "HIGH",
+                "reasoning": "High importance daily task that should be prioritized",
+                "result_json": {
+                    "widget_id": dashboard_widgets[1].id,
+                    "selected": True,
+                    "priority": "HIGH",
+                    "reasoning": "High importance daily task that should be prioritized"
+                },
+                "date": today,
+                "ai_model_used": "gpt-3.5-turbo",
+                "ai_prompt_used": "Generate daily plan for user widgets",
+                "ai_response_time": "2.1s",
+                "confidence_score": "0.85",
+                "generation_type": "ai_generated",
+                "created_by": "user_001"
+            },
+            {
+                "widget_id": dashboard_widgets[4].id,  # Read Books
+                "priority": "MEDIUM",
+                "reasoning": "Weekly habit that can be scheduled for today",
+                "result_json": {
+                    "widget_id": dashboard_widgets[4].id,
+                    "selected": True,
+                    "priority": "MEDIUM",
+                    "reasoning": "Weekly habit that can be scheduled for today"
+                },
+                "date": today,
+                "ai_model_used": "gpt-3.5-turbo",
+                "ai_prompt_used": "Generate daily plan for user widgets",
+                "ai_response_time": "2.1s",
+                "confidence_score": "0.75",
+                "generation_type": "ai_generated",
+                "created_by": "user_001"
+            },
+            {
+                "widget_id": dashboard_widgets[6].id,  # Team Meeting
+                "priority": "HIGH",
+                "reasoning": "Important work task with high priority",
+                "result_json": {
+                    "widget_id": dashboard_widgets[6].id,
+                    "selected": True,
+                    "priority": "HIGH",
+                    "reasoning": "Important work task with high priority"
+                },
+                "date": today,
+                "ai_model_used": "gpt-3.5-turbo",
+                "ai_prompt_used": "Generate daily plan for user widgets",
+                "ai_response_time": "2.1s",
+                "confidence_score": "0.90",
+                "generation_type": "ai_generated",
+                "created_by": "user_001"
+            },
+            {
+                "widget_id": dashboard_widgets[8].id,  # Code Review
+                "priority": "LOW",
+                "reasoning": "Can be postponed to tomorrow if needed",
+                "result_json": {
+                    "widget_id": dashboard_widgets[8].id,
+                    "selected": False,
+                    "priority": "LOW",
+                    "reasoning": "Can be postponed to tomorrow if needed"
+                },
+                "date": today,
+                "ai_model_used": "gpt-3.5-turbo",
+                "ai_prompt_used": "Generate daily plan for user widgets",
+                "ai_response_time": "2.1s",
+                "confidence_score": "0.65",
+                "generation_type": "ai_generated",
+                "created_by": "user_001"
+            },
+            {
+                "widget_id": dashboard_widgets[10].id,  # Research AI Trends
+                "priority": "MEDIUM",
+                "reasoning": "Research task that fits well in today's schedule",
+                "result_json": {
+                    "widget_id": dashboard_widgets[10].id,
+                    "selected": True,
+                    "priority": "MEDIUM",
+                    "reasoning": "Research task that fits well in today's schedule"
+                },
+                "date": today,
+                "ai_model_used": "gpt-3.5-turbo",
+                "ai_prompt_used": "Generate daily plan for user widgets",
+                "ai_response_time": "2.1s",
+                "confidence_score": "0.80",
+                "generation_type": "ai_generated",
+                "created_by": "user_001"
+            }
+        ]
+        
+        for config in daily_widgets_ai_configs:
+            ai_output = DailyWidgetsAIOutput(**config)
+            daily_widgets_ai_outputs.append(ai_output)
+            session.add(ai_output)
+        
+        await session.commit()
+        print(f"✅ Created {len(daily_widgets_ai_outputs)} daily widgets AI outputs")
     
     await engine.dispose()
     
@@ -802,6 +910,7 @@ async def generate_dummy_data():
     print(f"   📊 SingleItemTracker Activities: {len(tracker_activities)}")
     print(f"   🔍 WebSearch Activities: {len(websearch_activities)}")
     print(f"   🤖 WebSearch AI Outputs: {len(websearch_ai_outputs)}")
+    print(f"   🤖 Daily Widgets AI Outputs: {len(daily_widgets_ai_outputs)}")
     print("\n🔗 All foreign key relationships satisfied!")
     print("\n📅 Date ranges:")
     print(f"   - Yesterday: {yesterday}")
