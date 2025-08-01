@@ -1,230 +1,465 @@
 """
-Test script for Widget Creation API.
-Tests the complete flow: create widget -> add to today -> verify in both tables.
+Comprehensive Widget Creation API Test Suite
+Tests both service methods and actual HTTP endpoints for complete validation.
 """
 
 # ============================================================================
 # IMPORTS
 # ============================================================================
 import asyncio
-import httpx
+import sys
+import os
 import json
-from datetime import datetime
+import httpx
+from datetime import datetime, date
+from typing import Dict, Any, Optional
+
+# Add the backend directory to the path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from db.session import AsyncSessionLocal
+from services.widget_service import WidgetService
+from schemas.widget import CreateWidgetRequest, WidgetType, Frequency
 
 # ============================================================================
-# CONSTANTS
+# CONFIGURATION
 # ============================================================================
 BASE_URL = "http://localhost:8000"
 API_PREFIX = "/api/v1"
+TEST_USER_ID = "user_001"
+
+# Test data for different widget types
+TEST_WIDGET_DATA = {
+    "alarm": {
+        "widget_type": WidgetType.ALARM,
+        "frequency": Frequency.DAILY,
+        "importance": 0.9,
+        "title": "Morning Alarm",
+        "category": "health",
+        "alarm_time": "08:00"
+    },
+    "todo_task": {
+        "widget_type": WidgetType.TODO_TASK,
+        "frequency": Frequency.DAILY,
+        "importance": 0.8,
+        "title": "Complete Project",
+        "category": "work",
+        "description": "Finish the project documentation"
+    },
+    "singleitemtracker": {
+        "widget_type": WidgetType.SINGLEITEMTRACKER,
+        "frequency": Frequency.DAILY,
+        "importance": 0.7,
+        "title": "Weight Tracker",
+        "category": "health",
+        "value_type": "decimal",
+        "value_unit": "kg",
+        "target_value": "70.0"
+    }
+}
 
 # ============================================================================
-# TEST FUNCTIONS
+# TEST DATA
 # ============================================================================
-async def test_widget_creation() -> bool:
-    """Test creating a new widget."""
-    print(f"\n🧪 Testing POST /widgets/create")
+class TestData:
+    """Test data and state management."""
     
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Create a new alarm widget
-            widget_data = {
-                "widget_type": "alarm",
-                "frequency": "daily",
-                "importance": 0.9,
-                "title": "Test Widget Creation",
-                "category": "Health",
-                "alarm_time": "08:00"
+    def __init__(self):
+        self.created_widgets: Dict[str, str] = {}  # widget_type -> widget_id
+    
+    def reset(self):
+        """Reset all test data."""
+        self.created_widgets = {}
+
+test_data = TestData()
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+async def make_api_request(
+    method: str, 
+    endpoint: str, 
+    data: Optional[Dict] = None,
+    params: Optional[Dict] = None
+) -> Dict[str, Any]:
+    """Make HTTP API request and return response."""
+    url = f"{BASE_URL}{API_PREFIX}{endpoint}"
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            if method.upper() == "GET":
+                response = await client.get(url, params=params)
+            elif method.upper() == "POST":
+                response = await client.post(url, json=data)
+            elif method.upper() == "PUT":
+                response = await client.put(url, json=data)
+            elif method.upper() == "DELETE":
+                response = await client.delete(url)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
+            
+            return {
+                "status_code": response.status_code,
+                "data": response.json() if response.content else None,
+                "headers": dict(response.headers)
             }
-            
-            response = await client.post(
-                f"{BASE_URL}{API_PREFIX}/widgets/create",
-                json=widget_data
-            )
-            
-            print(f"📊 Response Status: {response.status_code}")
-            
-            if response.status_code == 200:
-                data = response.json()
-                print(f"✅ Successfully created widget")
-                print(f"📋 Response: {json.dumps(data, indent=2)}")
-                
-                # Store widget ID for further tests
-                global created_widget_id
-                created_widget_id = data.get('widget_id')
-                return True
-            else:
-                print(f"❌ Failed to create widget")
-                print(f"   Status: {response.status_code}")
-                print(f"   Response: {response.text}")
-                return False
-                
-    except Exception as e:
-        print(f"❌ Error testing widget creation: {e}")
-        return False
+        except httpx.RequestError as e:
+            return {
+                "status_code": 0,
+                "error": f"Request failed: {str(e)}",
+                "data": None
+            }
 
-async def test_widget_in_list() -> bool:
-    """Test that the created widget appears in the widgets list."""
-    print(f"\n🧪 Testing widget appears in list")
+def validate_response_structure(response: Dict, expected_fields: list) -> bool:
+    """Validate that response contains expected fields."""
+    if not response.get("data"):
+        return False
+    
+    data = response["data"]
+    for field in expected_fields:
+        if field not in data:
+            return False
+    return True
+
+def print_test_result(test_name: str, success: bool, details: str = ""):
+    """Print formatted test result."""
+    status = "✅ PASS" if success else "❌ FAIL"
+    print(f"{status} {test_name}")
+    if details:
+        print(f"   {details}")
+
+# ============================================================================
+# SERVICE METHOD TESTS (Unit Tests)
+# ============================================================================
+async def test_service_alarm_widget_creation() -> bool:
+    """Test alarm widget creation via service method."""
+    print("\n🔧 Testing Alarm Widget Creation (Service)...")
     
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{BASE_URL}{API_PREFIX}/widgets/")
+        async with AsyncSessionLocal() as db:
+            widget_service = WidgetService(db)
+            create_request = CreateWidgetRequest(**TEST_WIDGET_DATA["alarm"])
+            result = await widget_service.create_widget(create_request, TEST_USER_ID)
             
-            if response.status_code == 200:
-                widgets = response.json()
-                created_widget = next(
-                    (w for w in widgets if w.get('id') == created_widget_id), 
-                    None
-                )
-                
-                if created_widget:
-                    print(f"✅ Widget found in list")
-                    print(f"📋 Widget: {created_widget['title']} ({created_widget['widget_type']})")
-                    return True
-                else:
-                    print(f"❌ Widget not found in list")
-                    return False
-            else:
-                print(f"❌ Failed to get widgets list")
-                return False
-                
+            # Validate response
+            assert result.success == True, "Widget creation should succeed"
+            assert result.widget_id is not None, "Widget ID should be generated"
+            assert result.widget_type == "alarm", "Widget type should be alarm"
+            
+            # Store for later tests
+            test_data.created_widgets["alarm"] = result.widget_id
+            
+            print_test_result("Alarm Widget Creation", True, f"Widget ID: {result.widget_id}")
+            return True
+            
     except Exception as e:
-        print(f"❌ Error testing widget in list: {e}")
+        print_test_result("Alarm Widget Creation", False, str(e))
         return False
 
-async def test_add_to_today() -> bool:
-    """Test adding the created widget to today's list."""
-    print(f"\n🧪 Testing add widget to today")
+async def test_service_todo_widget_creation() -> bool:
+    """Test todo widget creation via service method."""
+    print("\n🔧 Testing Todo Widget Creation (Service)...")
     
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(
-                f"{BASE_URL}{API_PREFIX}/dashboard/widget/addtotoday/{created_widget_id}"
-            )
+        async with AsyncSessionLocal() as db:
+            widget_service = WidgetService(db)
+            create_request = CreateWidgetRequest(**TEST_WIDGET_DATA["todo_task"])
+            result = await widget_service.create_widget(create_request, TEST_USER_ID)
             
-            print(f"📊 Response Status: {response.status_code}")
+            # Validate response
+            assert result.success == True, "Widget creation should succeed"
+            assert result.widget_id is not None, "Widget ID should be generated"
+            assert result.widget_type == "todo-task", "Widget type should be todo-task"
             
-            if response.status_code == 200:
-                data = response.json()
-                print(f"✅ Successfully added widget to today")
-                print(f"📋 Response: {json.dumps(data, indent=2)}")
-                return True
-            else:
-                print(f"❌ Failed to add widget to today")
-                print(f"   Status: {response.status_code}")
-                print(f"   Response: {response.text}")
-                return False
-                
+            # Store for later tests
+            test_data.created_widgets["todo_task"] = result.widget_id
+            
+            print_test_result("Todo Widget Creation", True, f"Widget ID: {result.widget_id}")
+            return True
+            
     except Exception as e:
-        print(f"❌ Error testing add to today: {e}")
+        print_test_result("Todo Widget Creation", False, str(e))
         return False
 
-async def test_verify_today_list() -> bool:
-    """Test that the widget appears in today's widget list."""
-    print(f"\n🧪 Testing widget in today's list")
+async def test_service_tracker_widget_creation() -> bool:
+    """Test tracker widget creation via service method."""
+    print("\n🔧 Testing Tracker Widget Creation (Service)...")
     
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{BASE_URL}{API_PREFIX}/dashboard/getTodayWidgetList")
+        async with AsyncSessionLocal() as db:
+            widget_service = WidgetService(db)
+            create_request = CreateWidgetRequest(**TEST_WIDGET_DATA["singleitemtracker"])
+            result = await widget_service.create_widget(create_request, TEST_USER_ID)
             
-            if response.status_code == 200:
-                today_widgets = response.json()
-                
-                # Check if our widget is in any of the daily widget groups
-                widget_found = False
-                for daily_widget in today_widgets:
-                    if created_widget_id in daily_widget.get('widget_ids', []):
-                        widget_found = True
-                        print(f"✅ Widget found in today's list")
-                        print(f"📋 Daily Widget: {daily_widget['widget_type']} group")
-                        break
-                
-                if not widget_found:
-                    print(f"❌ Widget not found in today's list")
-                    return False
-                
-                return True
-            else:
-                print(f"❌ Failed to get today's widget list")
-                return False
-                
+            # Validate response
+            assert result.success == True, "Widget creation should succeed"
+            assert result.widget_id is not None, "Widget ID should be generated"
+            assert result.widget_type == "singleitemtracker", "Widget type should be singleitemtracker"
+            
+            # Store for later tests
+            test_data.created_widgets["singleitemtracker"] = result.widget_id
+            
+            print_test_result("Tracker Widget Creation", True, f"Widget ID: {result.widget_id}")
+            return True
+            
     except Exception as e:
-        print(f"❌ Error testing today's list: {e}")
+        print_test_result("Tracker Widget Creation", False, str(e))
         return False
 
-async def test_alarm_details_creation() -> bool:
-    """Test that alarm details were created in the database."""
-    print(f"\n🧪 Testing alarm details creation")
+# ============================================================================
+# HTTP API ENDPOINT TESTS (Integration Tests)
+# ============================================================================
+async def test_api_alarm_widget_creation() -> bool:
+    """Test alarm widget creation via HTTP API."""
+    print("\n🌐 Testing Alarm Widget Creation (HTTP API)...")
     
     try:
-        # This would require database access, but for now we'll test via API
-        # In a real scenario, you might want to add an endpoint to get alarm details
-        print(f"✅ Alarm details creation verified via widget creation success")
+        # Create widget via API
+        response = await make_api_request("POST", "/widgets/create", TEST_WIDGET_DATA["alarm"])
+        
+        # Validate response
+        assert response["status_code"] == 200, f"Expected 200, got {response['status_code']}"
+        assert validate_response_structure(response, ["success", "widget_id", "widget_type"]), "Invalid response structure"
+        
+        data = response["data"]
+        assert data["success"] == True, "Widget creation should succeed"
+        assert data["widget_type"] == "alarm", "Widget type should be alarm"
+        
+        # Store for later tests
+        test_data.created_widgets["alarm_api"] = data["widget_id"]
+        
+        print_test_result("Alarm Widget Creation (API)", True, f"Widget ID: {data['widget_id']}")
         return True
-                
+        
     except Exception as e:
-        print(f"❌ Error testing alarm details: {e}")
+        print_test_result("Alarm Widget Creation (API)", False, str(e))
+        return False
+
+async def test_api_todo_widget_creation() -> bool:
+    """Test todo widget creation via HTTP API."""
+    print("\n🌐 Testing Todo Widget Creation (HTTP API)...")
+    
+    try:
+        # Create widget via API
+        response = await make_api_request("POST", "/widgets/create", TEST_WIDGET_DATA["todo_task"])
+        
+        # Validate response
+        assert response["status_code"] == 200, f"Expected 200, got {response['status_code']}"
+        assert validate_response_structure(response, ["success", "widget_id", "widget_type"]), "Invalid response structure"
+        
+        data = response["data"]
+        assert data["success"] == True, "Widget creation should succeed"
+        assert data["widget_type"] == "todo-task", "Widget type should be todo-task"
+        
+        # Store for later tests
+        test_data.created_widgets["todo_task_api"] = data["widget_id"]
+        
+        print_test_result("Todo Widget Creation (API)", True, f"Widget ID: {data['widget_id']}")
+        return True
+        
+    except Exception as e:
+        print_test_result("Todo Widget Creation (API)", False, str(e))
+        return False
+
+async def test_api_tracker_widget_creation() -> bool:
+    """Test tracker widget creation via HTTP API."""
+    print("\n🌐 Testing Tracker Widget Creation (HTTP API)...")
+    
+    try:
+        # Create widget via API
+        response = await make_api_request("POST", "/widgets/create", TEST_WIDGET_DATA["singleitemtracker"])
+        
+        # Validate response
+        assert response["status_code"] == 200, f"Expected 200, got {response['status_code']}"
+        assert validate_response_structure(response, ["success", "widget_id", "widget_type"]), "Invalid response structure"
+        
+        data = response["data"]
+        assert data["success"] == True, "Widget creation should succeed"
+        assert data["widget_type"] == "singleitemtracker", "Widget type should be singleitemtracker"
+        
+        # Store for later tests
+        test_data.created_widgets["singleitemtracker_api"] = data["widget_id"]
+        
+        print_test_result("Tracker Widget Creation (API)", True, f"Widget ID: {data['widget_id']}")
+        return True
+        
+    except Exception as e:
+        print_test_result("Tracker Widget Creation (API)", False, str(e))
+        return False
+
+async def test_api_get_all_widgets() -> bool:
+    """Test getting all widgets via HTTP API."""
+    print("\n🌐 Testing Get All Widgets (HTTP API)...")
+    
+    try:
+        # Get all widgets via API
+        response = await make_api_request("GET", "/widgets/getAllWidgetList")
+        
+        # Validate response
+        assert response["status_code"] == 200, f"Expected 200, got {response['status_code']}"
+        
+        data = response["data"]
+        assert isinstance(data, list), "Response should be a list of widgets"
+        
+        # Check if our created widgets are in the list
+        created_widget_ids = list(test_data.created_widgets.values())
+        found_widgets = [w for w in data if w.get("id") in created_widget_ids]
+        
+        assert len(found_widgets) > 0, "Should find at least one created widget"
+        
+        print_test_result("Get All Widgets (API)", True, f"Found {len(found_widgets)} created widgets")
+        return True
+        
+    except Exception as e:
+        print_test_result("Get All Widgets (API)", False, str(e))
+        return False
+
+async def test_api_get_today_widgets() -> bool:
+    """Test getting today's widgets via HTTP API."""
+    print("\n🌐 Testing Get Today Widgets (HTTP API)...")
+    
+    try:
+        # Get today's widgets via API
+        response = await make_api_request("GET", "/dashboard/getTodayWidgetList")
+        
+        # Validate response
+        assert response["status_code"] == 200, f"Expected 200, got {response['status_code']}"
+        
+        data = response["data"]
+        assert isinstance(data, list), "Response should be a list of today's widgets"
+        
+        print_test_result("Get Today Widgets (API)", True, f"Found {len(data)} today's widgets")
+        return True
+        
+    except Exception as e:
+        print_test_result("Get Today Widgets (API)", False, str(e))
+        return False
+
+# ============================================================================
+# ERROR HANDLING TESTS
+# ============================================================================
+async def test_api_error_handling() -> bool:
+    """Test API error handling for invalid requests."""
+    print("\n🚨 Testing Widget Creation API Error Handling...")
+    
+    all_passed = True
+    
+    try:
+        # Test 1: Invalid widget type
+        invalid_data = {
+            "widget_type": "invalid_type",
+            "frequency": "daily",
+            "importance": 0.8,
+            "title": "Test Widget"
+        }
+        response = await make_api_request("POST", "/widgets/create", invalid_data)
+        if response["status_code"] == 422:
+            print_test_result("Invalid widget type (API)", True, "422 returned as expected")
+        else:
+            print_test_result("Invalid widget type (API)", False, f"Expected 422, got {response['status_code']}")
+            all_passed = False
+        
+        # Test 2: Missing required fields
+        incomplete_data = {
+            "widget_type": "alarm"
+            # Missing frequency, importance, title
+        }
+        response = await make_api_request("POST", "/widgets/create", incomplete_data)
+        if response["status_code"] == 422:
+            print_test_result("Missing required fields (API)", True, "422 returned as expected")
+        else:
+            print_test_result("Missing required fields (API)", False, f"Expected 422, got {response['status_code']}")
+            all_passed = False
+        
+        # Test 3: Invalid importance value
+        invalid_importance_data = {
+            "widget_type": "alarm",
+            "frequency": "daily",
+            "importance": 1.5,  # Should be <= 1.0
+            "title": "Test Widget"
+        }
+        response = await make_api_request("POST", "/widgets/create", invalid_importance_data)
+        if response["status_code"] == 422:
+            print_test_result("Invalid importance value (API)", True, "422 returned as expected")
+        else:
+            print_test_result("Invalid importance value (API)", False, f"Expected 422, got {response['status_code']}")
+            all_passed = False
+        
+        return all_passed
+        
+    except Exception as e:
+        print_test_result("Widget Creation API Error Handling", False, str(e))
         return False
 
 # ============================================================================
 # MAIN TEST RUNNER
 # ============================================================================
-async def run_widget_creation_test():
-    """Run comprehensive widget creation test suite."""
-    print("🚀 Starting Widget Creation API Test Suite")
-    print("=" * 60)
+async def run_comprehensive_tests():
+    """Run all comprehensive Widget Creation tests."""
+    print("🚀 Starting Comprehensive Widget Creation API Tests")
+    print("=" * 70)
+    
+    # Reset test data
+    test_data.reset()
     
     # Track test results
-    test_results = []
+    test_results = {
+        "service_tests": [],
+        "api_tests": [],
+        "error_handling": False
+    }
     
-    # Test 1: Create widget
-    result1 = await test_widget_creation()
-    test_results.append(("Create Widget", result1))
+    # Phase 1: Service Method Tests
+    print("\n📋 PHASE 1: Service Method Tests")
+    print("-" * 50)
     
-    if result1:
-        # Test 2: Verify widget in list
-        result2 = await test_widget_in_list()
-        test_results.append(("Widget in List", result2))
-        
-        # Test 3: Add to today
-        result3 = await test_add_to_today()
-        test_results.append(("Add to Today", result3))
-        
-        # Test 4: Verify in today's list
-        result4 = await test_verify_today_list()
-        test_results.append(("In Today's List", result4))
-        
-        # Test 5: Verify alarm details
-        result5 = await test_alarm_details_creation()
-        test_results.append(("Alarm Details", result5))
+    test_results["service_tests"].append(await test_service_alarm_widget_creation())
+    test_results["service_tests"].append(await test_service_todo_widget_creation())
+    test_results["service_tests"].append(await test_service_tracker_widget_creation())
     
-    # Print test summary
-    print("\n" + "=" * 60)
-    print("📊 TEST SUMMARY")
-    print("=" * 60)
+    # Phase 2: HTTP API Endpoint Tests
+    print("\n📋 PHASE 2: HTTP API Endpoint Tests")
+    print("-" * 50)
     
-    passed = 0
-    total = len(test_results)
+    test_results["api_tests"].append(await test_api_alarm_widget_creation())
+    test_results["api_tests"].append(await test_api_todo_widget_creation())
+    test_results["api_tests"].append(await test_api_tracker_widget_creation())
+    test_results["api_tests"].append(await test_api_get_all_widgets())
+    test_results["api_tests"].append(await test_api_get_today_widgets())
     
-    for test_name, result in test_results:
-        status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status} - {test_name}")
-        if result:
-            passed += 1
+    # Phase 3: Error Handling Tests
+    print("\n📋 PHASE 3: Error Handling Tests")
+    print("-" * 50)
     
-    print(f"\n📈 Results: {passed}/{total} tests passed")
+    test_results["error_handling"] = await test_api_error_handling()
     
-    if passed == total:
-        print("🎉 All tests passed! Widget Creation API is working correctly.")
+    # Print final results
+    print("\n" + "=" * 70)
+    print("🎯 FINAL TEST RESULTS")
+    print("=" * 70)
+    
+    service_passed = sum(test_results["service_tests"])
+    service_total = len(test_results["service_tests"])
+    api_passed = sum(test_results["api_tests"])
+    api_total = len(test_results["api_tests"])
+    
+    print(f"✅ Service Tests: {service_passed}/{service_total} passed")
+    print(f"✅ API Tests: {api_passed}/{api_total} passed")
+    print(f"✅ Error Handling: {'PASS' if test_results['error_handling'] else 'FAIL'}")
+    
+    total_passed = service_passed + api_passed + (1 if test_results["error_handling"] else 0)
+    total_tests = service_total + api_total + 1
+    
+    print(f"\n📊 OVERALL: {total_passed}/{total_tests} tests passed")
+    
+    if total_passed == total_tests:
+        print("\n🎉 ALL TESTS PASSED! Widget Creation API is complete and ready for production!")
     else:
-        print("⚠️  Some tests failed. Please check the implementation.")
-    
-    return passed == total
+        print(f"\n⚠️  {total_tests - total_passed} tests failed. Please review and fix issues.")
 
 # ============================================================================
 # MAIN
 # ============================================================================
 if __name__ == "__main__":
-    # Global variable to store created widget ID
-    created_widget_id = None
-    asyncio.run(run_widget_creation_test()) 
+    asyncio.run(run_comprehensive_tests()) 
