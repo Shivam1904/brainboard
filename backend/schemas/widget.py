@@ -22,6 +22,7 @@ class WidgetType(str, Enum):
     WEBSEARCH = "websearch"
     AI_CHAT = "aiChat"
 
+
 class Frequency(str, Enum):
     DAILY = "daily"
     WEEKLY = "weekly"
@@ -49,6 +50,8 @@ class CreateWidgetRequest(BaseModel):
     value_type: Optional[str] = Field(None, description="Type of value to track: number, text, decimal")
     value_unit: Optional[str] = Field(None, description="Unit for tracker values: kg, pages, steps, etc.")
     target_value: Optional[str] = Field(None, description="Target value for tracker")
+    
+
 
 class UpdateWidgetRequest(BaseModel):
     """Request schema for updating a dashboard widget"""

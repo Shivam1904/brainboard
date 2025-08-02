@@ -8,10 +8,14 @@ from .ai import (
     WidgetInfo, AIPlanItem, AIOutputMetadata, DailyPlanData, WebSummaryData, ActivityGenerationData,
     ToolResponse, AIErrorResponse
 )
+from .weather import (
+    WeatherResponse
+)
 
 __all__ = [
     "DailyPlanRequest", "WebSummaryRequest", "ActivityGenerationRequest",
     "DailyPlanResponse", "WebSummaryResponse", "ActivityGenerationResponse", 
     "WidgetInfo", "AIPlanItem", "AIOutputMetadata", "DailyPlanData", "WebSummaryData", "ActivityGenerationData",
-    "ToolResponse", "AIErrorResponse"
+    "ToolResponse", "AIErrorResponse",
+    "WeatherResponse"
 ]

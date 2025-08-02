@@ -8,6 +8,7 @@ from .todo_service import TodoService
 from .single_item_tracker_service import SingleItemTrackerService
 from .websearch_service import WebSearchService
 from .ai_service import AIService
+from .weather_service import WeatherService
 
 __all__ = [
     "AlarmService",
@@ -16,5 +17,6 @@ __all__ = [
     "TodoService",
     "SingleItemTrackerService",
     "WebSearchService",
-    "AIService"
+    "AIService",
+    "WeatherService"
 ] 

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .alarm_service import AlarmService
 from .todo_service import TodoService
 from .websearch_service import WebSearchService
+from .weather_service import WeatherService
 
 class ServiceFactory:
     """Factory for creating service instances"""
@@ -16,6 +17,7 @@ class ServiceFactory:
         self._todo_service = None
         self._single_item_tracker_service = None
         self._websearch_service = None
+        self._weather_service = None
     
     @property
     def alarm_service(self) -> AlarmService:
@@ -46,6 +48,13 @@ class ServiceFactory:
         if self._websearch_service is None:
             self._websearch_service = WebSearchService(self.db)
         return self._websearch_service
+    
+    @property
+    def weather_service(self) -> WeatherService:
+        """Get weather service instance"""
+        if self._weather_service is None:
+            self._weather_service = WeatherService()
+        return self._weather_service
 
 
 class SingleItemTrackerService:
