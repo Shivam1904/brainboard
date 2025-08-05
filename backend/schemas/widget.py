@@ -22,6 +22,7 @@ class WidgetType(str, Enum):
     WEBSEARCH = "websearch"
     AI_CHAT = "aiChat"
     CALENDAR = "calendar"
+    WEATHER = "weather"
 
 class Frequency(str, Enum):
     DAILY = "daily"
