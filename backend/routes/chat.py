@@ -76,6 +76,18 @@ class ConnectionManager:
         }
         await self.send_message(connection_id, message)
     
+    async def send_component(self, connection_id: str, content: str, component: Dict[str, Any], session_id: Optional[str] = None, is_complete: bool = False):
+        """Send a component message to the client."""
+        message = {
+            "type": "component",
+            "content": content,
+            "component": component,
+            "session_id": session_id,
+            "is_complete": is_complete,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        await self.send_message(connection_id, message)
+    
     async def send_error(self, connection_id: str, error: str):
         """Send an error message to the client."""
         message = {
@@ -148,13 +160,22 @@ async def websocket_chat(websocket: WebSocket):
                         websocket_callback=websocket_callback
                     )
                     
-                    # Send final response
-                    await manager.send_response(
-                        connection_id=connection_id,
-                        response=response.get("message", "No response generated"),
-                        session_id=response.get("session_id"),
-                        is_complete=response.get("is_complete", True)
-                    )
+                    # Send final response or component
+                    if response.get("component"):
+                        await manager.send_component(
+                            connection_id=connection_id,
+                            content=response.get("message", ""),
+                            component=response.get("component"),
+                            session_id=response.get("session_id"),
+                            is_complete=response.get("is_complete", False)
+                        )
+                    else:
+                        await manager.send_response(
+                            connection_id=connection_id,
+                            response=response.get("message", "No response generated"),
+                            session_id=response.get("session_id"),
+                            is_complete=response.get("is_complete", True)
+                        )
                     
                     # Update current session ID
                     current_session_id = response.get("session_id")
