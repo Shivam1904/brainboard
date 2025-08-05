@@ -15,15 +15,16 @@ from ai_engine.models.intent_models import IntentResponse, ParameterExtractionRe
 # ============================================================================
 logger = logging.getLogger(__name__)
 
-# Supported intents
-SUPPORTED_INTENTS = ["create_alarm", "edit_alarm", "delete_alarm", "list_alarms"]
+# Supported widget types
+SUPPORTED_WIDGET_TYPES = ["todo-task", "todo-habit", "alarm", "singleitemtracker", "websearch"]
 
-# Required parameters for each intent
+# Required parameters for each widget type
 REQUIRED_PARAMETERS = {
-    "create_alarm": ["title", "alarm_times"],
-    "edit_alarm": ["widget_id"],
-    "delete_alarm": ["widget_id"],
-    "list_alarms": []
+    "todo-task": ["title", "due_date"],
+    "todo-habit": ["title"],
+    "alarm": ["title", "alarm_time"],
+    "singleitemtracker": ["title", "value_unit", "target_value"],
+    "websearch": ["title"]
 }
 
 # ============================================================================
@@ -36,21 +37,22 @@ class IntentService:
         """Initialize the intent service."""
         self.ai_service = AIService()
     
-    async def recognize_intent(self, user_message: str, fallback_attempt: int = 0) -> Optional[IntentResponse]:
+    async def recognize_intent(self, user_message: str, fallback_attempt: int = 0, conversation_history: List[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
         """Recognize user intent with fallback mechanism."""
         try:
-            # Try AI-based intent recognition
-            intent_response = await self.ai_service.recognize_intent(user_message, fallback_attempt)
+            # Try AI-based intent recognition with conversation history
+            intent_response = await self.ai_service.recognize_intent(user_message, fallback_attempt, conversation_history)
             
             if not intent_response:
                 logger.warning("AI intent recognition failed, using fallback")
                 return self._create_fallback_response(fallback_attempt)
             
-            # Validate intent
-            if intent_response.intent not in SUPPORTED_INTENTS and intent_response.intent != "unknown":
-                logger.warning(f"Unsupported intent: {intent_response.intent}")
-                intent_response.intent = "unknown"
-                intent_response.confidence = 0.0
+            # Validate widget type
+            widget_type = intent_response.get("widget_type")
+            if widget_type and widget_type not in SUPPORTED_WIDGET_TYPES:
+                logger.warning(f"Unsupported widget type: {widget_type}")
+                intent_response["intent_found"] = False
+                intent_response["confidence"] = 0.0
             
             return intent_response
             
@@ -58,16 +60,17 @@ class IntentService:
             logger.error(f"Error in intent recognition: {e}")
             return self._create_fallback_response(fallback_attempt)
     
-    def _create_fallback_response(self, fallback_attempt: int) -> IntentResponse:
+    def _create_fallback_response(self, fallback_attempt: int) -> Dict[str, Any]:
         """Create a fallback response when AI recognition fails."""
-        return IntentResponse(
-            intent="unknown",
-            confidence=0.0,
-            parameters={},
-            reasoning="AI recognition failed, using fallback",
-            is_fallback=True,
-            fallback_attempt=fallback_attempt
-        )
+        return {
+            "intent_found": False,
+            "widget_type": None,
+            "parameters": {},
+            "missing_parameters": [],
+            "message": "AI recognition failed, using fallback",
+            "confidence": 0.0,
+            "fallback_attempt": fallback_attempt
+        }
     
     async def extract_parameters(
         self, 
@@ -78,8 +81,11 @@ class IntentService:
     ) -> Optional[ParameterExtractionResponse]:
         """Extract parameters from follow-up message."""
         try:
-            if current_intent not in SUPPORTED_INTENTS:
-                logger.warning(f"Unsupported intent for parameter extraction: {current_intent}")
+            # Extract widget type from intent (e.g., "create_todo-task" -> "todo-task")
+            widget_type = current_intent.replace("create_", "") if current_intent.startswith("create_") else None
+            
+            if not widget_type or widget_type not in SUPPORTED_WIDGET_TYPES:
+                logger.warning(f"Unsupported widget type for parameter extraction: {widget_type}")
                 return None
             
             return await self.ai_service.extract_parameters(
@@ -92,14 +98,22 @@ class IntentService:
     
     def get_missing_parameters(self, intent: str, filled_parameters: Dict[str, Any]) -> List[str]:
         """Get list of missing required parameters for an intent."""
-        if intent not in REQUIRED_PARAMETERS:
+        # Extract widget type from intent
+        widget_type = intent.replace("create_", "") if intent.startswith("create_") else None
+        
+        if not widget_type or widget_type not in REQUIRED_PARAMETERS:
             return []
         
-        required = REQUIRED_PARAMETERS[intent]
+        required = REQUIRED_PARAMETERS[widget_type]
         missing = []
         
         for param in required:
-            if param not in filled_parameters or filled_parameters[param] is None:
+            value = filled_parameters.get(param)
+            # Check if parameter is missing, None, empty string, or empty list
+            if (param not in filled_parameters or 
+                value is None or 
+                value == "" or 
+                (isinstance(value, list) and len(value) == 0)):
                 missing.append(param)
         
         return missing
@@ -109,14 +123,14 @@ class IntentService:
         missing = self.get_missing_parameters(intent, parameters)
         return len(missing) == 0, missing
     
-    def is_intent_supported(self, intent: str) -> bool:
-        """Check if intent is supported."""
-        return intent in SUPPORTED_INTENTS
+    def is_widget_type_supported(self, widget_type: str) -> bool:
+        """Check if widget type is supported."""
+        return widget_type in SUPPORTED_WIDGET_TYPES
     
-    def get_supported_intents(self) -> List[str]:
-        """Get list of supported intents."""
-        return SUPPORTED_INTENTS.copy()
+    def get_supported_widget_types(self) -> List[str]:
+        """Get list of supported widget types."""
+        return SUPPORTED_WIDGET_TYPES.copy()
     
-    def get_required_parameters_for_intent(self, intent: str) -> List[str]:
-        """Get required parameters for a specific intent."""
-        return REQUIRED_PARAMETERS.get(intent, []).copy() 
+    def get_required_parameters_for_widget_type(self, widget_type: str) -> List[str]:
+        """Get required parameters for a specific widget type."""
+        return REQUIRED_PARAMETERS.get(widget_type, []).copy() 

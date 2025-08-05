@@ -230,6 +230,16 @@ class SocketService {
           timestamp: message.timestamp
         });
         break;
+      case 'component':
+        this.emit('response', {
+          type: 'component',
+          content: message.content,
+          component: message.component,
+          session_id: message.session_id,
+          is_complete: message.is_complete,
+          timestamp: message.timestamp
+        });
+        break;
       case 'error':
         this.emit('error', {
           error: message.error,
