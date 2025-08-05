@@ -21,6 +21,7 @@ class WidgetType(str, Enum):
     SINGLEITEMTRACKER = "singleitemtracker"
     WEBSEARCH = "websearch"
     AI_CHAT = "aiChat"
+    AI_SUMMARY = "aiSummary"
     CALENDAR = "calendar"
 
 class Frequency(str, Enum):
