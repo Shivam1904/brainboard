@@ -2,14 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { UIWidget } from '../../types';
 import { socketService } from '../../services/socket';
+import { renderAiChatComponent, AiChatComponent } from './ai-chat/AiChatComponents';
 
 interface Message {
   id: string;
-  type: 'user' | 'ai' | 'thinking';
+  type: 'user' | 'ai' | 'thinking' | 'component';
   content: string;
   timestamp: Date;
   thinkingSteps?: string[];
   isComplete?: boolean;
+  component?: AiChatComponent;
 }
 
 interface AiChatWidgetProps {
@@ -54,21 +56,43 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
 
     const handleResponse = (data: any) => {
       console.log('AI Response:', data);
-      const aiResponse: Message = {
-        id: Date.now().toString(),
-        type: 'ai',
-        content: data.content,
-        timestamp: new Date(),
-        isComplete: data.is_complete
-      };
+      
+      // Handle component messages
+      if (data.type === 'component') {
+        const componentMessage: Message = {
+          id: Date.now().toString(),
+          type: 'component',
+          content: data.content || '',
+          timestamp: new Date(),
+          isComplete: true,
+          component: data.component
+        };
 
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.type === 'thinking' 
-            ? { ...msg, isComplete: true }
-            : msg
-        ).concat(aiResponse)
-      );
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.type === 'thinking' 
+              ? { ...msg, isComplete: true }
+              : msg
+          ).concat(componentMessage)
+        );
+      } else {
+        // Handle regular AI response
+        const aiResponse: Message = {
+          id: Date.now().toString(),
+          type: 'ai',
+          content: data.content,
+          timestamp: new Date(),
+          isComplete: data.is_complete
+        };
+
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.type === 'thinking' 
+              ? { ...msg, isComplete: true }
+              : msg
+          ).concat(aiResponse)
+        );
+      }
       
       setCurrentSessionId(data.session_id);
       setIsTyping(false);
@@ -178,6 +202,15 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     }
   };
 
+  const handleComponentAction = (componentId: string, action: string, data: any) => {
+    console.log('Component action:', { componentId, action, data });
+    
+    // Send component action to backend
+    if (isConnected) {
+      socketService.sendInteractiveAction(componentId, action, data);
+    }
+  };
+
   const renderMessage = (message: Message) => {
     switch (message.type) {
       case 'user':
@@ -245,6 +278,28 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        );
+
+      case 'component':
+        return (
+          <div className="flex justify-start mb-4">
+            <div className="max-w-[80%] bg-card border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+              <div className="flex items-start gap-2 mb-2">
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  ⚙️
+                </div>
+                <div className="flex-1">
+                  {message.content && (
+                    <p className="text-sm mb-3">{message.content}</p>
+                  )}
+                  {message.component && renderAiChatComponent(message.component, handleComponentAction)}
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground mt-2 block">
+                {message.timestamp.toLocaleTimeString()}
+              </span>
             </div>
           </div>
         );

@@ -48,6 +48,13 @@ export interface QuickActionsProps {
   onAction: (actionId: string) => void;
 }
 
+export interface AlarmFormProps {
+  filledParams: Record<string, any>;
+  missingParams: string[];
+  onSubmit: (data: Record<string, any>) => void;
+  onCancel: () => void;
+}
+
 // Todo Form Component
 export const TodoFormComponent: React.FC<TodoFormProps> = ({ onSubmit, onCancel }) => {
   const [title, setTitle] = useState('');
@@ -223,6 +230,113 @@ export const QuickActionsComponent: React.FC<QuickActionsProps> = ({ actions, on
   );
 };
 
+// Alarm Form Component
+export const AlarmFormComponent: React.FC<AlarmFormProps> = ({ filledParams, missingParams, onSubmit, onCancel }) => {
+  const [formData, setFormData] = useState<Record<string, any>>({});
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (Object.keys(formData).length > 0) {
+      onSubmit(formData);
+    }
+  };
+
+  const handleInputChange = (param: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [param]: value
+    }));
+  };
+
+  const getParamLabel = (param: string) => {
+    const labels: Record<string, string> = {
+      'title': 'Alarm Title',
+      'time': 'Alarm Time',
+      'date': 'Alarm Date',
+      'description': 'Description',
+      'repeat': 'Repeat'
+    };
+    return labels[param] || param;
+  };
+
+  const getParamType = (param: string) => {
+    if (param === 'time') return 'time';
+    if (param === 'date') return 'date';
+    if (param === 'description') return 'textarea';
+    return 'text';
+  };
+
+  return (
+    <div className="bg-muted/50 rounded-lg p-3 border">
+      <h4 className="text-sm font-medium mb-2">Complete Alarm Details</h4>
+      
+      {/* Show filled parameters */}
+      {Object.keys(filledParams).length > 0 && (
+        <div className="mb-3">
+          <p className="text-xs text-muted-foreground mb-1">Already provided:</p>
+          <div className="space-y-1">
+            {Object.entries(filledParams).map(([key, value]) => (
+              <div key={key} className="flex items-center gap-2 text-xs">
+                <span className="text-green-600">✓</span>
+                <span className="font-medium">{getParamLabel(key)}:</span>
+                <span className="text-muted-foreground">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Form for missing parameters */}
+      <form onSubmit={handleSubmit} className="space-y-2">
+        {missingParams.map((param) => {
+          const inputType = getParamType(param);
+          const label = getParamLabel(param);
+          
+          return (
+            <div key={param}>
+              <label className="block text-xs font-medium mb-1">{label} *</label>
+              {inputType === 'textarea' ? (
+                <textarea
+                  value={formData[param] || ''}
+                  onChange={(e) => handleInputChange(param, e.target.value)}
+                  className="w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  rows={2}
+                  required
+                />
+              ) : (
+                <input
+                  type={inputType}
+                  value={formData[param] || ''}
+                  onChange={(e) => handleInputChange(param, e.target.value)}
+                  className="w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                  required
+                />
+              )}
+            </div>
+          );
+        })}
+        
+        <div className="flex gap-2 pt-2">
+          <button
+            type="submit"
+            disabled={Object.keys(formData).length === 0}
+            className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Save Alarm
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-3 py-1 bg-secondary text-secondary-foreground text-xs rounded hover:bg-secondary/80 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
 // Component registry
 export const AI_CHAT_COMPONENTS = {
   'todo-form': TodoFormComponent,
@@ -231,6 +345,7 @@ export const AI_CHAT_COMPONENTS = {
   'data-display': DataDisplayComponent,
   'progress-tracker': ProgressTrackerComponent,
   'quick-actions': QuickActionsComponent,
+  'alarm-form': AlarmFormComponent,
 } as const;
 
 // Component renderer
@@ -263,6 +378,9 @@ export const renderAiChatComponent = (
     actionHandlers.onComplete = () => onAction(component.id, 'complete', null);
   } else if (component.type === 'quick-actions') {
     actionHandlers.onAction = (actionId: string) => onAction(component.id, 'click', actionId);
+  } else if (component.type === 'alarm-form') {
+    actionHandlers.onSubmit = (data: any) => onAction(component.id, 'submit', data);
+    actionHandlers.onCancel = () => onAction(component.id, 'cancel', null);
   }
 
   return (
