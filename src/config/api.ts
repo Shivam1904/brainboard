@@ -36,21 +36,21 @@ export const API_CONFIG = {
   
   // Single item tracker endpoints
   singleItemTracker: {
-    getTrackerDetailsAndActivity: '/api/v1/widgets/single-item-tracker/getTrackerDetailsAndActivity', // Get tracker details and activity
-    updateActivity: '/api/v1/widgets/single-item-tracker/updateActivity', // Update tracker activity
-    getTrackerDetails: '/api/v1/widgets/single-item-tracker/getTrackerDetails', // Get tracker details
-    updateDetails: '/api/v1/widgets/single-item-tracker/updateDetails', // Update tracker details
+    getTrackerDetailsAndActivity: '/api/v1/single-item-tracker/getTrackerDetailsAndActivity', // Get tracker details and activity
+    updateActivity: '/api/v1/single-item-tracker/updateActivity', // Update tracker activity
+    getTrackerDetails: '/api/v1/single-item-tracker/getTrackerDetails', // Get tracker details
+    updateDetails: '/api/v1/single-item-tracker/updateDetails', // Update tracker details
   },
   
   // Web search endpoints
   webSearch: {
     getScheduledSearches: '/api/v1/web-search/scheduled',
     getSearchResult: '/api/v1/web-search/result',
-    getSummaryAndActivity: '/api/v1/widgets/websearch/getSummaryAndActivity', // Get web search summary and activity
-    updateActivity: '/api/v1/widgets/websearch/updateActivity', // Update web search activity
-    getWebsearchDetails: '/api/v1/widgets/websearch/getWebsearchDetails', // Get web search details
-    updateDetails: '/api/v1/widgets/websearch/updateDetails', // Update web search details
-    getAISummary: '/api/v1/widgets/websearch/getaisummary', // Get AI summary
+    getSummaryAndActivity: '/api/v1/websearch/getSummaryAndActivity', // Get web search summary and activity
+    updateActivity: '/api/v1/websearch/updateActivity', // Update web search activity
+    getWebsearchDetails: '/api/v1/websearch/getWebsearchDetails', // Get web search details
+    updateDetails: '/api/v1/websearch/updateDetails', // Update web search details
+    getAISummary: '/api/v1/websearch/getaisummary', // Get AI summary
   },
   
   // Health check endpoints

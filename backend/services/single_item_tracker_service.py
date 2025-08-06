@@ -44,7 +44,20 @@ class SingleItemTrackerService:
             tracker_details = result.scalars().first()
 
             if not tracker_details:
+                logger.warning(f"No tracker details found for widget {widget_id}")
                 return {"tracker_details": None, "activity": None}
+
+            # Extract tracker details data immediately
+            tracker_details_data = {
+                "id": tracker_details.id,
+                "widget_id": tracker_details.widget_id,
+                "title": tracker_details.title,
+                "value_type": tracker_details.value_type,
+                "value_unit": tracker_details.value_unit,
+                "target_value": tracker_details.target_value,
+                "created_at": tracker_details.created_at,
+                "updated_at": tracker_details.updated_at
+            }
 
             # Get today's activity
             today = date.today()
@@ -79,39 +92,46 @@ class SingleItemTrackerService:
                         break
 
                 if daily_widget:
-                    activity = SingleItemTrackerItemActivity(
+                    # Create new activity
+                    new_activity = SingleItemTrackerItemActivity(
                         daily_widget_id=daily_widget.id,
                         widget_id=widget_id,
                         singleitemtrackerdetails_id=tracker_details.id,
                         created_by=user_id
                     )
-                    self.db.add(activity)
+                    self.db.add(new_activity)
                     await self.db.commit()
-                    await self.db.refresh(activity)
+                    
+                    # Extract activity data immediately after creation
+                    activity_data = {
+                        "id": new_activity.id,
+                        "widget_id": new_activity.widget_id,
+                        "singleitemtrackerdetails_id": new_activity.singleitemtrackerdetails_id,
+                        "value": new_activity.value,
+                        "time_added": new_activity.time_added,
+                        "created_at": new_activity.created_at,
+                        "updated_at": new_activity.updated_at
+                    }
+                else:
+                    activity_data = None
+            else:
+                # Extract existing activity data immediately
+                activity_data = {
+                    "id": activity.id,
+                    "widget_id": activity.widget_id,
+                    "singleitemtrackerdetails_id": activity.singleitemtrackerdetails_id,
+                    "value": activity.value,
+                    "time_added": activity.time_added,
+                    "created_at": activity.created_at,
+                    "updated_at": activity.updated_at
+                }
 
             return {
-                "tracker_details": {
-                    "id": tracker_details.id,
-                    "widget_id": tracker_details.widget_id,
-                    "title": tracker_details.title,
-                    "value_type": tracker_details.value_type,
-                    "value_unit": tracker_details.value_unit,
-                    "target_value": tracker_details.target_value,
-                    "created_at": tracker_details.created_at,
-                    "updated_at": tracker_details.updated_at
-                },
-                "activity": {
-                    "id": activity.id if activity else None,
-                    "widget_id": activity.widget_id if activity else None,
-                    "singleitemtrackerdetails_id": activity.singleitemtrackerdetails_id if activity else None,
-                    "value": activity.value if activity else None,
-                    "time_added": activity.time_added if activity else None,
-                    "created_at": activity.created_at if activity else None,
-                    "updated_at": activity.updated_at if activity else None
-                } if activity else None
+                "tracker_details": tracker_details_data,
+                "activity": activity_data
             }
         except Exception as e:
-            logger.error(f"Error getting tracker details and activity: {e}")
+            logger.error(f"Error getting tracker details and activity for widget {widget_id}: {e}")
             raise
 
     async def update_activity(self, activity_id: str, user_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -135,24 +155,26 @@ class SingleItemTrackerService:
             activity.updated_by = user_id
             activity.updated_at = datetime.now()
 
+            # Extract activity data before commit to avoid session detachment
+            activity_data = {
+                "id": activity.id,
+                "widget_id": activity.widget_id,
+                "singleitemtrackerdetails_id": activity.singleitemtrackerdetails_id,
+                "value": activity.value,
+                "time_added": activity.time_added,
+                "created_at": activity.created_at,
+                "updated_at": activity.updated_at
+            }
+
             await self.db.commit()
-            await self.db.refresh(activity)
 
             return {
                 "success": True,
                 "message": "Activity updated successfully",
-                "activity": {
-                    "id": activity.id,
-                    "widget_id": activity.widget_id,
-                    "singleitemtrackerdetails_id": activity.singleitemtrackerdetails_id,
-                    "value": activity.value,
-                    "time_added": activity.time_added,
-                    "created_at": activity.created_at,
-                    "updated_at": activity.updated_at
-                }
+                "activity": activity_data
             }
         except Exception as e:
-            logger.error(f"Error updating activity: {e}")
+            logger.error(f"Error updating activity {activity_id}: {e}")
             raise
 
     async def get_tracker_details(self, widget_id: str, user_id: str) -> Dict[str, Any]:
@@ -199,21 +221,23 @@ class SingleItemTrackerService:
             
             self.db.add(tracker_details)
             await self.db.commit()
-            await self.db.refresh(tracker_details)
+            
+            # Extract tracker details data after commit (no refresh needed)
+            tracker_details_data = {
+                "id": tracker_details.id,
+                "widget_id": tracker_details.widget_id,
+                "title": tracker_details.title,
+                "value_type": tracker_details.value_type,
+                "value_unit": tracker_details.value_unit,
+                "target_value": tracker_details.target_value,
+                "created_at": tracker_details.created_at,
+                "updated_at": tracker_details.updated_at
+            }
 
             return {
                 "success": True,
                 "message": "Tracker details created successfully",
-                "tracker_details": {
-                    "id": tracker_details.id,
-                    "widget_id": tracker_details.widget_id,
-                    "title": tracker_details.title,
-                    "value_type": tracker_details.value_type,
-                    "value_unit": tracker_details.value_unit,
-                    "target_value": tracker_details.target_value,
-                    "created_at": tracker_details.created_at,
-                    "updated_at": tracker_details.updated_at
-                }
+                "tracker_details": tracker_details_data
             }
         except Exception as e:
             logger.error(f"Error creating tracker details: {e}")
@@ -240,22 +264,24 @@ class SingleItemTrackerService:
                 tracker_details.updated_at = datetime.now()
                 tracker_details.updated_by = user_id or DEFAULT_USER
 
+                # Extract tracker details data before commit
+                tracker_details_data = {
+                    "id": tracker_details.id,
+                    "widget_id": tracker_details.widget_id,
+                    "title": tracker_details.title,
+                    "value_type": tracker_details.value_type,
+                    "value_unit": tracker_details.value_unit,
+                    "target_value": tracker_details.target_value,
+                    "created_at": tracker_details.created_at,
+                    "updated_at": tracker_details.updated_at
+                }
+
                 await self.db.commit()
-                await self.db.refresh(tracker_details)
 
                 return {
                     "success": True,
                     "message": "Tracker details updated successfully",
-                    "tracker_details": {
-                        "id": tracker_details.id,
-                        "widget_id": tracker_details.widget_id,
-                        "title": tracker_details.title,
-                        "value_type": tracker_details.value_type,
-                        "value_unit": tracker_details.value_unit,
-                        "target_value": tracker_details.target_value,
-                        "created_at": tracker_details.created_at,
-                        "updated_at": tracker_details.updated_at
-                    },
+                    "tracker_details": tracker_details_data,
                     "action": "updated"
                 }
             else:
@@ -297,22 +323,24 @@ class SingleItemTrackerService:
             tracker_details.updated_by = user_id
             tracker_details.updated_at = datetime.now()
 
+            # Extract tracker details data before commit
+            tracker_details_data = {
+                "id": tracker_details.id,
+                "widget_id": tracker_details.widget_id,
+                "title": tracker_details.title,
+                "value_type": tracker_details.value_type,
+                "value_unit": tracker_details.value_unit,
+                "target_value": tracker_details.target_value,
+                "created_at": tracker_details.created_at,
+                "updated_at": tracker_details.updated_at
+            }
+
             await self.db.commit()
-            await self.db.refresh(tracker_details)
 
             return {
                 "success": True,
                 "message": "Tracker details updated successfully",
-                "tracker_details": {
-                    "id": tracker_details.id,
-                    "widget_id": tracker_details.widget_id,
-                    "title": tracker_details.title,
-                    "value_type": tracker_details.value_type,
-                    "value_unit": tracker_details.value_unit,
-                    "target_value": tracker_details.target_value,
-                    "created_at": tracker_details.created_at,
-                    "updated_at": tracker_details.updated_at
-                }
+                "tracker_details": tracker_details_data
             }
         except Exception as e:
             logger.error(f"Error updating tracker details: {e}")
@@ -361,9 +389,9 @@ class SingleItemTrackerService:
 
             self.db.add(activity)
             await self.db.commit()
-            await self.db.refresh(activity)
-
-            return {
+            
+            # Extract activity data after commit (no refresh needed)
+            activity_data = {
                 "id": activity.id,
                 "widget_id": activity.widget_id,
                 "singleitemtrackerdetails_id": activity.singleitemtrackerdetails_id,
@@ -372,6 +400,8 @@ class SingleItemTrackerService:
                 "created_at": activity.created_at,
                 "updated_at": activity.updated_at
             }
+
+            return activity_data
         except Exception as e:
             logger.error(f"Error creating tracker activity for today: {e}")
             raise

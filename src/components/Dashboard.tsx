@@ -556,7 +556,7 @@ const Dashboard = () => {
           onResizeStop={onResizeStop}
         >
         {widgets.map((widget: UIWidget) => (
-          <div key={widget.layout.i} className="widget-container">
+          <div key={widget.daily_widget_id} className="widget-container">
             {renderWidget(widget)}
           </div>
         ))}
