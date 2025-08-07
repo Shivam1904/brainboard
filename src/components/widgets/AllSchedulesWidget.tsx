@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { DashboardWidget, ApiWidgetType } from '../../types';
+import { DashboardWidget } from '../../services/api';
 import { dashboardService } from '../../services/dashboard';
 import { getDummyAllSchedulesWidgets } from '../../data/widgetDummyData';
 import AddWidgetForm from '../AddWidgetForm';
@@ -28,11 +28,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
     let todayIds: string[] = [];
     if (Array.isArray(todayWidgetsResponse)) {
       todayWidgetsResponse.forEach((dailyWidget: any) => {
-        if (dailyWidget.widget_ids && Array.isArray(dailyWidget.widget_ids)) {
-          // Old structure: dailyWidget.widget_ids is an array
-          todayIds.push(...dailyWidget.widget_ids);
-        } else if (dailyWidget.widget_id) {
-          // New structure: dailyWidget.widget_id is a single ID
+        if (dailyWidget.widget_id) {
           todayIds.push(dailyWidget.widget_id);
         }
       });
@@ -40,7 +36,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
     return todayIds;
   };
 
-  // Load widgets from API using getAllWidgetList
+  // Load widgets from API using getAllWidgets
   useEffect(() => {
     const loadWidgets = async () => {
       try {
@@ -89,75 +85,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
       setLoading(true);
       
       // Fetch widget-specific details based on widget type
-      let widgetDetails: any = {};
-      
-      switch (widget.widget_type) {
-        case 'todo-habit':
-        case 'todo-task':
-        case 'todo-event':
-          try {
-            const todoDetails = await dashboardService.getTodoDetails(widget.id);
-            widgetDetails = {
-              ...widget,
-              todo_type: todoDetails.todo_type,
-              due_date: todoDetails.due_date,
-              description: todoDetails.description
-            };
-          } catch (err) {
-            console.warn('Failed to fetch todo details, using basic widget data:', err);
-            widgetDetails = widget;
-          }
-          break;
-          
-        case 'alarm':
-          try {
-            const alarmDetails = await dashboardService.getAlarmDetails(widget.id);
-            widgetDetails = {
-              ...widget,
-              alarm_times: alarmDetails.alarm_times,
-              description: alarmDetails.description,
-              target_value: alarmDetails.target_value,
-              is_snoozable: alarmDetails.is_snoozable
-            };
-          } catch (err) {
-            console.warn('Failed to fetch alarm details, using basic widget data:', err);
-            widgetDetails = widget;
-          }
-          break;
-          
-        case 'singleitemtracker':
-          try {
-            const trackerDetails = await dashboardService.getTrackerDetails(widget.id);
-            widgetDetails = {
-              ...widget,
-              value_type: trackerDetails.value_type,
-              value_unit: trackerDetails.value_unit,
-              target_value: trackerDetails.target_value
-            };
-          } catch (err) {
-            console.warn('Failed to fetch tracker details, using basic widget data:', err);
-            widgetDetails = widget;
-          }
-          break;
-          
-        case 'websearch':
-          try {
-            await dashboardService.getWebSearchDetails(widget.id);
-            widgetDetails = {
-              ...widget,
-              // Websearch details are minimal, just title
-            };
-          } catch (err) {
-            console.warn('Failed to fetch websearch details, using basic widget data:', err);
-            widgetDetails = widget;
-          }
-          break;
-          
-        default:
-          widgetDetails = widget;
-          break;
-      }
-      
+      const widgetDetails = await dashboardService.getWidget(widget.id);      
       setEditingWidget(widgetDetails);
     } catch (err) {
       console.error('Failed to fetch widget details:', err);
@@ -212,26 +140,26 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
   };
 
   // Get widget type display name
-  const getWidgetTypeDisplayName = (type: ApiWidgetType): string => {
-    const typeNames: Record<ApiWidgetType, string> = {
+  const getWidgetTypeDisplayName = (type: string): string => {
+    const typeNames: Record<string, string> = {
       'todo-habit': 'Habit Tracker',
       'todo-task': 'Task List',
       'todo-event': 'Event Tracker',
       'alarm': 'Alarm',
-      'singleitemtracker': 'Item Tracker',
+      'single_item_tracker': 'Item Tracker',
       'websearch': 'Web Search'
     };
     return typeNames[type] || type;
   };
 
   // Get widget type icon
-  const getWidgetTypeIcon = (type: ApiWidgetType): string => {
-    const icons: Record<ApiWidgetType, string> = {
+  const getWidgetTypeIcon = (type: string): string => {
+    const icons: Record<string, string> = {
       'todo-habit': '🔄',
       'todo-task': '📋',
       'todo-event': '📅',
       'alarm': '⏰',
-      'singleitemtracker': '📊',
+      'single_item_tracker': '📊',
       'websearch': '🔍'
     };
     return icons[type] || '⚙️';
@@ -262,7 +190,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
 
   // Group widgets by type
   const groupedWidgets = widgets.reduce((groups: GroupedWidgets, widget) => {
-    const type = widget.widget_type as ApiWidgetType;
+    const type = widget.widget_type;
     const displayName = getWidgetTypeDisplayName(type);
     if (!groups[displayName]) {
       groups[displayName] = [];
@@ -327,7 +255,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
           ) : (
             Object.entries(groupedWidgets).map(([groupName, groupWidgets]) => {
               const isExpanded = expandedGroups.has(groupName);
-              const widgetType = groupWidgets[0]?.widget_type as ApiWidgetType;
+              const widgetType = groupWidgets[0]?.widget_type;
               const icon = getWidgetTypeIcon(widgetType);
               
               return (

@@ -1,31 +1,71 @@
-// API Service - Direct API calls without conversions
-// This service matches the actual backend API endpoints exactly
+// API Service - Clean implementation using new consolidated backend API
+// This service matches the new backend API endpoints exactly
 
-import { 
-  TodoTodayResponse,
-  TodoDetailsAndActivityResponse,
-  TodoDetailsResponse,
-  AlarmDetailsAndActivityResponse,
-  AlarmDetailsResponse,
-  TrackerDetailsAndActivityResponse,
-  TrackerDetailsResponse,
-  WebSearchSummaryAndActivityResponse,
-  WebSearchDetailsResponse,
-  WebSearchAISummaryResponse,
-  ApiWidgetType,
-  ApiFrequency,
-  ApiCategory,
-  TodoStatus,
-  WebSearchStatus,
-  DailyWidget
-} from '../types';
-import { API_CONFIG, buildApiUrl } from '../config/api';
+import { API_CONFIG, buildApiUrl, buildApiUrlWithParams } from '../config/api';
+
+// Basic types for the new API structure
+export interface DashboardWidget {
+  id: string;
+  user_id: string;
+  widget_type: string;
+  title: string;
+  frequency: string;
+  importance: number;
+  category: string;
+  description?: string;
+  is_permanent: boolean;
+  widget_config: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  delete_flag: boolean;
+}
+
+import { Layout } from 'react-grid-layout';
+// Daily widget structure from API - Updated to match new response
+export interface DailyWidget {
+  id: string;
+  daily_widget_id: string;
+  widget_id: string;
+  widget_type: string;
+  title: string;
+  frequency: string;
+  importance: number;
+  category: string;
+  description?: string;
+  is_permanent?: boolean;
+  priority?: string;
+  reasoning?: string;
+  date?: string;
+  is_active?: boolean;
+  isVisible?: boolean;
+  layout: Layout;
+  widget_config?: Record<string, any>;
+  activity_data?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+  delete_flag?: boolean;
+}
+
+export interface ChatMessage {
+  message: string;
+  session_id?: string;
+}
+
+export interface ChatResponse {
+  response: string;
+  session_id: string;
+}
+
+export interface ChatSession {
+  session_id: string;
+  created_at: string;
+  last_activity: string;
+  message_count: number;
+}
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    // Check if endpoint is already a full URL (starts with http)
-    const url = endpoint.startsWith('http') ? endpoint : buildApiUrl(endpoint);
-    const response = await fetch(url, {
+    const response = await fetch(endpoint, {
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,
@@ -41,425 +81,181 @@ class ApiService {
   }
 
   // ============================================================================
-  // DASHBOARD ENDPOINTS
+  // DASHBOARD WIDGETS ENDPOINTS (/api/v1/dashboard-widgets/)
+  // ============================================================================
+
+  // POST /api/v1/dashboard-widgets/newwidget
+  async createWidget(data: {
+    widget_type: string;
+    title: string;
+    frequency: string;
+    importance: number;
+    category: string;
+    description?: string;
+    is_permanent?: boolean;
+    widget_config?: Record<string, any>;
+  }): Promise<DashboardWidget> {
+    const url = buildApiUrl(API_CONFIG.dashboardWidgets.createWidget);
+    return this.request<DashboardWidget>(url, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // GET /api/v1/dashboard-widgets/allwidgets
+  async getAllWidgets(): Promise<DashboardWidget[]> {
+    const url = buildApiUrl(API_CONFIG.dashboardWidgets.getAllWidgets);
+    return this.request<DashboardWidget[]>(url);
+  }
+
+  // GET /api/v1/dashboard-widgets/{widget_id}
+  async getWidget(widgetId: string): Promise<DashboardWidget> {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboardWidgets.getWidget, { widget_id: widgetId });
+    return this.request<DashboardWidget>(url);
+  }
+
+  // PUT /api/v1/dashboard-widgets/{widget_id}/update
+  async updateWidget(widgetId: string, data: Partial<DashboardWidget>): Promise<DashboardWidget> {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboardWidgets.updateWidget, { widget_id: widgetId });
+    return this.request<DashboardWidget>(url, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // DELETE /api/v1/dashboard-widgets/{widget_id}/delete
+  async deleteWidget(widgetId: string): Promise<{ message: string }> {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboardWidgets.deleteWidget, { widget_id: widgetId });
+    return this.request<{ message: string }>(url, {
+      method: 'DELETE',
+    });
+  }
+
+  // GET /api/v1/dashboard-widgets/alloftype/{widget_type}
+  async getWidgetsByType(widgetType: string): Promise<DashboardWidget[]> {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboardWidgets.getWidgetsByType, { widget_type: widgetType });
+    return this.request<DashboardWidget[]>(url);
+  }
+
+  // ============================================================================
+  // CHAT ENDPOINTS (/api/v1/chat/)
+  // ============================================================================
+
+  // GET /api/v1/chat/health
+  async getChatHealth(): Promise<{ status: string; message: string }> {
+    const url = buildApiUrl(API_CONFIG.chat.health);
+    return this.request<{ status: string; message: string }>(url);
+  }
+
+  // POST /api/v1/chat/message
+  async sendChatMessage(data: ChatMessage): Promise<ChatResponse> {
+    const url = buildApiUrl(API_CONFIG.chat.message);
+    return this.request<ChatResponse>(url, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // GET /api/v1/chat/sessions
+  async getChatSessions(): Promise<ChatSession[]> {
+    const url = buildApiUrl(API_CONFIG.chat.sessions);
+    return this.request<ChatSession[]>(url);
+  }
+
+  // GET /api/v1/chat/sessions/{session_id}
+  async getChatSession(sessionId: string): Promise<ChatSession> {
+    const url = buildApiUrlWithParams(API_CONFIG.chat.getSession, { session_id: sessionId });
+    return this.request<ChatSession>(url);
+  }
+
+  // DELETE /api/v1/chat/sessions/{session_id}
+  async clearChatSession(sessionId: string): Promise<{ message: string }> {
+    const url = buildApiUrlWithParams(API_CONFIG.chat.clearSession, { session_id: sessionId });
+    return this.request<{ message: string }>(url, {
+      method: 'DELETE',
+    });
+  }
+
+  // POST /api/v1/chat/cleanup
+  async cleanupChatSessions(): Promise<{ message: string }> {
+    const url = buildApiUrl(API_CONFIG.chat.cleanup);
+    return this.request<{ message: string }>(url, {
+      method: 'POST',
+    });
+  }
+
+  // ============================================================================
+  // DASHBOARD ENDPOINTS (/api/v1/dashboard/)
   // ============================================================================
 
   // GET /api/v1/dashboard/getTodayWidgetList
   async getTodayWidgetList(targetDate?: string): Promise<DailyWidget[]> {
     const params = targetDate ? { target_date: targetDate } : undefined;
-    const url = buildApiUrl(API_CONFIG.dashboard.getTodayWidgets, params);
+    const url = buildApiUrl(API_CONFIG.dashboard.getTodayWidgetList, params);
     return this.request<DailyWidget[]>(url);
   }
 
-  // GET /api/v1/dashboard/getAllWidgetList
-  async getAllWidgetList(): Promise<DailyWidget[]> {
-    return this.request<DailyWidget[]>(API_CONFIG.dashboard.getAllWidgets);
-  }
-
-  // POST /api/v1/dashboard/widget/addnew
-  async addNewWidget(data: {
-    widget_type: ApiWidgetType;
-    frequency: ApiFrequency;
-    importance: number;
-    title: string;
-    category: ApiCategory;
-    // Widget-specific fields
-    todo_type?: string;
-    due_date?: string;
-    alarm_time?: string;
-    value_data_type?: string;
-    value_data_unit?: string;
-    target_value?: string;
-  }): Promise<{
-    message: string;
-    widget_id: string;
-    widget_type: string;
-    title: string;
-  }> {
-    return this.request(API_CONFIG.dashboard.addNewWidget, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
   // POST /api/v1/dashboard/widget/addtotoday/{widget_id}
-  async addWidgetToToday(widgetId: string): Promise<{
+  async addWidgetToToday(widgetId: string, targetDate?: string): Promise<{
+    success: boolean;
     message: string;
     daily_widget_id: string;
     widget_id: string;
-    widget_type: string;
-    title: string;
   }> {
-    const url = buildApiUrl(`${API_CONFIG.dashboard.addWidgetToToday}/${widgetId}`);
-    return this.request(url, {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboard.addWidgetToToday, { widget_id: widgetId });
+    const fullUrl = targetDate ? `${url}?target_date=${targetDate}` : url;
+    return this.request(fullUrl, {
       method: 'POST',
     });
   }
 
-  // POST /api/v1/dashboard/widget/updateWidgetDetails/{widget_id}
-  async updateWidget(widgetId: string, data: {
-    widget_type: ApiWidgetType;
-    frequency: ApiFrequency;
-    importance: number;
-    title: string;
-    category: ApiCategory;
-    // Widget-specific fields
-    todo_type?: string;
-    due_date?: string;
-    alarm_time?: string;
-    value_data_type?: string;
-    value_data_unit?: string;
-    target_value?: string;
-  }): Promise<{
-    message: string;
-    widget_id: string;
-    widget_type: string;
-    title: string;
-  }> {
-    const url = buildApiUrl(`${API_CONFIG.dashboard.updateWidget}/${widgetId}`);
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // POST /api/v1/dashboard/widget/updateDetails/{widget_id}
-  async updateWidgetDetails(widgetId: string, data: {
-    title?: string;
-    frequency?: ApiFrequency;
-    importance?: number;
-    category?: ApiCategory;
-  }): Promise<{
-    message: string;
-    widget_id: string;
-    widget_type: string;
-    title: string;
-  }> {
-    const url = buildApiUrl(`${API_CONFIG.dashboard.updateWidgetDetails}/${widgetId}`);
-    return this.request<{
-      message: string;
-      widget_id: string;
-      widget_type: string;
-      title: string;
-    }>(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // POST /api/v1/single-item-tracker/updateDetails/{tracker_details_id}
-  async updateSingleItemTrackerDetails(trackerDetailsId: string, data: {
-    title: string;
-    value_type: string;
-    value_unit: string;
-    target_value: string;
-  }): Promise<{
+  // POST /api/v1/dashboard/widget/removefromtoday/{daily_widget_id}
+  async removeWidgetFromToday(dailyWidgetId: string, targetDate?: string): Promise<{
     success: boolean;
-    message: string;
-    tracker_details: {
-      id: string;
-      widget_id: string;
-      title: string;
-      value_type: string;
-      value_unit: string;
-      target_value: string;
-      created_at: string;
-      updated_at: string;
-    };
-  }> {
-    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.updateDetails}/${trackerDetailsId}`);
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // POST /api/v1/dashboard/widgets/updateDailyWidget/{daily_widget_id}
-  async updateDailyWidgetActive(dailyWidgetId: string, isActive: boolean): Promise<{
     message: string;
     daily_widget_id: string;
     is_active: boolean;
   }> {
-    const url = buildApiUrl(`${API_CONFIG.dashboard.updateDailyWidget}/${dailyWidgetId}`, { is_active: isActive.toString() });
-    return this.request(url, {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboard.removeWidgetFromToday, { daily_widget_id: dailyWidgetId });
+    const fullUrl = targetDate ? `${url}?target_date=${targetDate}` : url;
+    return this.request(fullUrl, {
       method: 'POST',
     });
   }
 
-  // GET /api/v1/dashboard/getTodoList/{todo_type}
-  async getTodoList(todoType: 'habit' | 'task' | 'event'): Promise<{
-    todo_type: 'habit' | 'task' | 'event';
-    todos: Array<{
-      id: string;
-      title: string;
-      todo_type: 'habit' | 'task' | 'event';
-      description: string;
-      due_date: string;
-      created_at: string;
-    }>;
-    total_todos: number;
+  // PUT /api/v1/dashboard/daily-widgets/{daily_widget_id}/updateactivity
+  async updateActivity(dailyWidgetId: string, activityData: Record<string, any>): Promise<{
+    success: boolean;
+    message: string;
+    activity_data: Record<string, any>;
   }> {
-    const url = buildApiUrl(`${API_CONFIG.dashboard.getTodoList}/${todoType}`);
-    return this.request(url);
-  }
-
-  // ============================================================================
-  // TODO WIDGET ENDPOINTS
-  // ============================================================================
-
-  // GET /api/v1/widgets/todo/getTodayTodoList/{todo_type}
-  async getTodayTodoList(todoType: 'habit' | 'task' | 'event'): Promise<TodoTodayResponse> {
-    const url = buildApiUrl(`${API_CONFIG.todo.getTodayTodoList}/${todoType}`);
-    return this.request<TodoTodayResponse>(url);
-  }
-
-  // POST /api/v1/widgets/todo/updateActivity/{activity_id}
-  async updateTodoActivity(activityId: string, data: {
-    status: TodoStatus;
-    progress: number;
-    updated_by: string;
-  }): Promise<{
-    activity_id: string;
-    status: TodoStatus;
-    progress: number;
-    updated_at: string;
-  }> {
-    const url = buildApiUrl(`${API_CONFIG.todo.updateActivity}/${activityId}`);
+    const url = buildApiUrlWithParams(API_CONFIG.dashboard.updateActivity, { daily_widget_id: dailyWidgetId });
     return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
+      method: 'PUT',
+      body: JSON.stringify(activityData),
     });
   }
 
-  // GET /api/v1/widgets/todo/getTodoItemDetailsAndActivity/{daily_widget_id}/{widget_id}
-  async getTodoItemDetailsAndActivity(dailyWidgetId: string, widgetId: string): Promise<TodoDetailsAndActivityResponse> {
-    const url = buildApiUrl(`${API_CONFIG.todo.getTodoItemDetailsAndActivity}/${dailyWidgetId}/${widgetId}`);
-    return this.request<TodoDetailsAndActivityResponse>(url);
-  }
-
-  // GET /api/v1/widgets/todo/getTodoDetails/{widget_id}
-  async getTodoDetails(widgetId: string): Promise<TodoDetailsResponse> {
-    const url = buildApiUrl(`${API_CONFIG.todo.getTodoDetails}/${widgetId}`);
-    return this.request<TodoDetailsResponse>(url);
-  }
-
-  // POST /api/v1/widgets/todo/updateDetails/{todo_details_id}
-  async updateTodoDetails(todoDetailsId: string, data: {
-    title: string;
-    description: string;
-    due_date: string;
-    todo_type: 'habit' | 'task' | 'event';
-  }): Promise<TodoDetailsResponse> {
-    const url = buildApiUrl(`${API_CONFIG.todo.updateDetails}/${todoDetailsId}`);
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // ============================================================================
-  // ALARM WIDGET ENDPOINTS
-  // ============================================================================
-
-  // GET /api/v1/widgets/alarm/getAlarmDetailsAndActivity/{widget_id}
-  async getAlarmDetailsAndActivity(widgetId: string): Promise<AlarmDetailsAndActivityResponse> {
-    const url = buildApiUrl(`${API_CONFIG.alarm.getAlarmDetailsAndActivity}/${widgetId}`);
-    return this.request<AlarmDetailsAndActivityResponse>(url);
-  }
-
-  // POST /api/v1/widgets/alarm/snoozeAlarm/{activity_id}
-  async snoozeAlarm(activityId: string, snoozeMinutes: number = 2): Promise<{
-    activity_id: string;
-    snoozed_at: string;
-    snooze_until: string;
-    snooze_count: number;
-    updated_at: string;
-  }> {
-    const url = buildApiUrl(`${API_CONFIG.alarm.snoozeAlarm}/${activityId}`, { snooze_minutes: snoozeMinutes.toString() });
-    return this.request(url, {
-      method: 'POST',
-    });
-  }
-
-  // POST /api/v1/widgets/alarm/stopAlarm/{activity_id}
-  async stopAlarm(activityId: string): Promise<{
-    activity_id: string;
-    started_at: string;
-    snooze_until: null;
-    updated_at: string;
-  }> {
-    const url = buildApiUrl(`${API_CONFIG.alarm.stopAlarm}/${activityId}`);
-    return this.request(url, {
-      method: 'POST',
-    });
-  }
-
-  // POST /api/v1/widgets/alarm/updateActivity/{activity_id}
-  async updateAlarmActivity(activityId: string, data: {
-    started_at?: string;
-    snoozed_at?: string;
-    updated_by: string;
-  }): Promise<{
-    activity_id: string;
-    started_at?: string;
-    snoozed_at?: string;
-    updated_at: string;
-  }> {
-    const url = buildApiUrl(`${API_CONFIG.alarm.updateActivity}/${activityId}`);
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // GET /api/v1/widgets/alarm/getAlarmDetails/{widget_id}
-  async getAlarmDetails(widgetId: string): Promise<AlarmDetailsResponse> {
-    const url = buildApiUrl(`${API_CONFIG.alarm.getAlarmDetails}/${widgetId}`);
-    return this.request<AlarmDetailsResponse>(url);
-  }
-
-  // POST /api/v1/widgets/alarm/updateDetails/{alarm_details_id}
-  async updateAlarmDetails(alarmDetailsId: string, data: {
-    title: string;
-    description: string;
-    alarm_times: string[];
-    target_value?: string;
-    is_snoozable?: boolean;
-  }): Promise<AlarmDetailsResponse> {
-    const url = buildApiUrl(`${API_CONFIG.alarm.updateDetails}/${alarmDetailsId}`);
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // ============================================================================
-  // SINGLE ITEM TRACKER WIDGET ENDPOINTS
-  // ============================================================================
-
-  // GET /api/v1/widgets/single-item-tracker/getTrackerDetailsAndActivity/{widget_id}
-  async getTrackerDetailsAndActivity(widgetId: string): Promise<TrackerDetailsAndActivityResponse> {
-    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.getTrackerDetailsAndActivity}/${widgetId}`);
-    return this.request<TrackerDetailsAndActivityResponse>(url);
-  }
-
-  // POST /api/v1/widgets/single-item-tracker/updateActivity/{activity_id}
-  async updateTrackerActivity(activityId: string, data: {
-    value: string;
-    time_added?: string;
-    updated_by: string;
-  }): Promise<{
-    activity_id: string;
-    value: string;
-    time_added?: string;
-    updated_at: string;
-  }> {
-    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.updateActivity}/${activityId}`);
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // GET /api/v1/widgets/single-item-tracker/getTrackerDetails/{widget_id}
-  async getTrackerDetails(widgetId: string): Promise<TrackerDetailsResponse> {
-    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.getTrackerDetails}/${widgetId}`);
-    return this.request<TrackerDetailsResponse>(url);
-  }
-
-  // POST /api/v1/widgets/single-item-tracker/updateDetails/{tracker_details_id}
-  async updateTrackerDetails(trackerDetailsId: string, data: {
-    title: string;
-    value_type: string;
-    value_unit: string;
-    target_value: string;
-  }): Promise<TrackerDetailsResponse> {
-    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.updateDetails}/${trackerDetailsId}`);
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // ============================================================================
-  // WEBSEARCH WIDGET ENDPOINTS
-  // ============================================================================
-
-  // GET /api/v1/widgets/websearch/getSummaryAndActivity/{widget_id}
-  async getWebSearchSummaryAndActivity(widgetId: string): Promise<WebSearchSummaryAndActivityResponse> {
-    const url = buildApiUrl(`${API_CONFIG.webSearch.getSummaryAndActivity}/${widgetId}`);
-    return this.request<WebSearchSummaryAndActivityResponse>(url);
-  }
-
-  // POST /api/v1/widgets/websearch/updateActivity/{activity_id}
-  async updateWebSearchActivity(activityId: string, data: {
-    status: WebSearchStatus;
-    reaction?: string;
-    summary?: string;
-    source_json?: any;
-    updated_by: string;
-  }): Promise<{
-    activity_id: string;
-    status: WebSearchStatus;
-    reaction?: string;
-    summary?: string;
-    source_json?: any;
-    updated_at: string;
-  }> {
-    const url = buildApiUrl(`${API_CONFIG.webSearch.updateActivity}/${activityId}`);
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // GET /api/v1/widgets/websearch/getWebsearchDetails/{widget_id}
-  async getWebSearchDetails(widgetId: string): Promise<WebSearchDetailsResponse> {
-    const url = buildApiUrl(`${API_CONFIG.webSearch.getWebsearchDetails}/${widgetId}`);
-    return this.request<WebSearchDetailsResponse>(url);
-  }
-
-  // POST /api/v1/widgets/websearch/updateDetails/{websearch_details_id}
-  async updateWebSearchDetails(webSearchDetailsId: string, data: {
-    title: string;
-  }): Promise<WebSearchDetailsResponse> {
-    const url = buildApiUrl(`${API_CONFIG.webSearch.updateDetails}/${webSearchDetailsId}`);
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // GET /api/v1/widgets/websearch/getaisummary/{widget_id}
-  async getWebSearchAISummary(widgetId: string): Promise<WebSearchAISummaryResponse> {
-    const url = buildApiUrl(`${API_CONFIG.webSearch.getAISummary}/${widgetId}`);
-    return this.request<WebSearchAISummaryResponse>(url);
+  // GET /api/v1/dashboard/daily-widgets/{daily_widget_id}/getactivity
+  async getActivityData(dailyWidgetId: string): Promise<Record<string, any>> {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboard.getActivityData, { daily_widget_id: dailyWidgetId });
+    return this.request<Record<string, any>>(url);
   }
 
   // ============================================================================
   // HEALTH CHECK ENDPOINTS
   // ============================================================================
 
-  // GET /api/v1/health
-  async getHealth(): Promise<{
-    status: string;
-    service: string;
-    version: string;
-  }> {
-    return this.request(API_CONFIG.health.getHealth);
+  // GET /health
+  async getHealth(): Promise<{ status: string; message: string }> {
+    const url = buildApiUrl(API_CONFIG.health.getHealth);
+    return this.request<{ status: string; message: string }>(url);
   }
 
-  // GET /api/v1/health/detailed
-  async getDetailedHealth(): Promise<{
-    status: string;
-    service: string;
-    version: string;
-    services: {
-      database: string;
-      ai_services: string;
-    };
-  }> {
-    return this.request(API_CONFIG.health.getDetailedHealth);
+  // GET /
+  async getApiInfo(): Promise<{ message: string; version: string; docs: string; health: string }> {
+    const url = buildApiUrl(API_CONFIG.health.getRoot);
+    return this.request<{ message: string; version: string; docs: string; health: string }>(url);
   }
 }
 

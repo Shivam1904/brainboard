@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
 import { getDummyCalendarData } from '../../data/widgetDummyData';
+import { DailyWidget } from '../../services/api';
 
 interface CalendarEvent {
   id: string;
@@ -69,14 +70,7 @@ const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface CalendarWidgetProps {
   onRemove: () => void;
-  widget: {
-    daily_widget_id: string;
-    widget_type: string;
-    priority: string;
-    reasoning: string;
-    date: string;
-    created_at: string;
-  };
+  widget: DailyWidget;
 }
 
 const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {

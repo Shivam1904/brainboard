@@ -68,6 +68,7 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
           <h3 className="text-lg font-bold text-gray-800">Frequency Settings</h3>
         </div>
         <button
+          type="button"
           onClick={() => setExpanded(!expanded)}
           className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
         >

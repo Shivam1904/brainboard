@@ -39,8 +39,6 @@ def get_default_user_id() -> str:
 # ============================================================================
 @router.get("/getTodayWidgetList", response_model=List[TodayWidgetListResponse])
 async def get_today_widget_list(
-    target_date: Optional[date] = Query(None, description="Date for widget list (defaults to today)"),
-    user_id: str = Depends(get_default_user_id),
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
     """
@@ -49,19 +47,15 @@ async def get_today_widget_list(
     This endpoint only reads data and doesn't require transaction management.
     """
     try:
-        if target_date is None:
-            target_date = date.today()
         
         service = DailyWidgetService(db)
-        return await service.get_today_widget_list(user_id, target_date)
+        return await service.get_today_widget_list()
     except Exception as e:
         raise raise_database_error(f"Failed to get today's widget list: {str(e)}")
 
 @router.post("/widget/addtotoday/{widget_id}", response_model=AddWidgetToTodayResponse)
 async def add_widget_to_today(
     widget_id: str,
-    target_date: Optional[date] = Query(None, description="Date to add widget to (defaults to today)"),
-    user_id: str = Depends(get_default_user_id),
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
     """
@@ -70,11 +64,9 @@ async def add_widget_to_today(
     This endpoint manages the transaction lifecycle to prevent cursor reset issues.
     """
     try:
-        if target_date is None:
-            target_date = date.today()
         
         service = DailyWidgetService(db)
-        result = await service.add_widget_to_today(widget_id, user_id, target_date)
+        result = await service.add_widget_to_today(widget_id)
         
         # Commit the transaction at the route level
         await db.commit()
@@ -88,8 +80,6 @@ async def add_widget_to_today(
 @router.post("/widget/removefromtoday/{daily_widget_id}", response_model=RemoveWidgetFromTodayResponse)
 async def remove_widget_from_today(
     daily_widget_id: str,
-    target_date: Optional[date] = Query(None, description="Date to remove widget from (defaults to today)"),
-    user_id: str = Depends(get_default_user_id),
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
     """
@@ -98,11 +88,8 @@ async def remove_widget_from_today(
     This endpoint manages the transaction lifecycle to prevent cursor reset issues.
     """
     try:
-        if target_date is None:
-            target_date = date.today()
-        
         service = DailyWidgetService(db)
-        result = await service.remove_widget_from_today(daily_widget_id, user_id, target_date)
+        result = await service.remove_widget_from_today(daily_widget_id)
         
         # Commit the transaction at the route level
         await db.commit()
@@ -113,21 +100,20 @@ async def remove_widget_from_today(
         await db.rollback()
         raise raise_database_error(f"Failed to remove widget from today: {str(e)}")
 
-@router.post("/widget/updateActive/{daily_widget_id}")
-async def update_daily_widget_active(
+# ============================================================================
+# ACTIVITY ENDPOINTS
+# ============================================================================
+
+@router.put("/daily-widgets/{daily_widget_id}/updateactivity")
+async def update_activity(
     daily_widget_id: str,
-    is_active: bool = Query(..., description="Whether the daily widget should be active"),
-    user_id: str = Depends(get_default_user_id),
+    activity_data: Dict[str, Any],
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
-    """
-    Update the active status of a daily widget.
-    
-    This endpoint manages the transaction lifecycle to prevent cursor reset issues.
-    """
+    """Update activity data for a daily widget."""
     try:
         service = DailyWidgetService(db)
-        result = await service.update_daily_widget_active(daily_widget_id, is_active)
+        result = await service.update_activity(daily_widget_id, activity_data)
         
         # Commit the transaction at the route level
         await db.commit()
@@ -136,4 +122,16 @@ async def update_daily_widget_active(
     except Exception as e:
         # Rollback on any exception
         await db.rollback()
-        raise raise_database_error(f"Failed to update daily widget active status: {str(e)}") 
+        raise raise_database_error(f"Failed to update activity: {str(e)}")
+
+@router.get("/daily-widgets/{daily_widget_id}/getactivity")
+async def get_activity_data(
+    daily_widget_id: str,
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Get activity data for a daily widget."""
+    try:
+        service = DailyWidgetService(db)
+        return await service.get_activity_data(daily_widget_id)
+    except Exception as e:
+        raise raise_database_error(f"Failed to get activity data: {str(e)}")

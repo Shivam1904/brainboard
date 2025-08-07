@@ -1,20 +1,13 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { TrendingUp, Target, Calendar, Plus, X, Save } from 'lucide-react';
-import { TrackerDetailsAndActivityResponse, TrackerDetails, TrackerActivity } from '../../types';
+import { TrackerDetailsAndActivityResponse, TrackerDetails, TrackerActivity } from '../../types/widgets';
 import { dashboardService } from '../../services/dashboard';
+import { DailyWidget } from '../../services/api';
 
 interface SingleItemTrackerWidgetProps {
   onRemove: () => void;
-  widget: {
-    widget_ids: string[];
-    daily_widget_id: string;
-    widget_type: string;
-    priority: string;
-    reasoning: string;
-    date: string;
-    created_at: string;
-  };
+  widget: DailyWidget;
 }
 
 const getValueTypeInput = (valueType: string) => {

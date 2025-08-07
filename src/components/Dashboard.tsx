@@ -10,28 +10,23 @@ import AddWidgetButton from './AddWidgetButton'
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties, findEmptyPosition } from '../config/grid'
 import { dashboardService } from '../services/dashboard'
-import { 
-  DailyWidget,
-  ApiWidgetType,
-  ApiFrequency,
-  ApiCategory,
-  UIWidget
-} from '../types'
 import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
 import HabitListWidget from './widgets/HabitListWidget';
 import EventTrackerWidget from './widgets/EventTrackerWidget';
 import AiChatWidget from './widgets/AiChatWidget';
-import { apiService } from '../services/api';
+import { apiService, DailyWidget } from '../services/api';
+import { ApiCategory, ApiFrequency, ApiWidgetType } from '@/types/widgets';
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
+
 
 const Dashboard = () => {
   const [showGridLines, setShowGridLines] = useState(false)
   const [dashboardLoading, setDashboardLoading] = useState(true)
   const [dashboardError, setDashboardError] = useState<string | null>(null)
-  const [widgets, setWidgets] = useState<UIWidget[]>([])
-
+  const [widgets, setWidgets] = useState<DailyWidget[]>([])
+  const [viewWidgetStates, setViewWidgetStates] = useState<DailyWidget[]>([])
   // Apply grid CSS properties on component mount
   useEffect(() => {
     const cssProperties = getGridCSSProperties()
@@ -41,7 +36,7 @@ const Dashboard = () => {
   }, [])
 
   // Find optimal position for a new widget
-  const findOptimalPosition = (widgetType: string, existingWidgets: UIWidget[]): { x: number; y: number } => {
+  const findOptimalPosition = (widgetType: string, existingWidgets: DailyWidget[]): { x: number; y: number } => {
     const config = getWidgetConfig(widgetType);
     if (!config) return { x: 0, y: 0 };
 
@@ -81,43 +76,95 @@ const Dashboard = () => {
     return { x: currentX, y: currentY };
   };
 
-  // Fetch today's widget configuration using getTodayWidgetList
+  // Fetch all widgets and today's widgets
   const fetchTodayWidgets = async () => {
     try {
       setDashboardLoading(true)
       setDashboardError(null)
       
-      // Try to fetch from API first
-      let data: DailyWidget[];
-      let dummyData: DailyWidget[];
-      dummyData = getDummyTodayWidgets();
-      
+      let allWidgetsData: any[] = [];
+      let todayWidgetsData: DailyWidget[] = [];
       try {
-        data = await dashboardService.getTodayWidgets();
-        console.log('Successfully fetched today\'s widgets from API:', data);
+        // Fetch all widgets first
+        allWidgetsData = await dashboardService.getAllWidgets();
+        console.log('Successfully fetched all widgets from API:', allWidgetsData);
+        
+        // Fetch today's widgets
+        todayWidgetsData = await dashboardService.getTodayWidgets();
+        console.log('Successfully fetched today\'s widgets from API:', todayWidgetsData);
       } catch (apiError) {
         console.warn('API call failed, falling back to dummy data:', apiError);
-        // Fallback to dummy data if API is not available
-        data = dummyData;
-        
-        // Show a subtle notification that we're using fallback data
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Using fallback data - API server may not be running');
-        }
       }
       
-      // Convert API widgets to UI widgets with proper placement
-      const uiWidgets: UIWidget[] = [];
+      // Convert widgets to UI format with proper placement
+      const uiWidgets: DailyWidget[] = [];
       
-      data.forEach((widget: DailyWidget) => {
+      // Track view widget states for the AddWidgetButton
+      
+      // First, handle view widgets (allSchedules, aiChat) from all widgets list
+      const viewWidgetTypes = ['allSchedules', 'aiChat'];
+
+      const allWidgetsDataViewWidgets = allWidgetsData.filter(w => viewWidgetTypes.includes(w.widget_type));
+
+      setViewWidgetStates(allWidgetsDataViewWidgets);
+
+      viewWidgetTypes.forEach(widgetType => {
+        // Find the widget in all widgets list
+        const allWidgetsViewWidget = allWidgetsData.find(w => w.widget_type === widgetType);
+        const isVisible = allWidgetsViewWidget?.widget_config?.visibility; // Default to true if not set
+        if (isVisible) {
+          const config = getWidgetConfig(widgetType);
+          if (config) {
+            const position = findOptimalPosition(widgetType, uiWidgets);
+            const viewWidget: DailyWidget = {
+              id: `auto-${widgetType}`,
+              daily_widget_id: `auto-${widgetType}`,
+              widget_id: allWidgetsViewWidget?.id || '',
+              widget_type: widgetType,
+              title: config.title,
+              frequency: 'daily',
+              importance: 0.5,
+              category: 'utilities',
+              description: config.description,
+              is_permanent: true,
+              priority: 'LOW',
+              reasoning: 'View widget managed by visibility setting',
+              date: new Date().toISOString().split('T')[0],
+              created_at: allWidgetsViewWidget?.created_at || new Date().toISOString(),
+              widget_config: allWidgetsViewWidget?.widget_config ,
+              layout: {
+                i: `auto-${widgetType}`,
+                x: position.x,
+                y: position.y,
+                w: config.defaultSize.w,
+                h: config.defaultSize.h,
+                minW: config.minSize.w,
+                minH: config.minSize.h,
+                maxW: config.maxSize.w,
+                maxH: config.maxSize.h,
+              }
+            };
+            
+            uiWidgets.push(viewWidget);
+          }
+        }
+      });
+      
+      // Then, handle other widgets from today's widgets list
+      todayWidgetsData.forEach((widget: DailyWidget) => {
+        // Skip view widgets as they're already handled above
+        if (viewWidgetTypes.includes(widget.widget_type)) {
+          return;
+        }
+        
         const config = getWidgetConfig(widget.widget_type);
         const defaultSize = config?.defaultSize || { w: 10, h: 10 };
         
         // Find optimal position for this widget
         const position = findOptimalPosition(widget.widget_type, uiWidgets);
         
-        // Convert new API structure to UIWidget format
-        const uiWidget: UIWidget = {
+        // Convert new API structure to DailyWidget format
+        const uiWidget: DailyWidget = {
           ...widget,
           daily_widget_id: widget.id, // Map id to daily_widget_id for UI compatibility
           priority: widget.importance >= 0.7 ? 'HIGH' : 'LOW', // Derive priority from importance
@@ -140,37 +187,9 @@ const Dashboard = () => {
         uiWidgets.push(uiWidget);
       });
       
-      // Automatically add the "All Schedules" widget
-      const allSchedulesConfig = getWidgetConfig('allSchedules');
-      if (allSchedulesConfig) {
-        const position = findOptimalPosition('allSchedules', uiWidgets);
-        const allSchedulesWidget: UIWidget = {
-          daily_widget_id: 'auto-all-schedules',
-          widget_ids: [],
-          widget_type: 'allSchedules',
-          priority: 'LOW',
-          reasoning: 'Automatically included for widget management',
-          date: new Date().toISOString().split('T')[0],
-          created_at: new Date().toISOString(),
-          layout: {
-            i: 'auto-all-schedules',
-            x: position.x,
-            y: position.y,
-            w: allSchedulesConfig.defaultSize.w,
-            h: allSchedulesConfig.defaultSize.h,
-            minW: allSchedulesConfig.minSize.w,
-            minH: allSchedulesConfig.minSize.h,
-            maxW: allSchedulesConfig.maxSize.w,
-            maxH: allSchedulesConfig.maxSize.h,
-          }
-        };
-        
-        uiWidgets.push(allSchedulesWidget);
-      }
-      
       setWidgets(uiWidgets);
     } catch (err) {
-      console.error('Failed to fetch today\'s widgets:', err)
+      console.error('Failed to fetch widgets:', err)
       setDashboardError('Failed to load dashboard configuration')
     } finally {
       setDashboardLoading(false)
@@ -186,8 +205,8 @@ const Dashboard = () => {
   useEffect(() => {
     const handleResize = () => {
       // Re-constrain all widgets when window is resized
-      setWidgets((prev: UIWidget[]) => 
-        prev.map((widget: UIWidget) => ({
+      setWidgets((prev: DailyWidget[]) => 
+        prev.map((widget: DailyWidget) => ({
           ...widget,
           layout: constrainLayout(widget.layout)
         }))
@@ -219,8 +238,8 @@ const Dashboard = () => {
 
   const onLayoutChange = (layout: Layout[]) => {
     // Update widget layouts
-    setWidgets((prev: UIWidget[]) => 
-      prev.map((widget: UIWidget) => {
+    setWidgets((prev: DailyWidget[]) => 
+      prev.map((widget: DailyWidget) => {
         const newLayout = layout.find(l => l.i === widget.daily_widget_id)
         return newLayout ? { ...widget, layout: newLayout } : widget
       })
@@ -240,7 +259,7 @@ const Dashboard = () => {
   const applyConstraints = (layout: Layout[]) => {
     const constrainedLayout = layout.map(l => constrainLayout(l));
     
-    const updatedWidgets = widgets.map((widget: UIWidget) => {
+    const updatedWidgets = widgets.map((widget: DailyWidget) => {
       const newLayout = constrainedLayout.find(l => l.i === widget.daily_widget_id)
       return newLayout ? { ...widget, layout: newLayout } : widget
     });
@@ -274,7 +293,7 @@ const Dashboard = () => {
     
     try {
       // Call the API to add a new widget
-      const response = await dashboardService.addNewWidget({
+      const response = await dashboardService.createWidget({
         widget_type: config.apiWidgetType as ApiWidgetType,
         frequency: 'daily' as ApiFrequency, // Default to daily
         importance: 0.5, // Default importance
@@ -290,41 +309,18 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Failed to add widget:', error);
       
-      // Add widget locally even if API fails
-      const position = findOptimalPosition(widgetId, widgets);
-      const newWidget: UIWidget = {
-        daily_widget_id: `temp-${Date.now()}`,
-        widget_ids: [],
-        widget_type: widgetId,
-        priority: 'LOW',
-        reasoning: 'Manually added widget',
-        date: new Date().toISOString().split('T')[0],
-        created_at: new Date().toISOString(),
-        layout: {
-          i: `temp-${Date.now()}`,
-          x: position.x,
-          y: position.y,
-          w: config.defaultSize.w,
-          h: config.defaultSize.h,
-          minW: config.minSize.w,
-          minH: config.minSize.h,
-          maxW: config.maxSize.w,
-          maxH: config.maxSize.h,
-        }
-      };
-      
-      setWidgets(prev => [...prev, newWidget]);
-      
-      // Show a subtle notification that we're using local data
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Widget added locally - API server may not be running');
-      }
     }
   }
 
   const removeWidget = async (dailyWidgetId: string) => {
     const widget = widgets.find(w => w.daily_widget_id === dailyWidgetId)
     const widgetType = widget?.widget_type || 'widget'
+    
+    // Prevent removal of view widgets - they should be managed through the Views dropdown
+    if (widget?.widget_type === 'allSchedules' || widget?.widget_type === 'aiChat') {
+      alert('View widgets cannot be removed directly. Use the Views dropdown to toggle their visibility.');
+      return;
+    }
     
     // Prevent removal of the automatically included "All Schedules" widget
     if (dailyWidgetId === 'auto-all-schedules') {
@@ -340,8 +336,8 @@ const Dashboard = () => {
     if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
       try {
         // Call API to set is_active = 0
-        await apiService.updateDailyWidgetActive(dailyWidgetId, false);
-        const updatedWidgets = widgets.filter((widget: UIWidget) => widget.daily_widget_id !== dailyWidgetId);
+        await apiService.removeWidgetFromToday(dailyWidgetId);
+        const updatedWidgets = widgets.filter((widget: DailyWidget) => widget.daily_widget_id !== dailyWidgetId);
         setWidgets(updatedWidgets)
       } catch (error) {
         alert('Failed to remove widget from dashboard. Please try again.');
@@ -350,7 +346,7 @@ const Dashboard = () => {
     }
   }
 
-  const renderWidget = (widget: UIWidget) => {
+  const renderWidget = (widget: DailyWidget) => {
     switch (widget.widget_type) {
       case 'alarm':
         return (
@@ -532,7 +528,10 @@ const Dashboard = () => {
           >
             {showGridLines ? 'Hide Grid' : 'Show Grid'}
           </button>
-          <AddWidgetButton onAddWidget={addWidget} />
+          <AddWidgetButton 
+            onAddWidget={addWidget} 
+            existingViewWidgets={viewWidgetStates}
+          />
         </div>
       </div>
       
@@ -555,7 +554,7 @@ const Dashboard = () => {
           onDragStop={onDragStop}
           onResizeStop={onResizeStop}
         >
-        {widgets.map((widget: UIWidget) => (
+        {widgets.map((widget: DailyWidget) => (
           <div key={widget.daily_widget_id} className="widget-container">
             {renderWidget(widget)}
           </div>

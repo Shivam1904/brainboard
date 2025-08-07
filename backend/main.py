@@ -9,7 +9,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routes import alarm, widgets, chat, single_item_tracker, dashboard, todo, websearch, ai_router, weather_router
+from routes import dashboard_widgets, chat, dashboard
+# from routes import ai  # Temporarily commented out for testing
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,22 +29,12 @@ CORS_METHODS = ["*"]
 CORS_HEADERS = ["*"]
 
 # API settings
-API_PREFIX_ALARMS = "/api/v1/alarms"
-API_PREFIX_WIDGETS = "/api/v1/widgets"
+API_PREFIX_DASHBOARD_WIDGETS = "/api/v1/dashboard-widgets"
 API_PREFIX_CHAT = "/api/v1/chat"
-API_PREFIX_SINGLE_ITEM_TRACKER = "/api/v1/single-item-tracker"
 API_PREFIX_DASHBOARD = "/api/v1/dashboard"
-API_PREFIX_TODO = "/api/v1/todo"
-API_PREFIX_WEBSEARCH = "/api/v1/websearch"
-API_PREFIX_WEATHER = "/api/v1/weather"
-API_TAG_ALARMS = "alarm"
-API_TAG_WIDGETS = "widgets"
+API_TAG_DASHBOARD_WIDGETS = "dashboard-widgets"
 API_TAG_CHAT = "chat"
-API_TAG_SINGLE_ITEM_TRACKER = "single-item-tracker"
 API_TAG_DASHBOARD = "dashboard"
-API_TAG_TODO = "todo"
-API_TAG_WEBSEARCH = "websearch"
-API_TAG_WEATHER = "weather"
 
 # Server settings
 HOST = "0.0.0.0"
@@ -72,15 +63,10 @@ app.add_middleware(
 # ============================================================================
 # ROUTERS
 # ============================================================================
-app.include_router(alarm.router, prefix=API_PREFIX_ALARMS, tags=[API_TAG_ALARMS])
-app.include_router(widgets.router, prefix=API_PREFIX_WIDGETS, tags=[API_TAG_WIDGETS])
+app.include_router(dashboard_widgets.router, prefix=API_PREFIX_DASHBOARD_WIDGETS, tags=[API_TAG_DASHBOARD_WIDGETS])
 app.include_router(chat.router, prefix=API_PREFIX_CHAT, tags=[API_TAG_CHAT])
-app.include_router(single_item_tracker.router, prefix=API_PREFIX_SINGLE_ITEM_TRACKER, tags=[API_TAG_SINGLE_ITEM_TRACKER])
 app.include_router(dashboard.router, prefix=API_PREFIX_DASHBOARD, tags=[API_TAG_DASHBOARD])
-app.include_router(todo.router, prefix=API_PREFIX_TODO, tags=[API_TAG_TODO])
-app.include_router(websearch.router, prefix=API_PREFIX_WEBSEARCH, tags=[API_TAG_WEBSEARCH])
-app.include_router(weather_router, prefix=API_PREFIX_WEATHER, tags=[API_TAG_WEATHER])
-app.include_router(ai_router, tags=["AI Operations"])
+# app.include_router(ai.router, tags=["AI Operations"])  # Temporarily commented out for testing
 
 # ============================================================================
 # ENDPOINTS

@@ -4,6 +4,7 @@ import { CheckCircle, Circle, Plus, X } from 'lucide-react';
 import FrequencySection from './FrequencySection';
 import { TodoTodayResponse, TodoActivity } from '../../types';
 import { dashboardService } from '../../services/dashboard';
+import { DailyWidget } from '../../services/api';
 
 interface Task {
   id: string;
@@ -57,14 +58,7 @@ const getPriorityFromNumber = (priority: number): 'High' | 'Medium' | 'Low' => {
 
 interface TaskListWidgetProps {
   onRemove: () => void;
-  widget: {
-    daily_widget_id: string;
-    widget_type: string;
-    priority: string;
-    reasoning: string;
-    date: string;
-    created_at: string;
-  };
+  widget: DailyWidget;
 }
 
 const HabitListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {

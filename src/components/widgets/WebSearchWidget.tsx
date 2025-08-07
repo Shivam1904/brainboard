@@ -1,19 +1,12 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { WebSearchAISummaryResponse } from '../../types';
+import { WebSearchAISummaryResponse } from '../../types/widgets';
 import { dashboardService } from '../../services/dashboard';
+import { DailyWidget } from '../../services/api';
 
 interface WebSearchWidgetProps {
   onRemove: () => void;
-  widget: {
-    widget_ids: string[];
-    daily_widget_id: string;
-    widget_type: string;
-    priority: string;
-    reasoning: string;
-    date: string;
-    created_at: string;
-  };
+  widget: DailyWidget;
 }
 
 const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
