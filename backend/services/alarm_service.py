@@ -291,7 +291,12 @@ class AlarmService:
             return {"success": False, "message": f"Failed to get user alarms: {str(e)}"}
 
     async def create_alarm_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
-        """Create alarm activity entry for today's dashboard"""
+        """
+        Create alarm activity entry for today's dashboard.
+        
+        Note: This method does NOT commit the transaction.
+        The calling layer is responsible for committing.
+        """
         try:
             logger.info(f"Creating alarm activity for widget {widget_id}, daily_widget_id {daily_widget_id}, user_id {user_id}")
             
@@ -315,8 +320,7 @@ class AlarmService:
             )
             
             self.db.add(activity)
-            await self.db.commit()  # Commit the transaction
-            await self.db.refresh(activity)  # Refresh to get the ID
+            await self.db.flush()  # Get the ID without committing
             
             logger.info(f"Created alarm activity {activity.id} for widget {widget_id}")
             

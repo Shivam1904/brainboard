@@ -24,11 +24,22 @@ logger = logging.getLogger(__name__)
 # SERVICE CLASS
 # ============================================================================
 class DailyWidgetService:
+    """
+    Service for daily widget operations.
+    
+    Note: This service does NOT commit or rollback transactions.
+    The calling layer (routes) is responsible for transaction management.
+    """
+    
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def get_today_widget_list(self, user_id: str, target_date: date) -> List[Dict[str, Any]]:
-        """Get today's widget list from table DailyWidget."""
+        """
+        Get today's widget list from table DailyWidget.
+        
+        Note: This method only reads data and does not modify the session.
+        """
         try:
             stmt = select(DailyWidget).where(
                 DailyWidget.date == target_date,
@@ -60,8 +71,11 @@ class DailyWidgetService:
 
     async def add_widget_to_today(self, widget_id: str, user_id: str, target_date: date) -> Dict[str, Any]:
         """
-        Add a widget to today's dashboard
+        Add a widget to today's dashboard.
         Creates entries in DailyWidget and corresponding activity tables.
+        
+        Note: This method does NOT commit the transaction.
+        The calling layer is responsible for committing.
         """
         try:
             from services.service_factory import ServiceFactory
@@ -95,7 +109,7 @@ class DailyWidgetService:
                 if not existing_daily_widget.is_active:
                     existing_daily_widget.is_active = True
                     existing_daily_widget.updated_at = datetime.now(timezone.utc)
-                    await self.db.commit()
+                    # Note: No commit here - calling layer handles it
                     return {
                         "success": True,
                         "message": "Widget was already in today's dashboard but was inactive. It has now been re-activated.",
@@ -147,8 +161,7 @@ class DailyWidgetService:
                     else:
                         logger.info(f"Widget {widget_id} already exists in DailyWidget {daily_widget.id}")
                 else:
-                    # Create new DailyWidget for this specific todo widget type
-                    logger.info(f"Creating new DailyWidget for widget {widget_id} of type {widget.widget_type}")
+                    # Create new DailyWidget for todo widgets
                     daily_widget = DailyWidget(
                         widget_ids=[widget_id],
                         widget_type=widget.widget_type,
@@ -160,7 +173,7 @@ class DailyWidgetService:
                     self.db.add(daily_widget)
                     await self.db.flush()
             else:
-                # For non-todo widgets, create new DailyWidget entry
+                # For non-todo widgets, create a new DailyWidget
                 daily_widget = DailyWidget(
                     widget_ids=[widget_id],
                     widget_type=widget.widget_type,
@@ -173,6 +186,7 @@ class DailyWidgetService:
                 await self.db.flush()
             
             # Create activity entries using service methods
+            # Note: These service methods should NOT commit transactions
             service_factory = ServiceFactory(self.db)
             
             if widget.widget_type in ["todo-habit", "todo-task", "todo-event"]:
@@ -195,7 +209,7 @@ class DailyWidgetService:
                 if not activity_result:
                     logger.warning(f"Failed to create websearch activity for widget {widget_id}")
             
-            await self.db.commit()
+            # Note: No commit here - calling layer handles it
             
             # Determine if we created a new DailyWidget or reused an existing one
             action_type = "created new daily widget"
@@ -215,11 +229,16 @@ class DailyWidgetService:
             }
         except Exception as e:
             logger.error(f"Failed to add widget {widget_id} to today's dashboard for user {user_id}: {e}")
-            await self.db.rollback()
+            # Note: No rollback here - calling layer handles it
             raise
 
     async def remove_widget_from_today(self, daily_widget_id: str, user_id: str, target_date: date) -> Dict[str, Any]:
-        """Remove a widget from today's list."""
+        """
+        Remove a widget from today's list.
+        
+        Note: This method does NOT commit the transaction.
+        The calling layer is responsible for committing.
+        """
         try:
             stmt = select(DailyWidget).where(
                 and_(
@@ -235,7 +254,7 @@ class DailyWidgetService:
             
             daily_widget.is_active = False
             daily_widget.updated_at = datetime.now(timezone.utc)
-            await self.db.commit()
+            # Note: No commit here - calling layer handles it
             
             return {
                 "success": True,
@@ -245,12 +264,15 @@ class DailyWidgetService:
             }
         except Exception as e:
             logger.error(f"Failed to update is_active for DailyWidget {daily_widget_id}: {e}")
-            self.db.rollback()
+            # Note: No rollback here - calling layer handles it
             raise 
 
     async def update_daily_widget_active(self, daily_widget_id: str, is_active: bool) -> Dict[str, Any]:
         """
         Update the is_active column for a DailyWidget (activate/deactivate widget)
+        
+        Note: This method does NOT commit the transaction.
+        The calling layer is responsible for committing.
         """
         try:
             stmt = select(DailyWidget).where(
@@ -267,15 +289,15 @@ class DailyWidgetService:
             
             daily_widget.is_active = is_active
             daily_widget.updated_at = datetime.now(timezone.utc)
-            await self.db.commit()
+            # Note: No commit here - calling layer handles it
             
             return {
                 "success": True,
-                "message": "DailyWidget is_active updated successfully", 
-                "daily_widget_id": daily_widget_id, 
+                "message": f"DailyWidget is_active updated to {is_active}",
+                "daily_widget_id": daily_widget_id,
                 "is_active": is_active
             }
         except Exception as e:
             logger.error(f"Failed to update is_active for DailyWidget {daily_widget_id}: {e}")
-            await self.db.rollback()
+            # Note: No rollback here - calling layer handles it
             raise 

@@ -9,9 +9,9 @@ export const API_CONFIG = {
     addNewWidget: '/api/v1/widgets/create', // Add new widget
     addWidgetToToday: '/api/v1/dashboard/widget/addtotoday', // Add widget to today
     removeWidgetFromToday: '/api/v1/dashboard/widget/removefromtoday', // Remove widget from today
-    updateWidget: '/api/v1/widget/updateWidgetDetails', // Update widget
-    updateWidgetDetails: '/api/v1/widget/updateDetails', // Update widget details
-    updateDailyWidget: '/api/v1/widgets/updateDailyWidget', // Update daily widget active status
+    updateWidget: '/api/v1/widgets/updateDetails', // Update widget
+    updateWidgetDetails: '/api/v1/widgets/updateDetails', // Update widget details
+    updateDailyWidget: '/api/v1/dashboard/widget/updateActive', // Update daily widget active status
     getTodoList: '/api/v1/getTodoList', // Get todo list by type
   },
   

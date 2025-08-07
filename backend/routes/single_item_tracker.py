@@ -44,11 +44,22 @@ async def get_tracker_details_and_activity(
     user_id: str = Depends(get_default_user_id),
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
-    """Get tracker details and activity for a widget."""
+    """
+    Get tracker details and activity for a widget.
+    
+    This endpoint manages the transaction lifecycle to prevent cursor reset issues.
+    """
     try:
         service = SingleItemTrackerService(db)
-        return await service.get_tracker_details_and_activity(widget_id, user_id)
+        result = await service.get_tracker_details_and_activity(widget_id, user_id)
+        
+        # Commit the transaction at the route level
+        await db.commit()
+        
+        return result
     except Exception as e:
+        # Rollback on any exception
+        await db.rollback()
         raise raise_database_error(f"Failed to get tracker details: {str(e)}")
 
 @router.post("/updateActivity/{activity_id}")
@@ -58,11 +69,22 @@ async def update_activity(
     user_id: str = Depends(get_default_user_id),
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
-    """Update a tracker activity."""
+    """
+    Update a tracker activity.
+    
+    This endpoint manages the transaction lifecycle to prevent cursor reset issues.
+    """
     try:
         service = SingleItemTrackerService(db)
-        return await service.update_activity(activity_id, user_id, update_data.dict(exclude_unset=True))
+        result = await service.update_activity(activity_id, user_id, update_data.dict(exclude_unset=True))
+        
+        # Commit the transaction at the route level
+        await db.commit()
+        
+        return result
     except Exception as e:
+        # Rollback on any exception
+        await db.rollback()
         raise raise_database_error(f"Failed to update activity: {str(e)}")
 
 @router.get("/getTrackerDetails/{widget_id}", response_model=TrackerDetailsResponse)
@@ -71,7 +93,11 @@ async def get_tracker_details(
     user_id: str = Depends(get_default_user_id),
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
-    """Get tracker details for a widget."""
+    """
+    Get tracker details for a widget.
+    
+    This endpoint only reads data and doesn't require transaction management.
+    """
     try:
         service = SingleItemTrackerService(db)
         result = await service.get_tracker_details(widget_id, user_id)
@@ -88,11 +114,22 @@ async def update_tracker_details(
     user_id: str = Depends(get_default_user_id),
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
-    """Update tracker details."""
+    """
+    Update tracker details.
+    
+    This endpoint manages the transaction lifecycle to prevent cursor reset issues.
+    """
     try:
         service = SingleItemTrackerService(db)
-        return await service.update_tracker_details(tracker_details_id, user_id, update_data.dict(exclude_unset=True))
+        result = await service.update_tracker_details(tracker_details_id, user_id, update_data.dict(exclude_unset=True))
+        
+        # Commit the transaction at the route level
+        await db.commit()
+        
+        return result
     except Exception as e:
+        # Rollback on any exception
+        await db.rollback()
         raise raise_database_error(f"Failed to update tracker details: {str(e)}")
 
 @router.post("/updateOrCreateDetails")
@@ -101,10 +138,14 @@ async def update_or_create_tracker_details(
     user_id: str = Depends(get_default_user_id),
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
-    """Update existing tracker details or create new ones if they don't exist."""
+    """
+    Update existing tracker details or create new ones if they don't exist.
+    
+    This endpoint manages the transaction lifecycle to prevent cursor reset issues.
+    """
     try:
         service = SingleItemTrackerService(db)
-        return await service.update_or_create_tracker_details(
+        result = await service.update_or_create_tracker_details(
             widget_id=request.widget_id,
             title=request.title,
             value_type=request.value_type,
@@ -112,7 +153,14 @@ async def update_or_create_tracker_details(
             target_value=request.target_value,
             user_id=user_id
         )
+        
+        # Commit the transaction at the route level
+        await db.commit()
+        
+        return result
     except Exception as e:
+        # Rollback on any exception
+        await db.rollback()
         raise raise_database_error(f"Failed to update or create tracker details: {str(e)}")
 
 @router.get("/user/{user_id}")
@@ -120,7 +168,11 @@ async def get_user_trackers(
     user_id: str,
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
-    """Get all trackers for a user."""
+    """
+    Get all trackers for a user.
+    
+    This endpoint only reads data and doesn't require transaction management.
+    """
     try:
         service = SingleItemTrackerService(db)
         return await service.get_user_trackers(user_id)

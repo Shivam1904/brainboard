@@ -33,7 +33,12 @@ class SingleItemTrackerService:
         self.db = db
 
     async def get_tracker_details_and_activity(self, widget_id: str, user_id: str) -> Dict[str, Any]:
-        """Get tracker details and activity for a widget."""
+        """
+        Get tracker details and activity for a widget.
+        
+        Note: This method does NOT commit the transaction.
+        The calling layer is responsible for committing.
+        """
         try:
             # Get tracker details
             stmt = select(SingleItemTrackerDetails).where(
@@ -100,7 +105,7 @@ class SingleItemTrackerService:
                         created_by=user_id
                     )
                     self.db.add(new_activity)
-                    await self.db.commit()
+                    await self.db.flush()  # Get the ID without committing
                     
                     # Extract activity data immediately after creation
                     activity_data = {
@@ -347,7 +352,12 @@ class SingleItemTrackerService:
             raise
 
     async def create_tracker_activity_for_today(self, daily_widget_id: str, widget_id: str, user_id: str) -> Optional[Dict[str, Any]]:
-        """Create tracker activity for today."""
+        """
+        Create tracker activity for today.
+        
+        Note: This method does NOT commit the transaction.
+        The calling layer is responsible for committing.
+        """
         try:
             # Get tracker details
             stmt = select(SingleItemTrackerDetails).where(
@@ -388,9 +398,9 @@ class SingleItemTrackerService:
             )
 
             self.db.add(activity)
-            await self.db.commit()
+            await self.db.flush()  # Get the ID without committing
             
-            # Extract activity data after commit (no refresh needed)
+            # Extract activity data after flush
             activity_data = {
                 "id": activity.id,
                 "widget_id": activity.widget_id,

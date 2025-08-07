@@ -164,7 +164,46 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
       let response;
       if (editMode && existingWidget) {
         // Update existing widget
-        response = await dashboardService.updateWidget(existingWidget.id, apiData);
+        if (widgetConfig.apiWidgetType === 'singleitemtracker') {
+          // For SingleItemTracker, we need to update both basic widget properties and tracker details
+          
+          // First, update basic widget properties
+          const basicWidgetData = {
+            widget_type: widgetConfig.apiWidgetType as ApiWidgetType,
+            frequency: apiFrequency,
+            importance: formData.importance,
+            title: formData.title.trim(),
+            category: formData.category
+          };
+          
+          const basicResponse = await dashboardService.updateWidget(existingWidget.id, basicWidgetData);
+          console.log('Basic widget updated successfully:', basicResponse);
+          
+          // Then, update SingleItemTracker-specific details
+          try {
+            // Get the tracker details to get the tracker_details_id
+            const trackerDetails = await dashboardService.getTrackerDetails(existingWidget.id);
+            
+            const trackerData = {
+              title: formData.title.trim(),
+              value_type: formData.valueDataType || 'number',
+              value_unit: formData.valueDataUnit || 'units',
+              target_value: formData.targetValue || ''
+            };
+            
+            const trackerResponse = await dashboardService.updateSingleItemTrackerDetails(trackerDetails.id, trackerData);
+            console.log('Tracker details updated successfully:', trackerResponse);
+            
+            response = { ...basicResponse, trackerDetails: trackerResponse };
+          } catch (trackerError) {
+            console.error('Failed to update tracker details:', trackerError);
+            // Still return the basic widget update response
+            response = basicResponse;
+          }
+        } else {
+          // For other widget types, use the regular updateWidget method
+          response = await dashboardService.updateWidget(existingWidget.id, apiData);
+        }
         console.log('Widget updated successfully:', response);
       } else {
         // Create new widget

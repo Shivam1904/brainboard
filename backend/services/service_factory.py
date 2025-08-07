@@ -1,5 +1,5 @@
 """
-Service Factory for creating service instances
+Service Factory for creating service instances with proper session management
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,9 +7,16 @@ from .alarm_service import AlarmService
 from .todo_service import TodoService
 from .websearch_service import WebSearchService
 from .weather_service import WeatherService
+from .single_item_tracker_service import SingleItemTrackerService
 
 class ServiceFactory:
-    """Factory for creating service instances"""
+    """
+    Factory for creating service instances with proper session management.
+    
+    This factory ensures that services don't commit or rollback transactions
+    prematurely, preventing cursor reset issues when multiple services
+    share the same session.
+    """
     
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -28,17 +35,15 @@ class ServiceFactory:
     
     @property
     def todo_service(self):
-        """Get todo service instance - placeholder for now"""
+        """Get todo service instance"""
         if self._todo_service is None:
-            # Create a simple placeholder service
             self._todo_service = TodoService(self.db)
         return self._todo_service
     
     @property
     def single_item_tracker_service(self):
-        """Get single item tracker service instance - placeholder for now"""
+        """Get single item tracker service instance"""
         if self._single_item_tracker_service is None:
-            # Create a simple placeholder service
             self._single_item_tracker_service = SingleItemTrackerService(self.db)
         return self._single_item_tracker_service
     
@@ -65,3 +70,4 @@ class SingleItemTrackerService:
         """Placeholder for tracker activity creation"""
         # TODO: Implement when tracker models are available
         return None 
+        return self._websearch_service 

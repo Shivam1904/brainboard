@@ -136,6 +136,38 @@ class ApiService {
     title: string;
   }> {
     const url = buildApiUrl(`${API_CONFIG.dashboard.updateWidgetDetails}/${widgetId}`);
+    return this.request<{
+      message: string;
+      widget_id: string;
+      widget_type: string;
+      title: string;
+    }>(url, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // POST /api/v1/single-item-tracker/updateDetails/{tracker_details_id}
+  async updateSingleItemTrackerDetails(trackerDetailsId: string, data: {
+    title: string;
+    value_type: string;
+    value_unit: string;
+    target_value: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    tracker_details: {
+      id: string;
+      widget_id: string;
+      title: string;
+      value_type: string;
+      value_unit: string;
+      target_value: string;
+      created_at: string;
+      updated_at: string;
+    };
+  }> {
+    const url = buildApiUrl(`${API_CONFIG.singleItemTracker.updateDetails}/${trackerDetailsId}`);
     return this.request(url, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -148,9 +180,9 @@ class ApiService {
     daily_widget_id: string;
     is_active: boolean;
   }> {
-    const url = buildApiUrl(`${API_CONFIG.dashboard.removeWidgetFromToday}/${dailyWidgetId}`);
+    const url = buildApiUrl(`${API_CONFIG.dashboard.updateDailyWidget}/${dailyWidgetId}`, { is_active: isActive.toString() });
     return this.request(url, {
-      method: 'POST'
+      method: 'POST',
     });
   }
 

@@ -95,6 +95,29 @@ export class DashboardService {
     return apiService.updateWidgetDetails(widgetId, data);
   }
 
+  // Update SingleItemTracker details
+  async updateSingleItemTrackerDetails(trackerDetailsId: string, data: {
+    title: string;
+    value_type: string;
+    value_unit: string;
+    target_value: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    tracker_details: {
+      id: string;
+      widget_id: string;
+      title: string;
+      value_type: string;
+      value_unit: string;
+      target_value: string;
+      created_at: string;
+      updated_at: string;
+    };
+  }> {
+    return apiService.updateSingleItemTrackerDetails(trackerDetailsId, data);
+  }
+
   // Get todo item details and activity
   async getTodoItemDetailsAndActivity(dailyWidgetId: string, widgetId: string): Promise<TodoDetailsAndActivityResponse> {
     return apiService.getTodoItemDetailsAndActivity(dailyWidgetId, widgetId);
