@@ -8,6 +8,7 @@ Daily Widget service for business logic.
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, and_, inspect
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import flag_modified
 from datetime import datetime, date, timezone
 from typing import Dict, Any, Optional, List
 import logging
@@ -66,7 +67,7 @@ class DailyWidgetService:
                 widgets_data.append({
                     "id": daily_widget.id,
                     "daily_widget_id": daily_widget.id,  # Same as id for compatibility
-                    "widget_ids": [daily_widget.widget_id],  # List containing the widget_id
+                    "widget_id": daily_widget.widget_id,  # List containing the widget_id
                     "widget_type": widget_details.widget_type,
                     "priority": daily_widget.priority,
                     "reasoning": daily_widget.reasoning,
@@ -257,14 +258,24 @@ class DailyWidgetService:
             daily_widget = result.scalars().first()
             
             if not daily_widget:
+                print("DailyWidget not found")
                 raise ValueError("DailyWidget not found")
             
-            if not daily_widget.activity_data:
-                daily_widget.activity_data = {}
-            
+            act = daily_widget.activity_data
+
+            for key, value in activity_data.items():
+                print(f"Updating activity data for {key} with value {value}")
+                act[key] = value
+
+            daily_widget.activity_data = act
+            # Mark the JSON field as modified so SQLAlchemy detects the change
+            flag_modified(daily_widget, 'activity_data')
             # Update activity data
-            daily_widget.activity_data.update(activity_data)
+            print(f"Updated activity data: {daily_widget}")
             daily_widget.updated_at = date.today()
+            
+            # Flush the changes to the database
+            await self.db.flush()
             
             return {
                 "success": True,
@@ -276,23 +287,51 @@ class DailyWidgetService:
             print(f"Failed to update activity data for DailyWidget {daily_widget_id}: {e}")
             raise
 
-    async def get_activity_data(self, widget_id: str) -> Dict[str, Any]:
+    async def get_today_widget(self, daily_widget_id: str) -> Dict[str, Any]:
         """Get activity data for a daily widget."""
         try:
-            stmt = select(DailyWidget).where(
+            # Join DailyWidget with DashboardWidgetDetails to get widget information
+            stmt = select(
+                DailyWidget,
+                DashboardWidgetDetails
+            ).join(
+                DashboardWidgetDetails,
+                DailyWidget.widget_id == DashboardWidgetDetails.id
+            ).where(
                 and_(
-                    DailyWidget.widget_id == widget_id,
+                    DailyWidget.id == daily_widget_id,
                     DailyWidget.delete_flag == False
                 )
             )
+            
             result = await self.db.execute(stmt)
-            daily_widget = result.scalars().first()
+            rows = result.all()
             
-            if not daily_widget:
-                raise ValueError("DailyWidget not found")
-            
-            return daily_widget.activity_data or {}
+            for daily_widget, widget_details in rows:
+                return {
+                        "id": daily_widget.id,
+                        "daily_widget_id": daily_widget.id,  # Same as id for compatibility
+                        "widget_id": daily_widget.widget_id,  # List containing the widget_id
+                        "widget_type": widget_details.widget_type,
+                        "priority": daily_widget.priority,
+                        "reasoning": daily_widget.reasoning,
+                        "date": daily_widget.date.isoformat(),  # Convert to ISO string
+                        "is_active": daily_widget.is_active,
+                        # Additional fields for frontend compatibility
+                        "widget_id": daily_widget.widget_id,
+                        "title": widget_details.title,
+                        "frequency": widget_details.frequency,
+                        "importance": widget_details.importance,
+                        "category": widget_details.category,
+                        "description": widget_details.description,
+                        "is_permanent": widget_details.is_permanent,
+                        "widget_config": widget_details.widget_config,
+                        "activity_data": daily_widget.activity_data,
+                        "created_at": daily_widget.created_at.isoformat() if daily_widget.created_at else None,
+                        "updated_at": daily_widget.updated_at.isoformat() if daily_widget.updated_at else None,
+                        "delete_flag": daily_widget.delete_flag
+                    }
         except Exception as e:
-            logger.error(f"Failed to get activity data for DailyWidget {widget_id}: {e}")
-            print(f"Failed to get activity data for DailyWidget {widget_id}: {e}")
+            logger.error(f"Failed to get activity data for DailyWidget {daily_widget_id}: {e}")
+            print(f"Failed to get activity data for DailyWidget {daily_widget_id}: {e}")
             raise 

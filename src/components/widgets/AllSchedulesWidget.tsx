@@ -263,7 +263,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
                   {/* Group header */}
                   <button
                     onClick={() => toggleGroup(groupName)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-card/50 transition-colors"
+                    className="w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5 flex items-center justify-between "
                   >
                     <div className="flex items-center space-x-3">
                       <span className="text-lg">{icon}</span>

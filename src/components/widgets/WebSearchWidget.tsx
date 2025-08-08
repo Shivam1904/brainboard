@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { WebSearchAISummaryResponse } from '../../types/widgets';
 import { dashboardService } from '../../services/dashboard';
 import { DailyWidget } from '../../services/api';
 
@@ -10,25 +9,8 @@ interface WebSearchWidgetProps {
 }
 
 const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
-  const [webSearchData, setWebSearchData] = useState<WebSearchAISummaryResponse | null>(null);
-  const [activityData, setActivityData] = useState<{
-    websearch_details: {
-      id: string;
-      widget_id: string;
-      title: string;
-      created_at: string;
-      updated_at: string;
-    };
-    activity: {
-      id: string;
-      status: 'pending' | 'completed' | 'failed';
-      reaction: string;
-      summary: string;
-      source_json: any;
-      created_at: string;
-      updated_at: string;
-    };
-  } | null>(null);
+  const [webSearchData, setWebSearchData] = useState<any | null>(null);
+  const [activityData, setActivityData] = useState<DailyWidget | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRead, setIsRead] = useState(false);
@@ -37,19 +19,17 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
   const fetchWebSearchData = async () => {
     try {
       // Get the widget_id from the widget_ids array (first one for websearch widgets)
-      const widgetId = widget.widget_ids[0];
       
       // Call both APIs in parallel
-      const [aiSummaryResponse, activityResponse] = await Promise.all([
-        dashboardService.getWebSearchAISummary(widgetId),
-        dashboardService.getWebSearchSummaryAndActivity(widgetId)
+      const [aiSummary] = await Promise.all([
+        dashboardService.getTodayWidget(widget.daily_widget_id)
       ]);
       
-      setWebSearchData(aiSummaryResponse);
-      setActivityData(activityResponse);
+      setActivityData(aiSummary);
+      setWebSearchData(aiSummary);
       
       // Set initial read status based on activity data
-      setIsRead(activityResponse.activity.status === 'completed');
+      setIsRead(aiSummary.activity_data?.status === 'completed');
     } catch (err) {
       console.error('Failed to fetch web search data:', err);
       setError('Failed to load web search data');
@@ -65,19 +45,18 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
     
     try {
       // Update the activity status using the activity_id we already have
-      await dashboardService.updateWebSearchActivity(activityData.activity.id, {
+      await dashboardService.updateWebSearchActivity(activityData.daily_widget_id, {
         status: read ? 'completed' : 'pending',
         reaction: read ? 'read' : 'unread',
         summary: webSearchData.summary,
         source_json: webSearchData.sources,
-        updated_by: 'user'
       });
       
       // Update local activity data
       setActivityData(prev => prev ? {
         ...prev,
-        activity: {
-          ...prev.activity,
+        activity_data: {
+          ...prev.activity_data,
           status: read ? 'completed' : 'pending',
           reaction: read ? 'read' : 'unread',
           updated_at: new Date().toISOString()
@@ -103,7 +82,7 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
     };
 
     loadData();
-  }, [widget.widget_ids[0]]); // Changed dependency to widget_ids[0]
+  }, [widget.widget_id]); // Changed dependency to widget_ids[0]
 
   if (loading) {
     return (
@@ -157,7 +136,7 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
 
   return (
     <BaseWidget 
-      title={webSearchData.query || "Web Search"} 
+      title={webSearchData.title || "Web Search"} 
       icon="🔍" 
       onRemove={onRemove}
     >
@@ -209,7 +188,7 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
               <div>
                 <h3 className="font-medium text-sm mb-2">Sources</h3>
                 <div className="space-y-1">
-                  {webSearchData.sources.map((source, index) => (
+                  {webSearchData.sources.map((source: any, index: number) => (
                     <div key={index} className="text-xs">
                       <a 
                         href={source.url} 
@@ -230,7 +209,7 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
               <div>AI Model: {webSearchData.ai_model_used}</div>
               <div>Generated: {new Date(webSearchData.created_at).toLocaleDateString()}</div>
               {activityData && (
-                <div>Last Activity: {new Date(activityData.activity.updated_at).toLocaleDateString()}</div>
+                <div>Last Activity: {new Date(activityData.activity_data?.updated_at).toLocaleDateString()}</div>
               )}
             </div>
           </div>

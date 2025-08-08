@@ -689,7 +689,7 @@ SUMMARY:
     async def _create_activity_entries(
         self, 
         daily_widget_id: str, 
-        widget_ids: List[str], 
+        widget_id: str, 
         widget_type: str, 
         user_id: str
     ) -> int:

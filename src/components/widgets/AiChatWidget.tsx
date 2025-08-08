@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { UIWidget } from '../../types';
+import { DailyWidget } from '../../services/api';
 import { socketService } from '../../services/socket';
 import { renderAiChatComponent, AiChatComponent } from './ai-chat/AiChatComponents';
 
@@ -15,7 +15,7 @@ interface Message {
 }
 
 interface AiChatWidgetProps {
-  widget: UIWidget;
+  widget: DailyWidget;
   onRemove: () => void;
 }
 
@@ -211,11 +211,11 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     }
   };
 
-  const renderMessage = (message: Message) => {
+  const renderMessage = (message: Message, index: number) => {
     switch (message.type) {
       case 'user':
         return (
-          <div className="flex justify-end mb-4">
+          <div key={`${message.id}-user`} className="flex justify-end mb-4">
             <div className="max-w-[80%] bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2 shadow-sm">
               <p className="text-sm">{message.content}</p>
               <span className="text-xs opacity-70 mt-1 block">
@@ -227,7 +227,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
 
       case 'ai':
         return (
-          <div className="flex justify-start mb-4">
+          <div key={`${message.id}-ai`} className="flex justify-start mb-4">
             <div className="max-w-[80%] bg-card border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
               <div className="flex items-start gap-2 mb-2">
                 <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -244,7 +244,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
 
       case 'thinking':
         return (
-          <div className="flex justify-start mb-4">
+          <div key={`${message.id}-thinking`} className="flex justify-start mb-4">
             <div className="max-w-[80%] bg-card border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
               <div className="flex items-start gap-2 mb-3">
                 <div className="w-6 h-6 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse">
@@ -255,10 +255,10 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
                     AI is thinking...
                   </p>
                   
-                  {message.thinkingSteps && message.thinkingSteps.length > 0 && (
+                                        {message.thinkingSteps && message.thinkingSteps.length > 0 && (
                     <div className="space-y-1">
                       {message.thinkingSteps.map((step, index) => (
-                        <div key={index} className="flex items-center gap-2 animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${index * 100}ms` }}>
+                        <div key={`${message.id}-step-${index}`} className="flex items-center gap-2 animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${index * 100}ms` }}>
                           <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                           <span className="text-xs text-muted-foreground">{step}</span>
                         </div>
@@ -284,7 +284,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
 
       case 'component':
         return (
-          <div className="flex justify-start mb-4">
+          <div key={`${message.id}-component`} className="flex justify-start mb-4">
             <div className="max-w-[80%] bg-card border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
               <div className="flex items-start gap-2 mb-2">
                 <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -342,7 +342,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
 
         {/* Messages container */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {messages.map(renderMessage)}
+          {messages.map((message, index) => renderMessage(message, index))}
           <div ref={messagesEndRef} />
         </div>
 

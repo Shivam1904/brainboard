@@ -28,7 +28,7 @@ export const API_CONFIG = {
     addWidgetToToday: '/api/v1/dashboard/widget/addtotoday/{widget_id}', // POST - Add widget to today
     removeWidgetFromToday: '/api/v1/dashboard/widget/removefromtoday/{daily_widget_id}', // POST - Remove widget from today
     updateActivity: '/api/v1/dashboard/daily-widgets/{daily_widget_id}/updateactivity', // PUT - Update activity data
-    getActivityData: '/api/v1/dashboard/daily-widgets/{daily_widget_id}/getactivity', // GET - Get activity data
+    getTodayWidget: '/api/v1/dashboard/daily-widgets/{daily_widget_id}/getTodayWidget', // GET - Get activity data
   },
   
   // Health check endpoints

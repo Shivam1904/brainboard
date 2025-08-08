@@ -74,36 +74,22 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     icon: '📅'
   },
 
-  // ALARM Widget
-  alarm: {
-    id: 'alarm',
-    apiWidgetType: 'alarm',
-    title: 'Alarms',
-    description: 'Time-based reminders and alarms',
-    component: 'AlarmWidget',
-    minSize: { w: 6, h: 4 },
-    maxSize: { w: 20, h: 28 },
+
+
+  // ADVANCED SINGLE TASK Widget
+  advancedsingletask: {
+    id: 'advancedsingletask',
+    apiWidgetType: 'advancedsingletask', // Uses the same API type as singleitemtracker
+    title: 'Advanced Single Task',
+    description: 'Advanced single task with tracker, alarm, and progress details',
+    component: 'SingleTaskWidget',
+    minSize: { w: 8, h: 6 },
+    maxSize: { w: 18, h: 20 },
     defaultSize: { w: 12, h: 6 },
     deletable: true,
     resizable: true,
     category: 'productivity',
-    icon: '⏰'
-  },
-
-  // SINGLE ITEM TRACKER Widget
-  singleitemtracker: {
-    id: 'singleitemtracker',
-    apiWidgetType: 'singleitemtracker',
-    title: 'Item Tracker',
-    description: 'Track single items like weight, water intake, etc.',
-    component: 'SingleItemTrackerWidget',
-    minSize: { w: 6, h: 4 },
-    maxSize: { w: 15, h: 18 },
-    defaultSize: { w: 10, h: 12 },
-    deletable: true,
-    resizable: true,
-    category: 'health',
-    icon: '📈'
+    icon: '🎯'
   },
 
   // WEBSEARCH Widget
@@ -115,7 +101,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'WebSearchWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 20, h: 24 },
-    defaultSize: { w: 11, h: 14 },
+    defaultSize: { w: 11, h: 11 },
     deletable: true,
     resizable: true,
     category: 'information',
@@ -166,6 +152,22 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     resizable: true,
     category: 'information',
     icon: '🤖'
+  },
+
+  // ALARM Widget
+  alarm: {
+    id: 'alarm',
+    apiWidgetType: 'alarm',
+    title: 'Alarm',
+    description: 'Set and manage alarms',
+    component: 'AlarmWidget',
+    minSize: { w: 6, h: 6 },
+    maxSize: { w: 16, h: 20 },
+    defaultSize: { w: 10, h: 12 },
+    deletable: true,
+    resizable: true,
+    category: 'utilities',
+    icon: '⏰'
   }
 };
 
@@ -188,12 +190,12 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
     WIDGET_CONFIGS['todo-habit'],
     WIDGET_CONFIGS['todo-task'],
     WIDGET_CONFIGS['todo-event'],
-    WIDGET_CONFIGS.alarm,
-    WIDGET_CONFIGS.singleitemtracker,
+    WIDGET_CONFIGS.advancedsingletask,
     WIDGET_CONFIGS.websearch,
     WIDGET_CONFIGS.allSchedules, // UI-only widget
     WIDGET_CONFIGS.calendar,
     WIDGET_CONFIGS.aiChat,
+    WIDGET_CONFIGS.alarm,
   ];
 };
 

@@ -98,8 +98,8 @@ export class DashboardService {
   }
 
   // Get activity data for a daily widget
-  async getActivityData(dailyWidgetId: string): Promise<Record<string, any>> {
-    return apiService.getActivityData(dailyWidgetId);
+  async getTodayWidget(dailyWidgetId: string): Promise<DailyWidget> {
+    return apiService.getTodayWidget(dailyWidgetId);
   }
 
   // ============================================================================
@@ -209,6 +209,13 @@ export class DashboardService {
     snoozed_at?: string;
     snooze_until?: string;
     snooze_count?: number;
+    activity_history?: Array<{
+      type: 'snooze' | 'stop';
+      timestamp: string;
+      snooze_until?: string;
+      snooze_count?: number;
+      total_snooze_count?: number;
+    }>;
   }): Promise<{
     success: boolean;
     message: string;
@@ -259,46 +266,50 @@ export class DashboardService {
   }
 
   // Get alarm activity data
-  async getAlarmActivity(dailyWidgetId: string): Promise<{
-    started_at?: string;
-    snoozed_at?: string;
-    snooze_until?: string;
-    snooze_count?: number;
-  }> {
-    const activityData = await this.getActivityData(dailyWidgetId);
+  async getAlarmActivity(dailyWidgetId: string): Promise<DailyWidget> {
+    const activityData = await this.getTodayWidget(dailyWidgetId);
     return activityData || {};
   }
 
   // Get todo activity data
-  async getTodoActivity(dailyWidgetId: string): Promise<{
-    status?: string;
-    progress?: number;
-    started_at?: string;
-  }> {
-    const activityData = await this.getActivityData(dailyWidgetId);
+  async getTodoActivity(dailyWidgetId: string): Promise<DailyWidget> {
+    const activityData = await this.getTodayWidget(dailyWidgetId);
     return activityData || {};
   }
 
   // Get tracker activity data
-  async getTrackerActivity(dailyWidgetId: string): Promise<{
-    value?: string;
-    time_added?: string;
-    notes?: string;
-  }> {
-    const activityData = await this.getActivityData(dailyWidgetId);
+  async getTrackerActivity(dailyWidgetId: string): Promise<DailyWidget> {
+    const activityData = await this.getTodayWidget(dailyWidgetId);
     return activityData || {};
   }
 
   // Get web search activity data
-  async getWebSearchActivity(dailyWidgetId: string): Promise<{
-    status?: string;
-    reaction?: string;
-    summary?: string;
-    source_json?: any;
-    completed_at?: string;
-  }> {
-    const activityData = await this.getActivityData(dailyWidgetId);
+  async getWebSearchActivity(dailyWidgetId: string): Promise<DailyWidget> {
+    const activityData = await this.getTodayWidget(dailyWidgetId);
     return activityData || {};
+  }
+
+  // ============================================================================
+  // WIDGET-SPECIFIC METHODS
+  // ============================================================================
+
+  // Get alarm details and activity
+  async getAlarmDetailsAndActivity(widgetId: string): Promise<any> {
+    return apiService.getAlarmDetailsAndActivity(widgetId);
+  }
+
+  // Get tracker details and activity
+  async getTrackerDetailsAndActivity(widgetId: string): Promise<any> {
+    // This would typically call a specific tracker endpoint
+    // For now, we'll use the general getTodayWidget method
+    return this.getTodayWidget(widgetId);
+  }
+
+  // Get todo item details and activity
+  async getTodoItemDetailsAndActivity(dailyWidgetId: string, widgetId: string): Promise<any> {
+    // This would typically call a specific todo endpoint
+    // For now, we'll use the general getTodayWidget method
+    return this.getTodayWidget(dailyWidgetId);
   }
 }
 

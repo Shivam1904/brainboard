@@ -237,9 +237,38 @@ class ApiService {
   }
 
   // GET /api/v1/dashboard/daily-widgets/{daily_widget_id}/getactivity
-  async getActivityData(dailyWidgetId: string): Promise<Record<string, any>> {
-    const url = buildApiUrlWithParams(API_CONFIG.dashboard.getActivityData, { daily_widget_id: dailyWidgetId });
-    return this.request<Record<string, any>>(url);
+  async getTodayWidget(dailyWidgetId: string): Promise<DailyWidget> {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboard.getTodayWidget, { daily_widget_id: dailyWidgetId });
+    return this.request<DailyWidget>(url);
+  }
+
+  // ============================================================================
+  // WIDGET-SPECIFIC API METHODS
+  // ============================================================================
+
+  // Get alarm details and activity
+  async getAlarmDetailsAndActivity(widgetId: string): Promise<any> {
+    // This would typically call a specific alarm endpoint
+    // For now, we'll use the general getTodayWidget method
+    return this.getTodayWidget(widgetId);
+  }
+
+  // Snooze alarm
+  async snoozeAlarm(activityId: string, minutes: number): Promise<any> {
+    // This would typically call a specific alarm snooze endpoint
+    // For now, we'll use the general updateActivity method
+    return this.updateActivity(activityId, {
+      snooze_until: new Date(Date.now() + minutes * 60 * 1000).toISOString()
+    });
+  }
+
+  // Stop alarm
+  async stopAlarm(activityId: string): Promise<any> {
+    // This would typically call a specific alarm stop endpoint
+    // For now, we'll use the general updateActivity method
+    return this.updateActivity(activityId, {
+      started_at: new Date().toISOString()
+    });
   }
 
   // ============================================================================
