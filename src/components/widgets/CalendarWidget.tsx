@@ -14,6 +14,10 @@ interface CalendarEvent {
   priority: 'High' | 'Medium' | 'Low';
   description?: string;
   category?: string;
+  widget_id?: string;
+  widget_config?: Record<string, any>;
+  activity_data?: Record<string, any>;
+  due_date?: string;
 }
 
 interface CalendarDay {
@@ -117,11 +121,13 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
 
       const events = items.map(item => ({
         id: item.daily_widget_id || item.id,
-        title: item.title || item.widget_type,
+        title: item.title,
         date: item.date || new Date().toISOString().split('T')[0],
-        type: (item.widget_type?.includes('todo') ? 'task' : item.widget_type?.includes('alarm') ? 'reminder' : 'event') as 'event' | 'milestone' | 'reminder' | 'task',
+        type: item.widget_type,
         priority: toPriority(item.priority),
         description: item.description,
+        widget_config: item.widget_config,
+        activity_data: item.activity_data,
       }));
 
       // Place events into days
@@ -153,20 +159,32 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
       }
 
       // Add upcoming milestones from widget_config (within month and not past today)
+      // Track unique widget IDs that have milestones on each day
+      const milestoneWidgetsByDate = new Map<string, Set<string>>();
+      
       for (const item of items) {
         const milestones = Array.isArray((item as any).widget_config?.milestones) ? (item as any).widget_config.milestones : [];
+        const widgetId = item.widget_id;
+        
         for (const m of milestones) {
-          if (!m?.due_date) continue;
+          if (!m?.due_date || base.milestones.find(milestone => milestone.due_date === m.due_date && milestone.widget_id === item.widget_id)) continue;
           const due = new Date(m.due_date);
           if (due >= startOfMonth && due <= endOfMonth && due >= new Date()) {
             const dateKey = m.due_date;
             const day = dayByKey.get(dateKey);
             if (day) {
-              day.milestones = (day.milestones || 0) + 1;
+              // Track unique widget IDs for this date
+              if (!milestoneWidgetsByDate.has(dateKey)) {
+                milestoneWidgetsByDate.set(dateKey, new Set());
+              }
+              milestoneWidgetsByDate.get(dateKey)!.add(widgetId);
+              
               const milestoneEvent: CalendarEvent = {
-                id: `${item.id || item.daily_widget_id}-milestone-${dateKey}`,
+                widget_id: widgetId,
+                id: `${widgetId}-milestone-${dateKey}`,
                 title: m.title || `${item.title || 'Milestone'}`,
                 date: dateKey,
+                due_date: m.due_date,
                 type: 'milestone',
                 priority: 'Medium',
                 description: m.description,
@@ -175,6 +193,14 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
               base.milestones.push(milestoneEvent);
             }
           }
+        }
+      }
+      
+      // Update milestone counts based on unique widget IDs
+      for (const [dateKey, widgetIds] of milestoneWidgetsByDate) {
+        const day = dayByKey.get(dateKey);
+        if (day) {
+          day.milestones = widgetIds.size; // Count unique widget IDs
         }
       }
 
@@ -286,7 +312,7 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
         )}
 
         {/* Monthly Stats */}
-        {calendarData.monthlyStats && (
+        {false && calendarData?.monthlyStats && (
           <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
             <h4 className="text-sm font-semibold text-gray-800 mb-2">Monthly Overview</h4>
             <div className="grid grid-cols-2 gap-3 text-xs">
@@ -336,7 +362,7 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
           {calendarData.days.map((day, index) => (
             <div
               key={index}
-              className={`min-h-[80px] p-1 border border-gray-200 text-xs ${
+              className={`min-h-[40px] p-1 text-xs ${
                 !day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'
               } ${day.isToday ? 'bg-blue-50 border-blue-300' : ''}`}
             >
@@ -377,14 +403,14 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
                 <div className="mb-1">
                   <div className="flex items-center gap-1">
                     <span className="text-xs text-purple-500">🏆</span>
-                    <span className="text-xs text-gray-600">{day.milestones}</span>
+                    {day.milestones> 1 && (<span className="text-xs text-gray-600">{day.milestones}</span>)}
                   </div>
                 </div>
               )}
               
               {/* Events */}
               <div className="space-y-1">
-                {day.events.slice(0, 1).map(event => (
+                {day.events.map(event => (
                   <div
                     key={event.id}
                     onClick={() => setSelectedEvent(event)}
@@ -394,18 +420,13 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
                     {event.title}
                   </div>
                 ))}
-                {day.events.length > 1 && (
-                  <div className="text-xs text-gray-500 text-center">
-                    +{day.events.length - 1} more
-                  </div>
-                )}
               </div>
             </div>
           ))}
         </div>
 
         {/* Upcoming Events & Milestones */}
-        <div className="mt-4 space-y-4">
+        {false && (<div className="mt-4 space-y-4">
           {/* Upcoming Events */}
           <div>
             <h4 className="font-medium text-sm text-gray-700 mb-2">Upcoming Events</h4>
@@ -461,7 +482,7 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
                 ))}
             </div>
           </div>
-        </div>
+        </div>)}
       </div>
 
       {/* Event Detail Modal */}
