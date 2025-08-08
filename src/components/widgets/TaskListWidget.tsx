@@ -104,7 +104,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       // Convert API response to internal Task format
       const convertedTasks: Task[] = response.filter((todo: DailyWidget) => 
         !['calendar', 'allSchedules', 'aiChat', 'websearch', 'moodTracker'].includes(todo.widget_type) 
-      && !(todo.widget_config?.include_alarm_details || todo.widget_config?.include_progress_details || todo.widget_config?.include_tracker_details))
+      && !(todo.widget_config?.include_alarm_details  || todo.widget_config?.include_tracker_details))
       .map((todo: DailyWidget) => ({
         id: todo.daily_widget_id,
         title: todo.title,

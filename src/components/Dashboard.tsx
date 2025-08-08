@@ -214,7 +214,7 @@ const Dashboard = () => {
         });
 
         // Determine widget type based on criteria
-        if (hasTrackerDetails || hasAlarmDetails || hasProgressDetails || hasUpcomingMilestone) {
+        if (hasTrackerDetails || hasAlarmDetails || hasUpcomingMilestone) {
           console.log(`Creating advanced single task widget for: ${widget.title}`);
           // Create advanced single task widget
           const config = getWidgetConfig('advancedsingletask');
