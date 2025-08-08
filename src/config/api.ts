@@ -1,103 +1,52 @@
-// API Configuration for Brainboard widgets
+// API Configuration for Brainboard Backend
 export const API_CONFIG = {
   baseUrl: 'http://localhost:8000', // Backend server URL
   
-  // Dashboard endpoints
+  // Dashboard Widgets endpoints (/api/v1/dashboard-widgets/)
+  dashboardWidgets: {
+    createWidget: '/api/v1/dashboard-widgets/newwidget', // POST - Create new widget
+    getAllWidgets: '/api/v1/dashboard-widgets/allwidgets', // GET - Get all user widgets
+    getWidget: '/api/v1/dashboard-widgets/{widget_id}', // GET - Get specific widget
+    updateWidget: '/api/v1/dashboard-widgets/{widget_id}/update', // PUT - Update widget
+    deleteWidget: '/api/v1/dashboard-widgets/{widget_id}/delete', // DELETE - Delete widget
+    getWidgetsByType: '/api/v1/dashboard-widgets/alloftype/{widget_type}', // GET - Get widgets by type
+  },
+  
+  // Chat endpoints (/api/v1/chat/)
+  chat: {
+    health: '/api/v1/chat/health', // GET - Chat health check
+    message: '/api/v1/chat/message', // POST - Send chat message
+    sessions: '/api/v1/chat/sessions', // GET - List all sessions
+    getSession: '/api/v1/chat/sessions/{session_id}', // GET - Get specific session
+    clearSession: '/api/v1/chat/sessions/{session_id}', // DELETE - Clear session
+    cleanup: '/api/v1/chat/cleanup', // POST - Cleanup sessions
+  },
+  
+  // Dashboard endpoints (/api/v1/dashboard/)
   dashboard: {
-    getTodayWidgets: '/api/v1/dashboard/getTodayWidgetList', // Get today's widget configuration
-    getAllWidgets: '/api/v1/widgets/getAllWidgetList', // Get all widgets
-    addNewWidget: '/api/v1/widgets/create', // Add new widget
-    addWidgetToToday: '/api/v1/dashboard/widget/addtotoday', // Add widget to today
-    removeWidgetFromToday: '/api/v1/dashboard/widget/removefromtoday', // Remove widget from today
-    updateWidget: '/api/v1/widget/updateWidgetDetails', // Update widget
-    updateWidgetDetails: '/api/v1/widget/updateDetails', // Update widget details
-    updateDailyWidget: '/api/v1/widgets/updateDailyWidget', // Update daily widget active status
-    getTodoList: '/api/v1/getTodoList', // Get todo list by type
+    getTodayWidgetList: '/api/v1/dashboard/getTodayWidgetList', // GET - Get today's widget list
+    addWidgetToToday: '/api/v1/dashboard/widget/addtotoday/{widget_id}', // POST - Add widget to today
+    removeWidgetFromToday: '/api/v1/dashboard/widget/removefromtoday/{daily_widget_id}', // POST - Remove widget from today
+    updateActivity: '/api/v1/dashboard/daily-widgets/{daily_widget_id}/updateactivity', // PUT - Update activity data
+    getTodayWidget: '/api/v1/dashboard/daily-widgets/{daily_widget_id}/getTodayWidget', // GET - Get activity data
+    getTodayWidgetbyWidgetId: '/api/v1/dashboard/daily-widgets/{widget_id}/getTodayWidgetbyWidgetId', // GET - Get activity data by widget_id
   },
   
-  // Todo widget endpoints
-  todo: {
-    getTodayTodoList: '/api/v1/todo/getTodayTodoList', // Get today's todo list
-    updateActivity: '/api/v1/todo/updateActivity', // Update todo activity
-    getTodoItemDetailsAndActivity: '/api/v1/todo/getTodoItemDetailsAndActivity', // Get todo details and activity
-    getTodoDetails: '/api/v1/todo/getTodoDetails', // Get todo details
-    updateDetails: '/api/v1/todo/updateDetails', // Update todo details
+  // Tracker endpoints (/api/v1/tracker/)
+  tracker: {
+    getWidgetActivityForCalendar: '/api/v1/tracker/getWidgetActivityForCalendar',
   },
   
-  // Alarm widget endpoints
-  alarm: {
-    getAlarmDetailsAndActivity: '/api/v1/alarms/getAlarmDetailsAndActivity', // Get alarm details and activity
-    snoozeAlarm: '/api/v1/alarms/snoozeAlarm', // Snooze alarm
-    stopAlarm: '/api/v1/alarms/stopAlarm', // Stop alarm
-    updateActivity: '/api/v1/alarms/updateActivity', // Update alarm activity
-    getAlarmDetails: '/api/v1/alarms/getAlarmDetails', // Get alarm details
-    updateDetails: '/api/v1/alarms/updateDetails', // Update alarm details
-  },
-  
-  // Single item tracker endpoints
-  singleItemTracker: {
-    getTrackerDetailsAndActivity: '/api/v1/widgets/single-item-tracker/getTrackerDetailsAndActivity', // Get tracker details and activity
-    updateActivity: '/api/v1/widgets/single-item-tracker/updateActivity', // Update tracker activity
-    getTrackerDetails: '/api/v1/widgets/single-item-tracker/getTrackerDetails', // Get tracker details
-    updateDetails: '/api/v1/widgets/single-item-tracker/updateDetails', // Update tracker details
-  },
-  
-  // Web search endpoints
-  webSearch: {
-    getScheduledSearches: '/api/v1/web-search/scheduled',
-    getSearchResult: '/api/v1/web-search/result',
-    getSummaryAndActivity: '/api/v1/widgets/websearch/getSummaryAndActivity', // Get web search summary and activity
-    updateActivity: '/api/v1/widgets/websearch/updateActivity', // Update web search activity
-    getWebsearchDetails: '/api/v1/widgets/websearch/getWebsearchDetails', // Get web search details
-    updateDetails: '/api/v1/widgets/websearch/updateDetails', // Update web search details
-    getAISummary: '/api/v1/widgets/websearch/getaisummary', // Get AI summary
+  // Weather endpoints (/api/v1/weather/)
+  weather: {
+    getWeather: '/api/v1/weather/', // GET - Get current weather data
   },
   
   // Health check endpoints
   health: {
-    getHealth: '/api/v1/health', // Basic health check
-    getDetailedHealth: '/api/v1/health/detailed', // Detailed health check
-  },
-  
-  // Legacy endpoints (keeping for backward compatibility)
-  tasks: {
-    getTodayTasks: '/api/v1/widgets/todo/tasks/today', // Get today's tasks for todo widget
-    updateTask: '/api/v1/widgets/todo/tasks/update', // Update task status
-    addMission: '/api/v1/widgets/todo/tasks/mission', // Add new mission
-  },
-  singleItemTrackerLegacy: {
-    getTracker: '/api/v1/widgets/single-item-tracker/{widget_id}', // Get tracker with recent logs
-    updateValue: '/api/v1/widgets/single-item-tracker/{widget_id}/update-value', // Update tracker value
-    getWidgetData: '/api/v1/widgets/single-item-tracker/{widget_id}', // Get complete widget data
-  },
-  alarmLegacy: {
-    getAlarms: '/api/v1/widgets/alarm/{widget_id}', // Get all alarms for widget
-    createAlarm: '/api/v1/widgets/alarm/create', // Create new alarm
-    updateAlarmStatus: '/api/v1/widgets/alarm/{widget_id}/updateStatus', // Snooze or activate alarm
-    getWidgetData: '/api/v1/widgets/alarm/{widget_id}', // Get alarm widget data
-  },
-  reminders: {
-    getReminders: '/api/v1/reminders',
-    createReminder: '/api/v1/reminders/create',
-  },
-  calendar: {
-    getMonthlyCalendar: '/api/v1/calendar/monthly',
-  },
-  schedules: {
-    getAllSchedules: '/api/v1/schedules',
-    createSchedule: '/api/v1/schedules',
-    updateSchedule: '/api/v1/schedules/{id}',
-    deleteSchedule: '/api/v1/schedules/{id}',
-  },
-  weather: {
-    getWeather: '/api/v1/weather/current',
-  },
-  news: {
-    getNews: '/api/v1/news/feed',
-  },
-  stats: {
-    getStats: '/api/v1/stats/daily',
-  },
+    getHealth: '/health', // GET - Basic health check
+    getRoot: '/', // GET - API information
+  }
 };
 
 // Helper function to build full API URLs
@@ -106,6 +55,24 @@ export const buildApiUrl = (endpoint: string, params?: Record<string, string>): 
   
   if (params) {
     const searchParams = new URLSearchParams(params);
+    url += `?${searchParams.toString()}`;
+  }
+  
+  return url;
+};
+
+// Helper function to replace URL parameters
+export const buildApiUrlWithParams = (endpoint: string, pathParams: Record<string, string>, queryParams?: Record<string, string>): string => {
+  let url = `${API_CONFIG.baseUrl}${endpoint}`;
+  
+  // Replace path parameters
+  Object.entries(pathParams).forEach(([key, value]) => {
+    url = url.replace(`{${key}}`, value);
+  });
+  
+  // Add query parameters
+  if (queryParams) {
+    const searchParams = new URLSearchParams(queryParams);
     url += `?${searchParams.toString()}`;
   }
   

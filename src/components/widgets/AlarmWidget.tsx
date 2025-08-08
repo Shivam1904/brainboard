@@ -1,20 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import BaseWidget from './BaseWidget';
 import { Bell, Clock, RotateCcw, Check, AlertTriangle } from 'lucide-react';
-import { AlarmDetailsAndActivityResponse, AlarmDetails, AlarmActivity } from '../../types';
-import { apiService } from '../../services/api';
+import { AlarmDetailsAndActivityResponse, AlarmDetails, AlarmActivity } from '../../types/widgets';
+import { apiService, DailyWidget } from '../../services/api';
 
 interface AlarmWidgetProps {
   onRemove: () => void;
-  widget: {
-    widget_ids: string[];
-    daily_widget_id: string;
-    widget_type: string;
-    priority: string;
-    reasoning: string;
-    date: string;
-    created_at: string;
-  };
+  widget: DailyWidget;
 }
 
 const formatTime = (timeString: string) => {
@@ -70,7 +62,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
       setError(null);
       
       // Get the widget_id from the widget_ids array (first one for alarm widgets)
-      const widgetId = widget.widget_ids?.[0] || '111111';
+      const widgetId = widget.widget_id || '111111';
       
       // Call the real API
       const response = await apiService.getAlarmDetailsAndActivity(widgetId);

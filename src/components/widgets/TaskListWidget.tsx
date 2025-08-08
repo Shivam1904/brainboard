@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { CheckCircle, Circle, Plus, X } from 'lucide-react';
 import FrequencySection from './FrequencySection';
-import { TodoTodayResponse, TodoActivity } from '../../types';
 import { dashboardService } from '../../services/dashboard';
+import { DailyWidget } from '../../services/api';
 
 interface Task {
   id: string;
@@ -57,14 +57,7 @@ const getPriorityFromNumber = (priority: number): 'High' | 'Medium' | 'Low' => {
 
 interface TaskListWidgetProps {
   onRemove: () => void;
-  widget: {
-    daily_widget_id: string;
-    widget_type: string;
-    priority: string;
-    reasoning: string;
-    date: string;
-    created_at: string;
-  };
+  widget: DailyWidget;
 }
 
 const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
@@ -72,6 +65,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [progressText, setProgressText] = useState<string>('');
   const [formData, setFormData] = useState<MissionFormData>({
     title: '',
     description: '',
@@ -94,18 +88,32 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       setError(null);
       
       // Use real API call
-      const response = await dashboardService.getTodayTodoList('task');
+      const response = await dashboardService.getTodayWidgets();
+
+      // Convert API response to internal Task format
+      const allTasksToCount = response.filter((todo: DailyWidget) => 
+        !['calendar', 'allSchedules', 'aiChat', 'moodTracker'].includes(todo.widget_type) 
+      ).length;
+      // Convert API response to internal Task format
+      const allTasksCompleted = response.filter((todo: DailyWidget) => 
+        ![  'calendar', 'allSchedules', 'aiChat', 'moodTracker'].includes(todo.widget_type) && todo.activity_data?.status === 'completed'
+      ).length;
+
+      setProgressText(`${allTasksCompleted} / ${allTasksToCount} `);
       
       // Convert API response to internal Task format
-      const convertedTasks: Task[] = response.todos.map((todo: TodoActivity) => ({
-        id: todo.id,
+      const convertedTasks: Task[] = response.filter((todo: DailyWidget) => 
+        !['calendar', 'allSchedules', 'aiChat', 'websearch', 'moodTracker'].includes(todo.widget_type) 
+      && !(todo.widget_config?.include_alarm_details  || todo.widget_config?.include_tracker_details))
+      .map((todo: DailyWidget) => ({
+        id: todo.daily_widget_id,
         title: todo.title,
         description: todo.description || '',
-        completed: todo.status === 'completed',
-        priority: getPriorityFromNumber(todo.progress / 25), // Convert progress to priority
+        completed: todo.activity_data?.status === 'completed',
+        priority: getPriorityFromNumber(todo.activity_data?.progress / 25), // Convert progress to priority
         category: 'personal', // Default category
-        dueDate: todo.due_date || '',
-        createdAt: todo.created_at
+        dueDate: todo.activity_data?.due_date || '',
+        createdAt: todo.created_at || ''
       }));
       
       setTasks(convertedTasks);
@@ -124,8 +132,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       // Use real API call to update task status
       await dashboardService.updateTodoActivity(taskId, {
         status: completed ? 'completed' : 'pending',
-        progress: completed ? 100 : 0,
-        updated_by: 'user' // TODO: Get actual user ID
+        progress: completed ? 100 : 0
       });
       
       // Update local state
@@ -272,7 +279,7 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium text-gray-700">Progress</span>
-            <span className="text-sm text-gray-500">{completedTasks.length}/{tasks.length} completed</span>
+            <span className="text-sm text-gray-500">{progressText} completed</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
@@ -280,17 +287,6 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
-        </div>
-
-        {/* Add Task Button */}
-        <div className="mb-4">
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={16} />
-            Add Mission
-          </button>
         </div>
 
         {/* Tasks List */}
@@ -315,9 +311,9 @@ const TaskListWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                   className="mt-0.5 flex-shrink-0"
                 >
                   {task.completed ? (
-                    <CheckCircle size={20} className="text-green-600" />
+                    '✅'
                   ) : (
-                    <Circle size={20} className="text-gray-400 hover:text-blue-600" />
+                    '◻️'
                   )}
                 </button>
                 

@@ -6,8 +6,9 @@ Daily Widget service for business logic.
 # IMPORTS
 # ============================================================================
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, and_, inspect
+from sqlalchemy import select, update, and_, inspect, func
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import flag_modified
 from datetime import datetime, date, timezone
 from typing import Dict, Any, Optional, List
 import logging
@@ -19,58 +20,95 @@ from models.dashboard_widget_details import DashboardWidgetDetails
 # CONSTANTS
 # ============================================================================
 logger = logging.getLogger(__name__)
+DEFAULT_USER_ID = "user_001"
 
 # ============================================================================
 # SERVICE CLASS
 # ============================================================================
 class DailyWidgetService:
+    """
+    Service for daily widget operations.
+    
+    Note: This service does NOT commit or rollback transactions.
+    The calling layer (routes) is responsible for transaction management.
+    """
+    
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_today_widget_list(self, user_id: str, target_date: date) -> List[Dict[str, Any]]:
-        """Get today's widget list from table DailyWidget."""
+    async def get_today_widget_list(self) -> List[Dict[str, Any]]:
+        """
+        Get today's widget list from table DailyWidget.
+        
+        Note: This method only reads data and does not modify the session.
+        """
+        print("getting today's widget list", date.today())
+        todaysdate = date.today() # in sqlaclchemy Date
         try:
-            stmt = select(DailyWidget).where(
-                DailyWidget.date == target_date,
+            # Join DailyWidget with DashboardWidgetDetails to get widget information
+            stmt = select(
+                DailyWidget,
+                DashboardWidgetDetails
+            ).join(
+                DashboardWidgetDetails,
+                DailyWidget.widget_id == DashboardWidgetDetails.id
+            ).where(
+                DailyWidget.date == todaysdate,
                 DailyWidget.is_active == True,
-                DailyWidget.delete_flag == False
+                DailyWidget.delete_flag == False,
+                DashboardWidgetDetails.delete_flag == False
             ).order_by(DailyWidget.priority.desc())
             
             result = await self.db.execute(stmt)
-            daily_widgets = result.scalars().all()
+            rows = result.all()
             
             widgets_data = []
-            for daily_widget in daily_widgets:
+            for daily_widget, widget_details in rows:
                 widgets_data.append({
                     "id": daily_widget.id,
-                    "daily_widget_id": daily_widget.id,
-                    "widget_ids": daily_widget.widget_ids,
-                    "widget_type": daily_widget.widget_type,
+                    "daily_widget_id": daily_widget.id,  # Same as id for compatibility
+                    "widget_id": daily_widget.widget_id,  # List containing the widget_id
+                    "widget_type": widget_details.widget_type,
                     "priority": daily_widget.priority,
                     "reasoning": daily_widget.reasoning,
-                    "date": daily_widget.date.isoformat(),
-                    "is_active": daily_widget.is_active
+                    "date": daily_widget.date.isoformat(),  # Convert to ISO string
+                    "is_active": daily_widget.is_active,
+                    # Additional fields for frontend compatibility
+                    "widget_id": daily_widget.widget_id,
+                    "title": widget_details.title,
+                    "frequency": widget_details.frequency,
+                    "importance": widget_details.importance,
+                    "category": widget_details.category,
+                    "description": widget_details.description,
+                    "is_permanent": widget_details.is_permanent,
+                    "widget_config": widget_details.widget_config,
+                    "activity_data": daily_widget.activity_data,
+                    "created_at": daily_widget.created_at.isoformat() if daily_widget.created_at else None,
+                    "updated_at": daily_widget.updated_at.isoformat() if daily_widget.updated_at else None,
+                    "delete_flag": daily_widget.delete_flag
                 })
             
             return widgets_data
             
         except Exception as e:
             logger.error(f"Error getting today's widget list: {e}")
+            print(f"Error getting today's widget list: {e}")
             raise
 
-    async def add_widget_to_today(self, widget_id: str, user_id: str, target_date: date) -> Dict[str, Any]:
+    async def add_widget_to_today(self, widget_id: str) -> Dict[str, Any]:
         """
-        Add a widget to today's dashboard
-        Creates entries in DailyWidget and corresponding activity tables.
+        Add a widget to today's dashboard.
+        Creates entries in DailyWidget with JSON activity data.
+        
+        Note: This method does NOT commit the transaction.
+        The calling layer is responsible for committing.
         """
         try:
-            from services.service_factory import ServiceFactory
-            
             # Check if widget exists and belongs to user
             stmt = select(DashboardWidgetDetails).where(
                 and_(
                     DashboardWidgetDetails.id == widget_id,
-                    DashboardWidgetDetails.user_id == user_id,
+                    DashboardWidgetDetails.user_id == DEFAULT_USER_ID,
                     DashboardWidgetDetails.delete_flag == False
                 )
             )
@@ -83,8 +121,8 @@ class DailyWidgetService:
             # Check if widget is already in today's dashboard
             stmt = select(DailyWidget).where(
                 and_(
-                    DailyWidget.date == target_date,
-                    DailyWidget.widget_ids.contains([widget_id]),
+                    DailyWidget.date == date.today(),
+                    DailyWidget.widget_id == widget_id,
                     DailyWidget.delete_flag == False
                 )
             )
@@ -94,132 +132,90 @@ class DailyWidgetService:
             if existing_daily_widget:
                 if not existing_daily_widget.is_active:
                     existing_daily_widget.is_active = True
-                    existing_daily_widget.updated_at = datetime.now(timezone.utc)
-                    await self.db.commit()
+                    existing_daily_widget.updated_at = date.today()
+                    # Note: No commit here - calling layer handles it
                     return {
                         "success": True,
                         "message": "Widget was already in today's dashboard but was inactive. It has now been re-activated.",
                         "daily_widget_id": existing_daily_widget.id,
-                        "widget_ids": existing_daily_widget.widget_ids
+                        "widget_id": existing_daily_widget.widget_id
                     }
                 else:
                     raise ValueError("Widget is already in today's dashboard")
             
-            # Special handling for todo widgets (todo-task and todo-habit, but not todo-event)
-            daily_widget = None
-            if widget.widget_type in ["todo-task", "todo-habit"]:
-                # Check if there's already a DailyWidget for this specific todo widget type today
-                stmt = select(DailyWidget).where(
-                    and_(
-                        DailyWidget.date == target_date,
-                        DailyWidget.widget_type == widget.widget_type,
-                        DailyWidget.delete_flag == False
-                    )
-                )
-                result = await self.db.execute(stmt)
-                existing_todo_daily_widget = result.scalars().first()
-                
-                if existing_todo_daily_widget:
-                    # Update existing DailyWidget by appending widget_id and reasoning
-                    daily_widget = existing_todo_daily_widget
-                    if widget_id not in daily_widget.widget_ids:
-                        logger.info(f"Adding widget {widget_id} to existing DailyWidget {daily_widget.id} for type {widget.widget_type}")
-                        
-                        # Create a new list to ensure SQLAlchemy detects the change
-                        updated_widget_ids = daily_widget.widget_ids.copy()
-                        updated_widget_ids.append(widget_id)
-                        daily_widget.widget_ids = updated_widget_ids
-                        
-                        # Append the new reasoning to existing reasoning
-                        new_reasoning = f"Manually added {widget.title} to today's dashboard"
-                        if daily_widget.reasoning:
-                            daily_widget.reasoning = f"{daily_widget.reasoning}; {new_reasoning}"
-                        else:
-                            daily_widget.reasoning = new_reasoning
-                        
-                        daily_widget.updated_at = datetime.now(timezone.utc)
-                        
-                        # Explicitly add the modified object back to session to ensure update
-                        self.db.add(daily_widget)
-                        await self.db.flush()
-                        
-                        logger.info(f"Updated DailyWidget {daily_widget.id} with widget_ids: {daily_widget.widget_ids}")
-                    else:
-                        logger.info(f"Widget {widget_id} already exists in DailyWidget {daily_widget.id}")
-                else:
-                    # Create new DailyWidget for this specific todo widget type
-                    logger.info(f"Creating new DailyWidget for widget {widget_id} of type {widget.widget_type}")
-                    daily_widget = DailyWidget(
-                        widget_ids=[widget_id],
-                        widget_type=widget.widget_type,
-                        priority="HIGH",
-                        reasoning=f"Manually added {widget.title} to today's dashboard",
-                        date=target_date,
-                        created_by=user_id
-                    )
-                    self.db.add(daily_widget)
-                    await self.db.flush()
-            else:
-                # For non-todo widgets, create new DailyWidget entry
-                daily_widget = DailyWidget(
-                    widget_ids=[widget_id],
-                    widget_type=widget.widget_type,
-                    priority="HIGH",
-                    reasoning=f"Manually added {widget.title} to today's dashboard",
-                    date=target_date,
-                    created_by=user_id
-                )
-                self.db.add(daily_widget)
-                await self.db.flush()
+            # Create new DailyWidget with initial activity data
+            initial_activity_data = self._get_initial_activity_data(widget.widget_type)
             
-            # Create activity entries using service methods
-            service_factory = ServiceFactory(self.db)
-            
-            if widget.widget_type in ["todo-habit", "todo-task", "todo-event"]:
-                activity_result = await service_factory.todo_service.create_todo_activity_for_today(daily_widget.id, widget_id, user_id)
-                if not activity_result:
-                    logger.warning(f"Failed to create todo activity for widget {widget_id}")
-            
-            elif widget.widget_type == "singleitemtracker":
-                activity_result = await service_factory.single_item_tracker_service.create_tracker_activity_for_today(daily_widget.id, widget_id, user_id)
-                if not activity_result:
-                    logger.warning(f"Failed to create tracker activity for widget {widget_id}")
-            
-            elif widget.widget_type == "alarm":
-                activity_result = await service_factory.alarm_service.create_alarm_activity_for_today(daily_widget.id, widget_id, user_id)
-                if not activity_result:
-                    logger.warning(f"Failed to create alarm activity for widget {widget_id}")
-            
-            elif widget.widget_type == "websearch":
-                activity_result = await service_factory.websearch_service.create_websearch_activity_for_today(daily_widget.id, widget_id, user_id)
-                if not activity_result:
-                    logger.warning(f"Failed to create websearch activity for widget {widget_id}")
-            
-            await self.db.commit()
-            
-            # Determine if we created a new DailyWidget or reused an existing one
-            action_type = "created new daily widget"
-            if widget.widget_type in ["todo-task", "todo-habit"]:
-                if widget_id in daily_widget.widget_ids and len(daily_widget.widget_ids) == 1:
-                    action_type = "widget already in today's dashboard"
-                elif len(daily_widget.widget_ids) > 1:
-                    action_type = "added to existing widget group"
-                else:
-                    action_type = "created new daily widget"
+            daily_widget = DailyWidget(
+                widget_id=widget_id,
+                priority="HIGH",
+                reasoning=f"Manually added {widget.title} to today's dashboard",
+                date=date.today(),
+                activity_data=initial_activity_data,
+                created_by=DEFAULT_USER_ID
+            )
+            self.db.add(daily_widget)
+            await self.db.flush()
             
             return {
                 "success": True,
-                "message": f"Widget added to today's dashboard successfully ({action_type})",
+                "message": "Widget added to today's dashboard successfully",
                 "daily_widget_id": daily_widget.id,
-                "widget_ids": daily_widget.widget_ids
+                "widget_id": daily_widget.widget_id
             }
         except Exception as e:
-            logger.error(f"Failed to add widget {widget_id} to today's dashboard for user {user_id}: {e}")
-            await self.db.rollback()
+            logger.error(f"Failed to add widget {widget_id} to today's dashboard: {e}")
+            print(f"Failed to add widget {widget_id} to today's dashboard: {e}")
+            # Note: No rollback here - calling layer handles it
             raise
 
-    async def remove_widget_from_today(self, daily_widget_id: str, user_id: str, target_date: date) -> Dict[str, Any]:
-        """Remove a widget from today's list."""
+    def _get_initial_activity_data(self, widget_type: str) -> Dict[str, Any]:
+        """Get initial activity data structure based on widget type."""
+        if widget_type == 'alarm':
+            return {
+                'alarm_activity': {
+                    'started_at': None,
+                    'snoozed_at': None,
+                    'snooze_until': None,
+                    'snooze_count': 0
+                }
+            }
+        elif widget_type == 'todo':
+            return {
+                'todo_activity': {
+                    'status': 'not_started',
+                    'progress': 0,
+                    'started_at': None
+                }
+            }
+        elif widget_type == 'single_item_tracker':
+            return {
+                'tracker_activity': {
+                    'value': '0',
+                    'time_added': None,
+                    'notes': None
+                }
+            }
+        elif widget_type == 'websearch':
+            return {
+                'websearch_activity': {
+                    'status': 'pending',
+                    'reaction': None,
+                    'summary': None,
+                    'source_json': None,
+                    'completed_at': None
+                }
+            }
+        else:
+            return {}
+
+    async def remove_widget_from_today(self, daily_widget_id: str) -> Dict[str, Any]:
+        """
+        Remove a widget from today's list.
+        
+        Note: This method does NOT commit the transaction.
+        The calling layer is responsible for committing.
+        """
         try:
             stmt = select(DailyWidget).where(
                 and_(
@@ -234,8 +230,8 @@ class DailyWidgetService:
                 raise ValueError("DailyWidget not found")
             
             daily_widget.is_active = False
-            daily_widget.updated_at = datetime.now(timezone.utc)
-            await self.db.commit()
+            daily_widget.updated_at = date.today()
+            # Note: No commit here - calling layer handles it
             
             return {
                 "success": True,
@@ -245,13 +241,12 @@ class DailyWidgetService:
             }
         except Exception as e:
             logger.error(f"Failed to update is_active for DailyWidget {daily_widget_id}: {e}")
-            self.db.rollback()
+            print(f"Failed to update is_active for DailyWidget {daily_widget_id}: {e}")
+            # Note: No rollback here - calling layer handles it
             raise 
 
-    async def update_daily_widget_active(self, daily_widget_id: str, is_active: bool) -> Dict[str, Any]:
-        """
-        Update the is_active column for a DailyWidget (activate/deactivate widget)
-        """
+    async def update_activity(self, daily_widget_id: str, activity_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update activity data for a daily widget."""
         try:
             stmt = select(DailyWidget).where(
                 and_(
@@ -263,19 +258,170 @@ class DailyWidgetService:
             daily_widget = result.scalars().first()
             
             if not daily_widget:
+                print("DailyWidget not found")
                 raise ValueError("DailyWidget not found")
             
-            daily_widget.is_active = is_active
-            daily_widget.updated_at = datetime.now(timezone.utc)
-            await self.db.commit()
+            act = daily_widget.activity_data
+
+            for key, value in activity_data.items():
+                print(f"Updating activity data for {key} with value {value}")
+                act[key] = value
+
+            daily_widget.activity_data = act
+            # Mark the JSON field as modified so SQLAlchemy detects the change
+            flag_modified(daily_widget, 'activity_data')
+            # Update activity data
+            print(f"Updated activity data: {daily_widget}")
+            daily_widget.updated_at = date.today()
+            
+            # Flush the changes to the database
+            await self.db.flush()
             
             return {
                 "success": True,
-                "message": "DailyWidget is_active updated successfully", 
-                "daily_widget_id": daily_widget_id, 
-                "is_active": is_active
+                "message": "Activity data updated successfully",
+                "activity_data": daily_widget.activity_data
             }
         except Exception as e:
-            logger.error(f"Failed to update is_active for DailyWidget {daily_widget_id}: {e}")
-            await self.db.rollback()
+            logger.error(f"Failed to update activity data for DailyWidget {daily_widget_id}: {e}")
+            print(f"Failed to update activity data for DailyWidget {daily_widget_id}: {e}")
+            raise
+
+    async def get_today_widget_by_widget_id(self, widget_id: str) -> Dict[str, Any]:
+        """Get activity data for a daily widget by widget_id."""
+        try:
+            stmt = select(DailyWidget).where(
+                and_(
+                    DailyWidget.widget_id == widget_id,
+                    DailyWidget.date == date.today(),
+                    DailyWidget.delete_flag == False
+                )
+            )
+            
+            result = await self.db.execute(stmt)
+            daily_widget = result.scalars().first()
+
+            return daily_widget
+        except Exception as e:
+            logger.error(f"Failed to get activity data for DailyWidget {widget_id}: {e}")
+            print(f"Failed to get activity data for DailyWidget {widget_id}: {e}")
+            raise
+
+    async def get_today_widget(self, daily_widget_id: str) -> Dict[str, Any]:
+        """Get activity data for a daily widget."""
+        try:
+            # Join DailyWidget with DashboardWidgetDetails to get widget information
+            stmt = select(
+                DailyWidget,
+                DashboardWidgetDetails
+            ).join(
+                DashboardWidgetDetails,
+                DailyWidget.widget_id == DashboardWidgetDetails.id
+            ).where(
+                and_(
+                    DailyWidget.id == daily_widget_id,
+                    DailyWidget.delete_flag == False
+                )
+            )
+            
+            result = await self.db.execute(stmt)
+            rows = result.all()
+            
+            for daily_widget, widget_details in rows:
+                return {
+                        "id": daily_widget.id,
+                        "daily_widget_id": daily_widget.id,  # Same as id for compatibility
+                        "widget_id": daily_widget.widget_id,  # List containing the widget_id
+                        "widget_type": widget_details.widget_type,
+                        "priority": daily_widget.priority,
+                        "reasoning": daily_widget.reasoning,
+                        "date": daily_widget.date.isoformat(),  # Convert to ISO string
+                        "is_active": daily_widget.is_active,
+                        # Additional fields for frontend compatibility
+                        "widget_id": daily_widget.widget_id,
+                        "title": widget_details.title,
+                        "frequency": widget_details.frequency,
+                        "importance": widget_details.importance,
+                        "category": widget_details.category,
+                        "description": widget_details.description,
+                        "is_permanent": widget_details.is_permanent,
+                        "widget_config": widget_details.widget_config,
+                        "activity_data": daily_widget.activity_data,
+                        "created_at": daily_widget.created_at.isoformat() if daily_widget.created_at else None,
+                        "updated_at": daily_widget.updated_at.isoformat() if daily_widget.updated_at else None,
+                        "delete_flag": daily_widget.delete_flag
+                    }
+        except Exception as e:
+            logger.error(f"Failed to get activity data for DailyWidget {daily_widget_id}: {e}")
+            print(f"Failed to get activity data for DailyWidget {daily_widget_id}: {e}")
             raise 
+
+    async def get_widgets_for_calendar_period(
+        self,
+        calendar_widget_id: str,
+        start_date: date,
+        end_date: date
+    ) -> List[Dict[str, Any]]:
+        """Get widgets linked to a calendar via widget_config.selected_calendar for a period.
+
+        Joins DailyWidget with DashboardWidgetDetails and filters:
+        - DailyWidget.date between start_date and end_date
+        - DailyWidget.is_active == True
+        - Both records not deleted
+        - DashboardWidgetDetails.widget_config.selected_calendar == calendar_widget_id
+        """
+        try:
+            stmt = select(
+                DailyWidget,
+                DashboardWidgetDetails
+            ).join(
+                DashboardWidgetDetails,
+                DailyWidget.widget_id == DashboardWidgetDetails.id
+            ).where(
+                and_(
+                    DailyWidget.date >= start_date,
+                    DailyWidget.date <= end_date,
+                    DailyWidget.is_active == True,
+                    DailyWidget.delete_flag == False,
+                    DashboardWidgetDetails.delete_flag == False,
+                    # Filter on JSON widget_config.selected_calendar using SQLite JSON_EXTRACT
+                    func.json_extract(DashboardWidgetDetails.widget_config, '$.selected_calendar') == calendar_widget_id
+                )
+            ).order_by(DailyWidget.date.asc(), DailyWidget.priority.desc())
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
+
+            widgets_data: List[Dict[str, Any]] = []
+            for daily_widget, widget_details in rows:
+                widgets_data.append({
+                    "id": daily_widget.id,
+                    "daily_widget_id": daily_widget.id,
+                    "widget_id": daily_widget.widget_id,
+                    "widget_type": widget_details.widget_type,
+                    "priority": daily_widget.priority,
+                    "reasoning": daily_widget.reasoning,
+                    "date": daily_widget.date.isoformat(),
+                    "is_active": daily_widget.is_active,
+                    "title": widget_details.title,
+                    "frequency": widget_details.frequency,
+                    "importance": widget_details.importance,
+                    "category": widget_details.category,
+                    "description": widget_details.description,
+                    "is_permanent": widget_details.is_permanent,
+                    "widget_config": widget_details.widget_config,
+                    "activity_data": daily_widget.activity_data,
+                    "created_at": daily_widget.created_at.isoformat() if daily_widget.created_at else None,
+                    "updated_at": daily_widget.updated_at.isoformat() if daily_widget.updated_at else None,
+                    "delete_flag": daily_widget.delete_flag
+                })
+
+            return widgets_data
+        except Exception as e:
+            logger.error(
+                f"Failed to get widgets for calendar {calendar_widget_id} between {start_date} and {end_date}: {e}"
+            )
+            print(
+                f"Failed to get widgets for calendar {calendar_widget_id} between {start_date} and {end_date}: {e}"
+            )
+            raise

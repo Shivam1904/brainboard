@@ -18,14 +18,6 @@ import requests
 from models.daily_widgets_ai_output import DailyWidgetsAIOutput
 from models.dashboard_widget_details import DashboardWidgetDetails
 from models.daily_widget import DailyWidget
-from models.todo_details import TodoDetails
-from models.todo_item_activity import TodoItemActivity
-from models.single_item_tracker_details import SingleItemTrackerDetails
-from models.single_item_tracker_item_activity import SingleItemTrackerItemActivity
-from models.alarm_details import AlarmDetails
-from models.alarm_item_activity import AlarmItemActivity
-from models.websearch_details import WebSearchDetails
-from models.websearch_item_activity import WebSearchItemActivity
 from ai_engine.models.llm_client import LLMClient
 from ai_engine.prompts.intent_recognition import (
     WidgetTypeClassificationPrompts,
@@ -132,7 +124,7 @@ class AIService:
                 # Check if daily widget already exists for this date
                 stmt = select(DailyWidget).where(
                     and_(
-                        DailyWidget.widget_ids.contains([widget.id]),
+                        DailyWidget.widget_id == widget.id,
                         DailyWidget.date == target_date
                     )
                 )
@@ -140,13 +132,15 @@ class AIService:
                 existing = result.scalars().first()
                 
                 if not existing:
-                    # Create daily widget
+                    # Create daily widget with initial activity data
+                    initial_activity_data = self._get_initial_activity_data(widget.widget_type)
+                    
                     daily_widget = DailyWidget(
-                        widget_ids=[widget.id],
-                        widget_type=widget.widget_type,
+                        widget_id=widget.id,
                         priority="HIGH",
                         reasoning="Permanent widget - automatically included",
                         date=target_date,
+                        activity_data=initial_activity_data,
                         created_by=user_id
                     )
                     self.db_session.add(daily_widget)
@@ -159,6 +153,46 @@ class AIService:
             logger.error(f"Failed to process permanent widgets: {e}")
             await self.db_session.rollback()
             raise
+
+    def _get_initial_activity_data(self, widget_type: str) -> Dict[str, Any]:
+        """Get initial activity data structure based on widget type."""
+        if widget_type == 'alarm':
+            return {
+                'alarm_activity': {
+                    'started_at': None,
+                    'snoozed_at': None,
+                    'snooze_until': None,
+                    'snooze_count': 0
+                }
+            }
+        elif widget_type == 'todo':
+            return {
+                'todo_activity': {
+                    'status': 'not_started',
+                    'progress': 0,
+                    'started_at': None
+                }
+            }
+        elif widget_type == 'single_item_tracker':
+            return {
+                'tracker_activity': {
+                    'value': '0',
+                    'time_added': None,
+                    'notes': None
+                }
+            }
+        elif widget_type == 'websearch':
+            return {
+                'websearch_activity': {
+                    'status': 'pending',
+                    'reaction': None,
+                    'summary': None,
+                    'source_json': None,
+                    'completed_at': None
+                }
+            }
+        else:
+            return {}
     
     async def _process_ai_widgets(
         self, 
@@ -366,9 +400,11 @@ Please provide only the JSON array, no additional text.
     # ============================================================================
     
     async def generate_web_summaries(self, user_id: str, target_date: date) -> Dict[str, Any]:
-        """Generate web summaries for user's websearch widgets."""
+        """
+        Generate web summaries for all websearch widgets of a user on a specific date
+        """
         try:
-            # Get user's websearch widgets
+            # Get all websearch widgets for the user
             stmt = select(DashboardWidgetDetails).where(
                 and_(
                     DashboardWidgetDetails.user_id == user_id,
@@ -380,6 +416,7 @@ Please provide only the JSON array, no additional text.
             websearch_widgets = result.scalars().all()
             
             if not websearch_widgets:
+                logger.warning(f"No websearch widgets found for user {user_id}")
                 return {
                     "message": "No websearch widgets found",
                     "date": target_date.isoformat(),
@@ -389,16 +426,15 @@ Please provide only the JSON array, no additional text.
             summaries_generated = 0
             
             for widget in websearch_widgets:
-                # Get websearch details
-                stmt = select(WebSearchDetails).where(WebSearchDetails.widget_id == widget.id)
-                result = await self.db_session.execute(stmt)
-                websearch_details = result.scalars().first()
+                # Get websearch config from widget_config
+                websearch_config = widget.get_websearch_config()
+                search_query = websearch_config.get('search_query')
                 
-                if websearch_details and websearch_details.search_query:
+                if search_query:
                     try:
                         summary_result = await self._generate_web_summary(
-                            websearch_details.search_query, 
-                            websearch_details.id,
+                            search_query, 
+                            widget.id,  # Use widget.id instead of websearch_details.id
                             target_date,
                             user_id
                         )
@@ -420,7 +456,7 @@ Please provide only the JSON array, no additional text.
     async def _generate_web_summary(
         self, 
         query: str, 
-        websearch_details_id: str, 
+        widget_id: str,  # Changed from websearch_details_id to widget_id
         target_date: date, 
         user_id: str
     ) -> Optional[Dict[str, Any]]:
@@ -440,7 +476,7 @@ Please provide only the JSON array, no additional text.
             from models.websearch_summary_ai_output import WebSearchSummaryAIOutput
             
             summary_output = WebSearchSummaryAIOutput(
-                websearchdetails_id=websearch_details_id,
+                websearchdetails_id=widget_id,  # Use widget_id instead of websearch_details_id
                 summary_text=summary_result["summary"],
                 result_json=summary_result,
                 date=target_date,
@@ -602,37 +638,40 @@ SUMMARY:
                     "activities_created": 0
                 }
             
-            # Group widgets by type
-            widgets_by_type = {}
+            activities_created = 0
+            
+            # Create daily widgets for each AI output
             for ai_output in ai_outputs:
+                # Get the widget details
                 stmt = select(DashboardWidgetDetails).where(DashboardWidgetDetails.id == ai_output.widget_id)
                 result = await self.db_session.execute(stmt)
                 widget = result.scalars().first()
                 
                 if widget:
-                    if widget.widget_type not in widgets_by_type:
-                        widgets_by_type[widget.widget_type] = []
-                    widgets_by_type[widget.widget_type].append(widget.id)
-            
-            activities_created = 0
-            
-            # Create daily widgets and activities
-            for widget_type, widget_ids in widgets_by_type.items():
-                daily_widget = DailyWidget(
-                    widget_ids=widget_ids,
-                    widget_type=widget_type,
-                    priority="HIGH",  # TODO: Get from AI output
-                    reasoning=f"AI selected {len(widget_ids)} {widget_type} widgets",
-                    date=target_date,
-                    created_by=user_id
-                )
-                self.db_session.add(daily_widget)
-                await self.db_session.flush()  # Get the ID
-                
-                # Create activity entries
-                activities_created += await self._create_activity_entries(
-                    daily_widget.id, widget_ids, widget_type, user_id
-                )
+                    # Check if daily widget already exists
+                    stmt = select(DailyWidget).where(
+                        and_(
+                            DailyWidget.widget_id == widget.id,
+                            DailyWidget.date == target_date
+                        )
+                    )
+                    result = await self.db_session.execute(stmt)
+                    existing = result.scalars().first()
+                    
+                    if not existing:
+                        # Create daily widget with initial activity data
+                        initial_activity_data = self._get_initial_activity_data(widget.widget_type)
+                        
+                        daily_widget = DailyWidget(
+                            widget_id=widget.id,
+                            priority=ai_output.priority,
+                            reasoning=ai_output.reasoning,
+                            date=target_date,
+                            activity_data=initial_activity_data,
+                            created_by=user_id
+                        )
+                        self.db_session.add(daily_widget)
+                        activities_created += 1
             
             await self.db_session.commit()
             
@@ -650,76 +689,65 @@ SUMMARY:
     async def _create_activity_entries(
         self, 
         daily_widget_id: str, 
-        widget_ids: List[str], 
+        widget_id: str, 
         widget_type: str, 
         user_id: str
     ) -> int:
-        """Create activity entries for widgets."""
+        """Create activity entries for widgets using JSON structure."""
         activities_created = 0
         
-        for widget_id in widget_ids:
-            if widget_type in ["todo-habit", "todo-task", "todo-event"]:
-                stmt = select(TodoDetails).where(TodoDetails.widget_id == widget_id)
-                result = await self.db_session.execute(stmt)
-                todo_details = result.scalars().first()
-                
-                if todo_details:
-                    activity = TodoItemActivity(
-                        daily_widget_id=daily_widget_id,
-                        widget_id=widget_id,
-                        tododetails_id=todo_details.id,
-                        status="pending",
-                        progress=0,
-                        created_by=user_id
-                    )
-                    self.db_session.add(activity)
-                    activities_created += 1
-            
-            elif widget_type == "singleitemtracker":
-                stmt = select(SingleItemTrackerDetails).where(SingleItemTrackerDetails.widget_id == widget_id)
-                result = await self.db_session.execute(stmt)
-                tracker_details = result.scalars().first()
-                
-                if tracker_details:
-                    activity = SingleItemTrackerItemActivity(
-                        daily_widget_id=daily_widget_id,
-                        widget_id=widget_id,
-                        singleitemtrackerdetails_id=tracker_details.id,
-                        created_by=user_id
-                    )
-                    self.db_session.add(activity)
-                    activities_created += 1
-            
-            elif widget_type == "alarm":
-                stmt = select(AlarmDetails).where(AlarmDetails.widget_id == widget_id)
-                result = await self.db_session.execute(stmt)
-                alarm_details = result.scalars().first()
-                
-                if alarm_details:
-                    activity = AlarmItemActivity(
-                        daily_widget_id=daily_widget_id,
-                        widget_id=widget_id,
-                        alarmdetails_id=alarm_details.id,
-                        created_by=user_id
-                    )
-                    self.db_session.add(activity)
-                    activities_created += 1
-            
-            elif widget_type == "websearch":
-                stmt = select(WebSearchDetails).where(WebSearchDetails.widget_id == widget_id)
-                result = await self.db_session.execute(stmt)
-                websearch_details = result.scalars().first()
-                
-                if websearch_details:
-                    activity = WebSearchItemActivity(
-                        daily_widget_id=daily_widget_id,
-                        widget_id=widget_id,
-                        websearchdetails_id=websearch_details.id,
-                        status="pending",
-                        created_by=user_id
-                    )
-                    self.db_session.add(activity)
-                    activities_created += 1
+        # Get the daily widget
+        stmt = select(DailyWidget).where(DailyWidget.id == daily_widget_id)
+        result = await self.db_session.execute(stmt)
+        daily_widget = result.scalars().first()
+        
+        if not daily_widget:
+            logger.error(f"DailyWidget {daily_widget_id} not found")
+            return 0
+        
+        # Initialize activity_data if not present
+        if not daily_widget.activity_data:
+            daily_widget.activity_data = {}
+        
+        # Create activity data based on widget type
+        if widget_type in ["todo-habit", "todo-task", "todo-event"]:
+            daily_widget.activity_data['todo_activity'] = {
+                'status': 'not_started',
+                'progress': 0,
+                'started_at': None
+            }
+            activities_created += 1
+        
+        elif widget_type == "singleitemtracker":
+            daily_widget.activity_data['tracker_activity'] = {
+                'value': '0',
+                'time_added': None,
+                'notes': None
+            }
+            activities_created += 1
+        
+        elif widget_type == "alarm":
+            daily_widget.activity_data['alarm_activity'] = {
+                'started_at': None,
+                'snoozed_at': None,
+                'snooze_until': None,
+                'snooze_count': 0
+            }
+            activities_created += 1
+        
+        elif widget_type == "websearch":
+            daily_widget.activity_data['websearch_activity'] = {
+                'status': 'pending',
+                'reaction': None,
+                'summary': None,
+                'source_json': None,
+                'completed_at': None
+            }
+            activities_created += 1
+        
+        # Update the daily widget
+        daily_widget.updated_at = datetime.now()
+        await self.db_session.flush()
         
         return activities_created
     
@@ -1004,4 +1032,14 @@ Be conversational and helpful. Keep it under 3 sentences. Don't use JSON formatt
     
     def get_fallback_message(self, attempt: int) -> str:
         """Get predefined fallback message."""
-        return IntentRecognitionPrompts.get_fallback_prompt(attempt) 
+        # Simple fallback messages without external imports
+        fallback_messages = [
+            "I'm not sure I understood. Could you rephrase that?",
+            "I'm having trouble understanding. Can you try a different way?",
+            "I'm not sure what you mean. Could you be more specific?"
+        ]
+        
+        if attempt < len(fallback_messages):
+            return fallback_messages[attempt]
+        else:
+            return "I'm having trouble understanding. Please try again." 

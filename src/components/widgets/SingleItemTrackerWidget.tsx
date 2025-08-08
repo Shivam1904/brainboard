@@ -1,20 +1,13 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { TrendingUp, Target, Calendar, Plus, X, Save } from 'lucide-react';
-import { TrackerDetailsAndActivityResponse, TrackerDetails, TrackerActivity } from '../../types';
+import { TrackerDetailsAndActivityResponse, TrackerDetails, TrackerActivity } from '../../types/widgets';
 import { dashboardService } from '../../services/dashboard';
+import { DailyWidget } from '../../services/api';
 
 interface SingleItemTrackerWidgetProps {
   onRemove: () => void;
-  widget: {
-    widget_ids: string[];
-    daily_widget_id: string;
-    widget_type: string;
-    priority: string;
-    reasoning: string;
-    date: string;
-    created_at: string;
-  };
+  widget: DailyWidget;
 }
 
 const getValueTypeInput = (valueType: string) => {
@@ -68,6 +61,12 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
   const updateValue = async () => {
     if (!trackerData || !newValue.trim()) return;
     
+    // Check if activity exists
+    if (!trackerData.activity) {
+      console.error('No activity found for tracker');
+      return;
+    }
+    
     try {
       // Update tracker activity using the real API
       await dashboardService.updateTrackerActivity(trackerData.activity.id, {
@@ -84,7 +83,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
     } catch (err) {
       console.error('Failed to update value:', err);
       // Still update local state even if API fails
-      if (trackerData) {
+      if (trackerData && trackerData.activity) {
         const updatedTrackerData = {
           ...trackerData,
           activity: {
@@ -147,12 +146,26 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
     );
   }
 
-  const progressPercentage = trackerData.tracker_details.target_value && trackerData.activity.value 
-    ? Math.min((parseFloat(trackerData.activity.value) / parseFloat(trackerData.tracker_details.target_value)) * 100, 100)
+  // Safely access nested properties with null checks
+  const trackerDetails = trackerData.tracker_details;
+  const activity = trackerData.activity;
+  
+  if (!trackerDetails) {
+    return (
+      <BaseWidget title="Item Tracker" icon="📈" onRemove={onRemove}>
+        <div className="flex items-center justify-center h-32 text-center">
+          <p className="text-gray-500">Tracker details not found</p>
+        </div>
+      </BaseWidget>
+    );
+  }
+
+  const progressPercentage = trackerDetails.target_value && activity?.value 
+    ? Math.min((parseFloat(activity.value) / parseFloat(trackerDetails.target_value)) * 100, 100)
     : null;
 
   return (
-    <BaseWidget title={trackerData.tracker_details.title} icon="📈" onRemove={onRemove}>
+    <BaseWidget title={trackerDetails.title} icon="📈" onRemove={onRemove}>
       <div className="p-4 h-full overflow-y-auto">
         {/* Offline Indicator */}
         {error && (
@@ -166,14 +179,14 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
         {/* Current Value Display */}
         <div className="mb-4 text-center">
           <div className="text-3xl font-bold text-gray-900 mb-1">
-            {trackerData.activity.value || '0'}
-            {trackerData.tracker_details.value_unit && <span className="text-lg text-gray-600 ml-1">{trackerData.tracker_details.value_unit}</span>}
+            {activity?.value || '0'}
+            {trackerDetails.value_unit && <span className="text-lg text-gray-600 ml-1">{trackerDetails.value_unit}</span>}
           </div>
           <p className="text-sm text-gray-600">Current Value</p>
         </div>
 
         {/* Target and Progress */}
-        {trackerData.tracker_details.target_value && (
+        {trackerDetails.target_value && (
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -181,7 +194,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
                 <span className="text-sm font-medium text-gray-700">Target</span>
               </div>
               <span className="text-sm text-gray-600">
-                {trackerData.tracker_details.target_value}{trackerData.tracker_details.value_unit}
+                {trackerDetails.target_value}{trackerDetails.value_unit}
               </span>
             </div>
             
@@ -225,7 +238,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-xl font-bold">Add New Value</h3>
-                    <p className="text-blue-100 mt-1">Track your progress for {trackerData.tracker_details.title}</p>
+                    <p className="text-blue-100 mt-1">Track your progress for {trackerDetails.title}</p>
                   </div>
                   <button
                     onClick={() => setShowAddForm(false)}
@@ -242,14 +255,14 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
                   {/* Value Input */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Value {trackerData.tracker_details.value_unit && `(${trackerData.tracker_details.value_unit})`}
+                      Value {trackerDetails.value_unit && `(${trackerDetails.value_unit})`}
                     </label>
                     <input
-                      type={getValueTypeInput(trackerData.tracker_details.value_type)}
+                      type={getValueTypeInput(trackerDetails.value_type)}
                       value={newValue}
                       onChange={(e) => setNewValue(e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder={`Enter ${trackerData.tracker_details.title.toLowerCase()} value`}
+                      placeholder={`Enter ${trackerDetails.title.toLowerCase()} value`}
                       required
                     />
                   </div>

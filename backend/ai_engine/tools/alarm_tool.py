@@ -11,7 +11,7 @@ from datetime import datetime
 import uuid
 
 from .base_tool import BaseTool
-from services.alarm_service import AlarmService
+from services.dashboard_widget_service import DashboardWidgetService
 
 # ============================================================================
 # CONSTANTS
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # ALARM TOOL CLASS
 # ============================================================================
 class AlarmTool(BaseTool):
-    """Tool for alarm operations using existing AlarmService."""
+    """Tool for alarm operations using new DashboardWidgetService."""
     
     def __init__(self, db_session):
         """Initialize the alarm tool."""
@@ -31,7 +31,7 @@ class AlarmTool(BaseTool):
             description="Tool for creating, editing, deleting, and listing alarms"
         )
         self.db_session = db_session
-        self.alarm_service = AlarmService(db_session)
+        self.dashboard_widget_service = DashboardWidgetService(db_session)
     
     def validate_parameters(self, parameters: Dict[str, Any]) -> tuple[bool, List[str], Optional[str]]:
         """Validate alarm parameters."""
@@ -130,7 +130,7 @@ class AlarmTool(BaseTool):
             }
             
             # Use the real AlarmService to create the alarm
-            result = await self.alarm_service.create_alarm(user_id, alarm_data)
+            result = await self.dashboard_widget_service.create_widget(user_id, alarm_data)
             
             return result
             

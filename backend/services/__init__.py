@@ -1,22 +1,14 @@
 """
 Services package initialization.
 """
-from .alarm_service import AlarmService
-from .widget_service import WidgetService
+from .dashboard_widget_service import DashboardWidgetService
 from .daily_widget_service import DailyWidgetService
-from .todo_service import TodoService
-from .single_item_tracker_service import SingleItemTrackerService
-from .websearch_service import WebSearchService
 from .ai_service import AIService
 from .weather_service import WeatherService
 
 __all__ = [
-    "AlarmService",
-    "WidgetService",
+    "DashboardWidgetService",
     "DailyWidgetService",
-    "TodoService",
-    "SingleItemTrackerService",
-    "WebSearchService",
     "AIService",
     "WeatherService"
 ] 

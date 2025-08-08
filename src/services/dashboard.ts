@@ -1,18 +1,34 @@
-// Dashboard Service - Simple wrapper around API service
-// No conversions, just direct API calls
+// Dashboard Service - Clean implementation using new consolidated API
+// This service provides a simplified interface for dashboard operations
 
-import { apiService } from './api';
-import { 
-  DailyWidget,
-  ApiWidgetType,
-  ApiFrequency,
-  ApiCategory,
-  TodoTodayResponse,
-  TodoDetailsAndActivityResponse,
-  DashboardWidget
-} from '../types';
+import { apiService, DashboardWidget, DailyWidget } from './api';
+
+export interface CreateWidgetData {
+  widget_type: string;
+  title: string;
+  frequency: string;
+  importance: number;
+  category: string;
+  description?: string;
+  is_permanent?: boolean;
+  widget_config?: Record<string, any>;
+}
+
+export interface UpdateWidgetData {
+  title?: string;
+  frequency?: string;
+  importance?: number;
+  category?: string;
+  description?: string;
+  is_permanent?: boolean;
+  widget_config?: Record<string, any>;
+}
 
 export class DashboardService {
+  // ============================================================================
+  // DASHBOARD WIDGETS OPERATIONS
+  // ============================================================================
+
   // Get today's widget list from API
   async getTodayWidgets(targetDate?: string): Promise<DailyWidget[]> {
     return apiService.getTodayWidgetList(targetDate);
@@ -20,300 +36,285 @@ export class DashboardService {
 
   // Get all widgets list from API
   async getAllWidgets(): Promise<DashboardWidget[]> {
-    return apiService.getAllWidgetList();
+    return apiService.getAllWidgets();
   }
 
-  // Add new widget
-  async addNewWidget(data: {
-    widget_type: ApiWidgetType;
-    frequency: ApiFrequency;
-    importance: number;
-    title: string;
-    category: ApiCategory;
-    // Widget-specific fields
-    todo_type?: string;
-    due_date?: string;
-    alarm_time?: string;
-    value_data_type?: string;
-    value_data_unit?: string;
-    target_value?: string;
-  }): Promise<{
-    message: string;
-    widget_id: string;
-    widget_type: string;
-    title: string;
-  }> {
-    return apiService.addNewWidget(data);
+  // Create new widget
+  async createWidget(data: CreateWidgetData): Promise<DashboardWidget> {
+    return apiService.createWidget(data);
   }
 
-  // Add widget to today's dashboard
-  async addWidgetToToday(widgetId: string): Promise<{
-    message: string;
-    daily_widget_id: string;
-    widget_id: string;
-    widget_type: string;
-    title: string;
-  }> {
-    return apiService.addWidgetToToday(widgetId);
+  // Get specific widget by ID
+  async getWidget(widgetId: string): Promise<DashboardWidget> {
+    return apiService.getWidget(widgetId);
   }
 
   // Update widget
-  async updateWidget(widgetId: string, data: {
-    widget_type: ApiWidgetType;
-    frequency: ApiFrequency;
-    importance: number;
-    title: string;
-    category: ApiCategory;
-    // Widget-specific fields
-    todo_type?: string;
-    due_date?: string;
-    alarm_time?: string;
-    value_data_type?: string;
-    value_data_unit?: string;
-    target_value?: string;
-  }): Promise<{
-    message: string;
-    widget_id: string;
-    widget_type: string;
-    title: string;
-  }> {
+  async updateWidget(widgetId: string, data: UpdateWidgetData): Promise<DashboardWidget> {
     return apiService.updateWidget(widgetId, data);
   }
 
-  // Update widget details
-  async updateWidgetDetails(widgetId: string, data: {
-    title?: string;
-    frequency?: ApiFrequency;
-    importance?: number;
-    category?: ApiCategory;
-  }): Promise<{
+  // Delete widget
+  async deleteWidget(widgetId: string): Promise<{ message: string }> {
+    return apiService.deleteWidget(widgetId);
+  }
+
+  // Get widgets by type
+  async getWidgetsByType(widgetType: string): Promise<DashboardWidget[]> {
+    return apiService.getWidgetsByType(widgetType);
+  }
+
+  // ============================================================================
+  // DASHBOARD MANAGEMENT OPERATIONS
+  // ============================================================================
+
+  // Add widget to today's dashboard
+  async addWidgetToToday(widgetId: string, targetDate?: string): Promise<{
+    success: boolean;
     message: string;
+    daily_widget_id: string;
     widget_id: string;
-    widget_type: string;
+  }> {
+    return apiService.addWidgetToToday(widgetId, targetDate);
+  }
+
+  // Remove widget from today's dashboard
+  async removeWidgetFromToday(dailyWidgetId: string, targetDate?: string): Promise<{
+    success: boolean;
+    message: string;
+    daily_widget_id: string;
+    is_active: boolean;
+  }> {
+    return apiService.removeWidgetFromToday(dailyWidgetId, targetDate);
+  }
+
+  // Update activity data for a daily widget
+  async updateActivity(dailyWidgetId: string, activityData: Record<string, any>): Promise<{
+    success: boolean;
+    message: string;
+    activity_data: Record<string, any>;
+  }> {
+    return apiService.updateActivity(dailyWidgetId, activityData);
+  }
+
+  // Get activity data for a daily widget
+  async getTodayWidget(dailyWidgetId: string): Promise<DailyWidget> {
+    return apiService.getTodayWidget(dailyWidgetId);
+  }
+
+  // Get today's daily widget by underlying widget id
+  async getTodayWidgetByWidgetId(widgetId: string): Promise<DailyWidget | null> {
+    return apiService.getTodayWidgetByWidgetId(widgetId);
+  }
+
+  // ============================================================================
+  // CONVENIENCE METHODS FOR WIDGET-SPECIFIC OPERATIONS
+  // ============================================================================
+
+  // Create an alarm widget
+  async createAlarmWidget(data: {
     title: string;
-  }> {
-    return apiService.updateWidgetDetails(widgetId, data);
-  }
-
-  // Get todo item details and activity
-  async getTodoItemDetailsAndActivity(dailyWidgetId: string, widgetId: string): Promise<TodoDetailsAndActivityResponse> {
-    return apiService.getTodoItemDetailsAndActivity(dailyWidgetId, widgetId);
-  }
-
-  // Get todo list by type
-  async getTodoList(todoType: 'habit' | 'task' | 'event'): Promise<{
-    todo_type: 'habit' | 'task' | 'event';
-    todos: Array<{
-      id: string;
-      title: string;
-      todo_type: 'habit' | 'task' | 'event';
-      description: string;
-      due_date: string;
-      created_at: string;
-    }>;
-    total_todos: number;
-  }> {
-    return apiService.getTodoList(todoType);
-  }
-
-  // Get today's todo list by type
-  async getTodayTodoList(todoType: 'habit' | 'task' | 'event'): Promise<TodoTodayResponse> {
-    return apiService.getTodayTodoList(todoType);
-  }
-
-  // Update todo activity status
-  async updateTodoActivity(activityId: string, data: {
-    status: 'pending' | 'in progress' | 'completed' | 'cancelled';
-    progress: number;
-    updated_by: string;
-  }): Promise<{
-    activity_id: string;
-    status: 'pending' | 'in progress' | 'completed' | 'cancelled';
-    progress: number;
-    updated_at: string;
-  }> {
-    return apiService.updateTodoActivity(activityId, data);
-  }
-
-  // Update alarm activity
-  async updateAlarmActivity(activityId: string, data: {
-    started_at?: string;
-    snoozed_at?: string;
-    updated_by: string;
-  }): Promise<{
-    activity_id: string;
-    started_at?: string;
-    snoozed_at?: string;
-    updated_at: string;
-  }> {
-    return apiService.updateAlarmActivity(activityId, data);
-  }
-
-  // Update tracker activity
-  async updateTrackerActivity(activityId: string, data: {
-    value: string;
-    time_added?: string;
-    updated_by: string;
-  }): Promise<{
-    activity_id: string;
-    value: string;
-    time_added?: string;
-    updated_at: string;
-  }> {
-    return apiService.updateTrackerActivity(activityId, data);
-  }
-
-  // Update websearch activity
-  async updateWebSearchActivity(activityId: string, data: {
-    status: 'pending' | 'completed' | 'failed';
-    reaction?: string;
-    summary?: string;
-    source_json?: any;
-    updated_by: string;
-  }): Promise<{
-    activity_id: string;
-    status: 'pending' | 'completed' | 'failed';
-    reaction?: string;
-    summary?: string;
-    source_json?: any;
-    updated_at: string;
-  }> {
-    return apiService.updateWebSearchActivity(activityId, data);
-  }
-
-  // Get todo details
-  async getTodoDetails(widgetId: string): Promise<{
-    id: string;
-    title: string;
-    todo_type: 'habit' | 'task' | 'event';
-    description: string;
-    due_date: string;
-    created_at: string;
-  }> {
-    return apiService.getTodoDetails(widgetId);
-  }
-
-  // Get alarm details
-  async getAlarmDetails(widgetId: string): Promise<{
-    id: string;
-    title: string;
-    description: string;
+    importance: number;
+    category: string;
+    description?: string;
     alarm_times: string[];
-    target_value: string;
-    is_snoozable: boolean;
-    created_at: string;
-  }> {
-    return apiService.getAlarmDetails(widgetId);
+    is_snoozable?: boolean;
+  }): Promise<DashboardWidget> {
+    return this.createWidget({
+      widget_type: 'alarm',
+      title: data.title,
+      frequency: 'daily',
+      importance: data.importance,
+      category: data.category,
+      description: data.description,
+      widget_config: {
+          alarm_times: data.alarm_times,
+          is_snoozable: data.is_snoozable ?? true
+        }
+      
+    });
   }
 
-  // Get tracker details
-  async getTrackerDetails(widgetId: string): Promise<{
-    id: string;
+  // Create a todo widget
+  async createTodoWidget(data: {
     title: string;
+    importance: number;
+    category: string;
+    description?: string;
+    todo_type: 'habit' | 'task' | 'event';
+    due_date?: string;
+  }): Promise<DashboardWidget> {
+    return this.createWidget({
+      widget_type: 'todo',
+      title: data.title,
+      frequency: 'daily',
+      importance: data.importance,
+      category: data.category,
+      description: data.description,
+      widget_config: {
+          todo_type: data.todo_type,
+          due_date: data.due_date
+        
+      }
+    });
+  }
+
+  // Create a single item tracker widget
+  async createTrackerWidget(data: {
+    title: string;
+    importance: number;
+    category: string;
+    description?: string;
     value_type: string;
     value_unit: string;
     target_value: string;
-    created_at: string;
-  }> {
-    return apiService.getTrackerDetails(widgetId);
+  }): Promise<DashboardWidget> {
+    return this.createWidget({
+      widget_type: 'single_item_tracker',
+      title: data.title,
+      frequency: 'daily',
+      importance: data.importance,
+      category: data.category,
+      description: data.description,
+      widget_config: {
+          value_type: data.value_type,
+          value_unit: data.value_unit,
+          target_value: data.target_value
+        
+      }
+    });
   }
 
-  // Get websearch details
-  async getWebSearchDetails(widgetId: string): Promise<{
-    id: string;
+  // Create a web search widget
+  async createWebSearchWidget(data: {
     title: string;
-    created_at: string;
-  }> {
-    return apiService.getWebSearchDetails(widgetId);
+    importance: number;
+    category: string;
+    description?: string;
+    frequency?: string;
+    search_query_detailed: string;
+  }): Promise<DashboardWidget> {
+    return this.createWidget({
+      widget_type: 'websearch',
+      title: data.title,
+      frequency: data.frequency || 'daily',
+      importance: data.importance,
+      category: data.category,
+      description: data.description,
+      widget_config: {
+        search_query_detailed: data.search_query_detailed
+        }
+      
+    });
   }
+
+  // Update alarm activity
+  async updateAlarmActivity(dailyWidgetId: string, alarmActivity: {
+    started_at?: string;
+    snoozed_at?: string;
+    snooze_until?: string;
+    snooze_count?: number;
+    activity_history?: Array<{
+      type: 'snooze' | 'stop';
+      timestamp: string;
+      snooze_until?: string;
+      snooze_count?: number;
+      total_snooze_count?: number;
+    }>;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    activity_data: Record<string, any>;
+  }> {
+    return this.updateActivity(dailyWidgetId, alarmActivity);
+  }
+
+  // Update todo activity
+  async updateTodoActivity(dailyWidgetId: string, todoActivity: {
+    status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+    progress?: number;
+    started_at?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    activity_data: Record<string, any>;
+  }> {
+    return this.updateActivity(dailyWidgetId, todoActivity);
+  }
+
+  // Update tracker activity
+  async updateTrackerActivity(dailyWidgetId: string, trackerActivity: {
+    value: string;
+    time_added?: string;
+    notes?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    activity_data: Record<string, any>;
+  }> {
+    return this.updateActivity(dailyWidgetId, trackerActivity);
+  }
+
+  // Update web search activity
+  async updateWebSearchActivity(dailyWidgetId: string, webSearchActivity: {
+    status: 'pending' | 'completed' | 'failed';
+    reaction?: string;
+    summary?: string;
+    source_json?: any;
+    completed_at?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    activity_data: Record<string, any>;
+  }> {
+    return this.updateActivity(dailyWidgetId, webSearchActivity);
+  }
+
+  // Get alarm activity data
+  async getAlarmActivity(dailyWidgetId: string): Promise<DailyWidget> {
+    const activityData = await this.getTodayWidget(dailyWidgetId);
+    return activityData || {};
+  }
+
+  // Get todo activity data
+  async getTodoActivity(dailyWidgetId: string): Promise<DailyWidget> {
+    const activityData = await this.getTodayWidget(dailyWidgetId);
+    return activityData || {};
+  }
+
+  // Get tracker activity data
+  async getTrackerActivity(dailyWidgetId: string): Promise<DailyWidget> {
+    const activityData = await this.getTodayWidget(dailyWidgetId);
+    return activityData || {};
+  }
+
+  // Get web search activity data
+  async getWebSearchActivity(dailyWidgetId: string): Promise<DailyWidget> {
+    const activityData = await this.getTodayWidget(dailyWidgetId);
+    return activityData || {};
+  }
+
+  // ============================================================================
+  // WIDGET-SPECIFIC METHODS
+  // ============================================================================
 
   // Get alarm details and activity
-  async getAlarmDetailsAndActivity(widgetId: string): Promise<{
-    alarm_details: {
-      id: string;
-      widget_id: string;
-      title: string;
-      description: string;
-      alarm_times: string[];
-      target_value: string;
-      is_snoozable: boolean;
-      created_at: string;
-      updated_at: string;
-    };
-    activity: {
-      id: string;
-      started_at: string;
-      snoozed_at: string;
-      created_at: string;
-      updated_at: string;
-    };
-  }> {
+  async getAlarmDetailsAndActivity(widgetId: string): Promise<any> {
     return apiService.getAlarmDetailsAndActivity(widgetId);
   }
 
   // Get tracker details and activity
-  async getTrackerDetailsAndActivity(widgetId: string): Promise<{
-    tracker_details: {
-      id: string;
-      widget_id: string;
-      title: string;
-      value_type: string;
-      value_unit: string;
-      target_value: string;
-      created_at: string;
-      updated_at: string;
-    };
-    activity: {
-      id: string;
-      value: string;
-      time_added: string;
-      created_at: string;
-      updated_at: string;
-    };
-  }> {
-    return apiService.getTrackerDetailsAndActivity(widgetId);
+  async getTrackerDetailsAndActivity(widgetId: string): Promise<any> {
+    // This would typically call a specific tracker endpoint
+    // For now, we'll use the general getTodayWidget method
+    return this.getTodayWidget(widgetId);
   }
 
-  // Get websearch summary and activity
-  async getWebSearchSummaryAndActivity(widgetId: string): Promise<{
-    websearch_details: {
-      id: string;
-      widget_id: string;
-      title: string;
-      created_at: string;
-      updated_at: string;
-    };
-    activity: {
-      id: string;
-      status: 'pending' | 'completed' | 'failed';
-      reaction: string;
-      summary: string;
-      source_json: any;
-      created_at: string;
-      updated_at: string;
-    };
-  }> {
-    return apiService.getWebSearchSummaryAndActivity(widgetId);
-  }
-
-  // Get websearch AI summary
-  async getWebSearchAISummary(widgetId: string): Promise<{
-    ai_summary_id: string;
-    widget_id: string;
-    query: string;
-    summary: string;
-    sources: Array<{
-      title: string;
-      url: string;
-    }>;
-    search_successful: boolean;
-    results_count: number;
-    ai_model_used: string;
-    generation_type: string;
-    created_at: string;
-    updated_at: string;
-  }> {
-    return apiService.getWebSearchAISummary(widgetId);
+  // Get todo item details and activity
+  async getTodoItemDetailsAndActivity(dailyWidgetId: string, _widgetId: string): Promise<any> {
+    // This would typically call a specific todo endpoint
+    // For now, we'll use the general getTodayWidget method
+    return this.getTodayWidget(dailyWidgetId);
   }
 }
 

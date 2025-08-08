@@ -10,7 +10,7 @@ export interface FrequencySettings {
 // Frequency set mapping
 export const getFrequencySet = (value: number): string => {
   if (value < 0.25) return 'OCCASIONAL';
-  if (value < 0.5) return 'COMFORTABLE';
+  if (value < 0.50) return 'COMFORTABLE';
   if (value < 0.75) return 'BALANCED';
   return 'RIGOROUS';
 };

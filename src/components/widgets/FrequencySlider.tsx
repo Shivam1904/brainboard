@@ -8,18 +8,17 @@ interface FrequencySliderProps {
 }
 
 const FrequencySlider = ({ value, onChange, pillarColor = '#3B82F6' }: FrequencySliderProps) => {
-  const points = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1];
-  const labels = ['', 'OCCASIONAL', '', 'COMFORTABLE', '', 'BALANCED', '', 'RIGOROUS', ''];
+  const labels = ['OCCASIONAL', 'COMFORTABLE', 'BALANCED', 'RIGOROUS'];
   
   return (
     <div className="w-full">
       {/* Labels */}
       <div className="flex justify-between mb-4">
-        {points.map((point, index) => (
+        {labels.map((label, index) => (
           <div 
             key={index} 
             className={`text-xs px-2 py-1 rounded-full transition-all ${
-              value >= point - 0.125 && value < point + 0.124
+              getFrequencySet(value) == label
                 ? 'bg-blue-100 text-blue-800 font-bold shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
@@ -44,12 +43,6 @@ const FrequencySlider = ({ value, onChange, pillarColor = '#3B82F6' }: Frequency
           }}
         />
         
-        {/* Frequency set indicator */}
-        <div className="mt-3 text-center">
-          <span className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full text-sm font-bold shadow-lg">
-            {getFrequencySet(value)}
-          </span>
-        </div>
       </div>
     </div>
   );
