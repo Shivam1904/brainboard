@@ -147,7 +147,12 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
       'todo-event': 'Event Tracker',
       'alarm': 'Alarm',
       'single_item_tracker': 'Item Tracker',
-      'websearch': 'Web Search'
+      'websearch': 'Web Search',
+      'aiChat': 'Brainy AI',
+      'allSchedules': 'All Schedules',
+      'moodTracker': 'Mood Tracker',
+      'weatherWidget': 'Weather',
+      'simpleClock': 'Simple Clock'
     };
     return typeNames[type] || type;
   };
@@ -160,7 +165,12 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
       'todo-event': '📅',
       'alarm': '⏰',
       'single_item_tracker': '📊',
-      'websearch': '🔍'
+      'websearch': '🔍',
+      'aiChat': '🤖',
+      'allSchedules': '⚙️',
+      'moodTracker': '😊',
+      'weatherWidget': '⛅️',
+      'simpleClock': '🕒'
     };
     return icons[type] || '⚙️';
   };

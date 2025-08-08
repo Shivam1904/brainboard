@@ -154,6 +154,54 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     icon: '🤖'
   },
 
+  // MOOD TRACKER (View-type, UI-managed visibility)
+  moodTracker: {
+    id: 'moodTracker',
+    apiWidgetType: 'moodTracker',
+    title: 'Mood Tracker',
+    description: 'Track and reflect on your mood',
+    component: 'MoodTrackerWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 20, h: 24 },
+    defaultSize: { w: 14, h: 8 },
+    deletable: true,
+    resizable: true,
+    category: 'health',
+    icon: '😊'
+  },
+
+  // WEATHER (View-type, UI-managed visibility)
+  weatherWidget: {
+    id: 'weatherWidget',
+    apiWidgetType: 'weatherWidget',
+    title: 'Weather',
+    description: 'Current weather and forecast',
+    component: 'WeatherWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 20, h: 24 },
+    defaultSize: { w: 8, h: 8 },
+    deletable: true,
+    resizable: true,
+    category: 'information',
+    icon: '⛅️'
+  },
+
+  // SIMPLE CLOCK (View-type, UI-managed visibility)
+  simpleClock: {
+    id: 'simpleClock',
+    apiWidgetType: 'simpleClock',
+    title: 'Simple Clock',
+    description: 'Current time at a glance',
+    component: 'SimpleClockWidget',
+    minSize: { w: 6, h: 6 },
+    maxSize: { w: 20, h: 20 },
+    defaultSize: { w: 8, h: 8 },
+    deletable: true,
+    resizable: true,
+    category: 'utilities',
+    icon: '🕒'
+  },
+
   // ALARM Widget
   alarm: {
     id: 'alarm',
@@ -195,6 +243,9 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
     WIDGET_CONFIGS.allSchedules, // UI-only widget
     WIDGET_CONFIGS.calendar,
     WIDGET_CONFIGS.aiChat,
+    WIDGET_CONFIGS.moodTracker,
+    WIDGET_CONFIGS.weatherWidget,
+    WIDGET_CONFIGS.simpleClock,
     WIDGET_CONFIGS.alarm,
   ];
 };

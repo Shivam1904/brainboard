@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { Responsive, WidthProvider, Layout } from 'react-grid-layout'
 import WebSearchWidget from './widgets/WebSearchWidget';
 import TaskListWidget from './widgets/TaskListWidget'
-import SingleItemTrackerWidget from './widgets/SingleItemTrackerWidget'
-import AlarmWidget from './widgets/AlarmWidget'
 import BaseWidget from './widgets/BaseWidget'
 import CalendarWidget from './widgets/CalendarWidget'
 import AdvancedSingleTaskWidget from './widgets/AdvancedSingleTaskWidget'
@@ -13,9 +11,9 @@ import { GRID_CONFIG, getGridCSSProperties, findEmptyPosition } from '../config/
 import { dashboardService } from '../services/dashboard'
 // import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
-import HabitListWidget from './widgets/HabitListWidget';
-import EventTrackerWidget from './widgets/EventTrackerWidget';
 import AiChatWidget from './widgets/AiChatWidget';
+import MoodTrackerWidget from './widgets/MoodTrackerWidget';
+import SimpleClockWidget from './widgets/SimpleClockWidget';
 import { apiService, DailyWidget } from '../services/api';
 import { ApiCategory, ApiFrequency, ApiWidgetType } from '@/types/widgets';
 
@@ -112,11 +110,11 @@ const Dashboard = () => {
       const uiWidgets: DailyWidget[] = [];
       
       // Track view widget states for the AddWidgetButton
-      const viewWidgetTypes = ['allSchedules', 'aiChat'];
+      const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
       const allWidgetsDataViewWidgets = allWidgetsData.filter(w => viewWidgetTypes.includes(w.widget_type));
       setViewWidgetStates(allWidgetsDataViewWidgets);
 
-      // Step 1: Handle view widgets (allSchedules, aiChat) from all widgets list
+      // Step 1: Handle view widgets (allSchedules, aiChat, moodTracker) from all widgets list
       viewWidgetTypes.forEach(widgetType => {
         // Find the widget in all widgets list
         const allWidgetsViewWidget = allWidgetsData.find(w => w.widget_type === widgetType);
@@ -481,14 +479,14 @@ const Dashboard = () => {
     const widgetType = widget?.widget_type || 'widget'
     
     // Prevent removal of view widgets - they should be managed through the Views dropdown
-    if (widget?.widget_type === 'allSchedules' || widget?.widget_type === 'aiChat') {
+    if (widget?.widget_type === 'allSchedules' || widget?.widget_type === 'aiChat' || widget?.widget_type === 'moodTracker' || widget?.widget_type === 'weatherWidget' || widget?.widget_type === 'simpleClock') {
       alert('View widgets cannot be removed directly. Use the Views dropdown to toggle their visibility.');
       return;
     }
     
-    // Prevent removal of the automatically included "All Schedules" widget
-    if (dailyWidgetId === 'auto-all-schedules') {
-      alert('The "All Schedules" widget cannot be removed as it is automatically included for widget management.');
+    // Prevent removal of the automatically included view widgets
+    if (dailyWidgetId === 'auto-all-schedules' || dailyWidgetId === 'auto-moodTracker' || dailyWidgetId === 'auto-aiChat' || dailyWidgetId === 'auto-weatherWidget' || dailyWidgetId === 'auto-simpleClock') {
+      alert('This view widget is managed via the Views dropdown and cannot be removed directly.');
       return;
     }
     
@@ -595,10 +593,24 @@ const Dashboard = () => {
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );
+      case 'moodTracker':
+        return (
+          <MoodTrackerWidget
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+        );
       case 'allSchedules':
         return (
           <AllSchedulesWidget
             onWidgetAddedToToday={() => fetchTodayWidgets()}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+        );
+      case 'simpleClock':
+        return (
+          <SimpleClockWidget
+            widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );

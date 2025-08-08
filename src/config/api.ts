@@ -29,6 +29,7 @@ export const API_CONFIG = {
     removeWidgetFromToday: '/api/v1/dashboard/widget/removefromtoday/{daily_widget_id}', // POST - Remove widget from today
     updateActivity: '/api/v1/dashboard/daily-widgets/{daily_widget_id}/updateactivity', // PUT - Update activity data
     getTodayWidget: '/api/v1/dashboard/daily-widgets/{daily_widget_id}/getTodayWidget', // GET - Get activity data
+    getTodayWidgetbyWidgetId: '/api/v1/dashboard/daily-widgets/{widget_id}/getTodayWidgetbyWidgetId', // GET - Get activity data by widget_id
   },
   
   // Health check endpoints

@@ -28,9 +28,9 @@ const AddWidgetButton = ({ onAddWidget,  existingViewWidgets = [] }: AddWidgetBu
     ['calendar', 'weekchart'].includes(widget.id) && isImplemented(widget.id)
   )
 
-  // View widgets (aiChat, allSchedules, weather, currentTime)
+  // View widgets (aiChat, allSchedules, moodTracker, weatherWidget, simpleClock)
   const viewWidgets = allWidgets.filter(widget => 
-    ['aiChat', 'allSchedules', 'weather', 'currentTime'].includes(widget.id) && isImplemented(widget.id)
+    ['aiChat', 'allSchedules', 'moodTracker', 'weatherWidget', 'simpleClock'].includes(widget.id) && isImplemented(widget.id)
   )
 
   const handleAddMission = () => {

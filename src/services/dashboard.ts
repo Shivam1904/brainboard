@@ -102,6 +102,11 @@ export class DashboardService {
     return apiService.getTodayWidget(dailyWidgetId);
   }
 
+  // Get today's daily widget by underlying widget id
+  async getTodayWidgetByWidgetId(widgetId: string): Promise<DailyWidget | null> {
+    return apiService.getTodayWidgetByWidgetId(widgetId);
+  }
+
   // ============================================================================
   // CONVENIENCE METHODS FOR WIDGET-SPECIFIC OPERATIONS
   // ============================================================================
@@ -306,7 +311,7 @@ export class DashboardService {
   }
 
   // Get todo item details and activity
-  async getTodoItemDetailsAndActivity(dailyWidgetId: string, widgetId: string): Promise<any> {
+  async getTodoItemDetailsAndActivity(dailyWidgetId: string, _widgetId: string): Promise<any> {
     // This would typically call a specific todo endpoint
     // For now, we'll use the general getTodayWidget method
     return this.getTodayWidget(dailyWidgetId);

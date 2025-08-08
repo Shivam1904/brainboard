@@ -242,6 +242,12 @@ class ApiService {
     return this.request<DailyWidget>(url);
   }
 
+  // GET /api/v1/dashboard/daily-widgets/{widget_id}/getTodayWidgetbyWidgetId
+  async getTodayWidgetByWidgetId(widgetId: string): Promise<DailyWidget | null> {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboard.getTodayWidgetbyWidgetId, { widget_id: widgetId });
+    return this.request<DailyWidget | null>(url);
+  }
+
   // ============================================================================
   // WIDGET-SPECIFIC API METHODS
   // ============================================================================

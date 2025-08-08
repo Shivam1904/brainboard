@@ -135,3 +135,15 @@ async def get_activity_data(
         return await service.get_today_widget(daily_widget_id)
     except Exception as e:
         raise raise_database_error(f"Failed to get activity data: {str(e)}")
+
+@router.get("/daily-widgets/{widget_id}/getTodayWidgetbyWidgetId")
+async def get_activity_data(
+    widget_id: str,
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Get activity data for a daily widget."""
+    try:
+        service = DailyWidgetService(db)
+        return await service.get_today_widget_by_widget_id(widget_id)
+    except Exception as e:
+        raise raise_database_error(f"Failed to get activity data: {str(e)}")

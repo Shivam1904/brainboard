@@ -287,6 +287,25 @@ class DailyWidgetService:
             print(f"Failed to update activity data for DailyWidget {daily_widget_id}: {e}")
             raise
 
+    async def get_today_widget_by_widget_id(self, widget_id: str) -> Dict[str, Any]:
+        """Get activity data for a daily widget by widget_id."""
+        try:
+            stmt = select(DailyWidget).where(
+                and_(
+                    DailyWidget.widget_id == widget_id,
+                    DailyWidget.delete_flag == False
+                )
+            )
+            
+            result = await self.db.execute(stmt)
+            daily_widget = result.scalars().first()
+
+            return daily_widget
+        except Exception as e:
+            logger.error(f"Failed to get activity data for DailyWidget {widget_id}: {e}")
+            print(f"Failed to get activity data for DailyWidget {widget_id}: {e}")
+            raise
+
     async def get_today_widget(self, daily_widget_id: str) -> Dict[str, Any]:
         """Get activity data for a daily widget."""
         try:
