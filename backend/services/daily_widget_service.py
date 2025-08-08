@@ -6,7 +6,7 @@ Daily Widget service for business logic.
 # IMPORTS
 # ============================================================================
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, and_, inspect
+from sqlalchemy import select, update, and_, inspect, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 from datetime import datetime, date, timezone
@@ -293,6 +293,7 @@ class DailyWidgetService:
             stmt = select(DailyWidget).where(
                 and_(
                     DailyWidget.widget_id == widget_id,
+                    DailyWidget.date == date.today(),
                     DailyWidget.delete_flag == False
                 )
             )
@@ -354,3 +355,73 @@ class DailyWidgetService:
             logger.error(f"Failed to get activity data for DailyWidget {daily_widget_id}: {e}")
             print(f"Failed to get activity data for DailyWidget {daily_widget_id}: {e}")
             raise 
+
+    async def get_widgets_for_calendar_period(
+        self,
+        calendar_widget_id: str,
+        start_date: date,
+        end_date: date
+    ) -> List[Dict[str, Any]]:
+        """Get widgets linked to a calendar via widget_config.selected_calendar for a period.
+
+        Joins DailyWidget with DashboardWidgetDetails and filters:
+        - DailyWidget.date between start_date and end_date
+        - DailyWidget.is_active == True
+        - Both records not deleted
+        - DashboardWidgetDetails.widget_config.selected_calendar == calendar_widget_id
+        """
+        try:
+            stmt = select(
+                DailyWidget,
+                DashboardWidgetDetails
+            ).join(
+                DashboardWidgetDetails,
+                DailyWidget.widget_id == DashboardWidgetDetails.id
+            ).where(
+                and_(
+                    DailyWidget.date >= start_date,
+                    DailyWidget.date <= end_date,
+                    DailyWidget.is_active == True,
+                    DailyWidget.delete_flag == False,
+                    DashboardWidgetDetails.delete_flag == False,
+                    # Filter on JSON widget_config.selected_calendar using SQLite JSON_EXTRACT
+                    func.json_extract(DashboardWidgetDetails.widget_config, '$.selected_calendar') == calendar_widget_id
+                )
+            ).order_by(DailyWidget.date.asc(), DailyWidget.priority.desc())
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
+
+            widgets_data: List[Dict[str, Any]] = []
+            for daily_widget, widget_details in rows:
+                widgets_data.append({
+                    "id": daily_widget.id,
+                    "daily_widget_id": daily_widget.id,
+                    "widget_id": daily_widget.widget_id,
+                    "widget_type": widget_details.widget_type,
+                    "priority": daily_widget.priority,
+                    "reasoning": daily_widget.reasoning,
+                    "date": daily_widget.date.isoformat(),
+                    "is_active": daily_widget.is_active,
+                    "title": widget_details.title,
+                    "frequency": widget_details.frequency,
+                    "importance": widget_details.importance,
+                    "category": widget_details.category,
+                    "description": widget_details.description,
+                    "is_permanent": widget_details.is_permanent,
+                    "widget_config": widget_details.widget_config,
+                    "activity_data": daily_widget.activity_data,
+                    "created_at": daily_widget.created_at.isoformat() if daily_widget.created_at else None,
+                    "updated_at": daily_widget.updated_at.isoformat() if daily_widget.updated_at else None,
+                    "delete_flag": daily_widget.delete_flag
+                })
+
+            return widgets_data
+        except Exception as e:
+            logger.error(
+                f"Failed to get widgets for calendar {calendar_widget_id} between {start_date} and {end_date}: {e}"
+            )
+            print(
+                f"Failed to get widgets for calendar {calendar_widget_id} between {start_date} and {end_date}: {e}"
+            )
+            raise

@@ -32,6 +32,11 @@ export const API_CONFIG = {
     getTodayWidgetbyWidgetId: '/api/v1/dashboard/daily-widgets/{widget_id}/getTodayWidgetbyWidgetId', // GET - Get activity data by widget_id
   },
   
+  // Tracker endpoints (/api/v1/tracker/)
+  tracker: {
+    getWidgetActivityForCalendar: '/api/v1/tracker/getWidgetActivityForCalendar',
+  },
+  
   // Health check endpoints
   health: {
     getHealth: '/health', // GET - Basic health check

@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from routes import dashboard_widgets, chat, dashboard
+from routes import tracker as tracker_routes
 # from routes import ai  # Temporarily commented out for testing
 
 # Load environment variables from .env file
@@ -67,6 +68,7 @@ app.include_router(dashboard_widgets.router, prefix=API_PREFIX_DASHBOARD_WIDGETS
 app.include_router(chat.router, prefix=API_PREFIX_CHAT, tags=[API_TAG_CHAT])
 app.include_router(dashboard.router, prefix=API_PREFIX_DASHBOARD, tags=[API_TAG_DASHBOARD])
 # app.include_router(ai.router, tags=["AI Operations"])  # Temporarily commented out for testing
+app.include_router(tracker_routes.router, prefix="/api/v1/tracker", tags=["tracker"]) 
 
 # ============================================================================
 # ENDPOINTS

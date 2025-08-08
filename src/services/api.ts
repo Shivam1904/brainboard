@@ -287,6 +287,23 @@ class ApiService {
     return this.request<{ status: string; message: string }>(url);
   }
 
+  // ============================================================================
+  // TRACKER ENDPOINTS (/api/v1/tracker/)
+  // ============================================================================
+
+  async getWidgetActivityForCalendar(params: {
+    calendar_id: string;
+    start_date: string; // YYYY-MM-DD
+    end_date: string;   // YYYY-MM-DD
+  }): Promise<DailyWidget[]> {
+    const url = buildApiUrl(API_CONFIG.tracker.getWidgetActivityForCalendar, {
+      calendar_id: params.calendar_id,
+      start_date: params.start_date,
+      end_date: params.end_date,
+    });
+    return this.request<DailyWidget[]>(url);
+  }
+
   // GET /
   async getApiInfo(): Promise<{ message: string; version: string; docs: string; health: string }> {
     const url = buildApiUrl(API_CONFIG.health.getRoot);

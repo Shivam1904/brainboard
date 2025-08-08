@@ -7,8 +7,7 @@ import {
   Save, 
   Clock, 
   RotateCcw, 
-  Check, 
-  AlertTriangle
+  Check
 } from 'lucide-react';
 import { DailyWidget } from '../../services/api';
 import { dashboardService } from '../../services/dashboard';
@@ -446,6 +445,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
   // Extract data for different features
   const trackerActivity = activityData || {};
   const todoActivity = activityData || {};
+  const isCompleted = widgetData.activity_data?.status === 'completed';
 
   const formatSnoozeTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
@@ -470,13 +470,40 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
       icon={isAlerting ? "" : widgetData.activity_data?.status==='completed' ? "✅" : "◻️"} 
       onRemove={onRemove}
     >
-      <div className="h-full flex flex-col p-4 overflow-y-auto">
+      <div
+        className={`h-full flex flex-col p-4 overflow-y-auto rounded-lg transition-all ${
+          isAlerting
+            ? 'bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 text-white animate-pulse'
+            : ''
+        }`}
+      >
         {/* Error Indicator */}
         {error && (
           <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
             <p className="text-xs text-orange-700 text-center">{error}</p>
           </div>
         )}
+
+        {/* Top bar: Next alarm + completed badge */}
+        <div className="flex items-center justify-between">
+          {widgetConfig.alarm_times && widgetConfig.alarm_times.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Clock className={`h-4 w-4 ${isAlerting ? 'text-white' : 'text-yellow-600'}`} />
+              <span className={`text-xs ${isAlerting ? 'text-white' : 'text-yellow-800'}`}>
+                Next: {getNextAlarmTime(widgetConfig.alarm_times)}
+              </span>
+              <span className={`text-[10px] ${isAlerting ? 'text-white/80' : 'text-yellow-700'}`}>
+                [{widgetConfig.alarm_times.join(', ')}]
+              </span>
+            </div>
+          )}
+          {isCompleted && (
+            <span className={`${isAlerting ? 'bg-white/20 text-white' : 'bg-green-50 text-green-700'} px-2 py-1 rounded text-xs inline-flex items-center gap-1`}>
+              <Check className="h-3 w-3" />
+              Completed
+            </span>
+          )}
+        </div>
 
         {/* Task Status Section */}
         {widgetData.widget_type === 'todo' && (
@@ -534,136 +561,112 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
           </div>
         )}
 
-        {/* Alarm Section */}
-        {widgetConfig.alarm_times && widgetConfig.alarm_times.length > 0 && (
-          <div className={`mb-4 p-3 rounded-lg transition-all duration-300 ${
-            isAlerting 
-              ? 'bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 animate-pulse shadow-lg' 
-              : 'bg-yellow-50 border border-yellow-200'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex flex-row items-center gap-2">
-                <Clock className={`h-4 w-4 ${isAlerting ? 'text-white' : 'text-yellow-600'}`} />
-                <span className={`text-sm font-medium ${isAlerting ? 'text-white' : 'text-yellow-800'}`}>
-                  Next: {getNextAlarmTime(widgetConfig.alarm_times)}
-
-                  <span className={`ml-2 text-sm ${isAlerting ? 'text-white' : 'text-yellow-700'}`}>
-                    [{widgetConfig.alarm_times.join(', ')}]
-                  </span>
-                  </span>
-                </div>
-
-        {widgetConfig.value_type && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            {/* Current Value Display */}
-            <div className="text-center mb-3">
-              <div className="flex flex-row items-center justify-center text-2xl font-bold text-green-900">
+        {/* Centered tracker & minimal details */}
+        <div className="flex-1 flex flex-col items-center justify-center">
+          {widgetConfig.value_type && (
+            <div className={`${isAlerting ? 'bg-white/10' : 'bg-green-50'} ${isAlerting ? 'border-white/30' : 'border-green-200'} border rounded-xl px-5 py-4 text-center` }>
+              <div className={`text-4xl font-extrabold ${isAlerting ? 'text-white' : 'text-green-900'}`}>
                 {trackerActivity.value || '0'}
-                {widgetConfig.value_unit && <span className="text-sm text-green-600 ml-1">{widgetConfig.value_unit}</span>}
-
-              <button
-                 onClick={() => setShowAddForm(true)}
-                 disabled={updating}
-                 className={`ml-1 px-2 py-1 rounded text-xs transition-colors flex items-center gap-1 ${updating ? 'bg-green-300 text-white cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'}`}
-               >
-                 <Plus className="h-3 w-3" />
-               </button>
-              </div>
-            </div>
-
-            {/* Target and Progress */}
-            {widgetConfig.target_value && (
-              <div className="mb-3">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1">
-                    <Target className="h-3 w-3 text-green-600" />
-                    <span className="text-xs font-medium text-green-700">Target</span>
-                  </div>
-                  <span className="text-xs text-green-600">
-                    {widgetConfig.target_value}{widgetConfig.value_unit}
-                  </span>
-                </div>
-                
-                {trackerActivity.value && widgetConfig.target_value && (
-                  <div className="w-full bg-green-200 rounded-full h-1.5">
-                    <div 
-                      className={`h-1.5 rounded-full ${getProgressColor((parseFloat(trackerActivity.value) / parseFloat(widgetConfig.target_value)) * 100)}`}
-                      style={{ width: `${Math.min((parseFloat(trackerActivity.value) / parseFloat(widgetConfig.target_value)) * 100, 100)}%` }}
-                    ></div>
-                  </div>
+                {widgetConfig.value_unit && (
+                  <span className={`ml-1 text-base ${isAlerting ? 'text-white/80' : 'text-green-600'}`}>{widgetConfig.value_unit}</span>
                 )}
               </div>
-            )}
-          </div>
-        )}
+              <div className="mt-3">
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  disabled={updating || isCompleted}
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium ${
+                    updating || isCompleted
+                      ? `${isAlerting ? 'bg-white/30 text-white/70' : 'bg-green-300 text-white'} cursor-not-allowed`
+                      : `${isAlerting ? 'bg-white text-red-600 hover:bg-white/90' : 'bg-green-600 text-white hover:bg-green-700'}`
+                  }`}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add value
+                </button>
               </div>
-              {isAlerting && (
-                <div className="animate-bounce">
-                  <AlertTriangle className="h-4 w-4 text-white" />
+
+              {widgetConfig.target_value && (
+                <div className="mt-3">
+                  <div className={`text-xs ${isAlerting ? 'text-white/80' : 'text-green-700'} mb-1 flex items-center justify-center gap-1`}>
+                    <Target className="h-3 w-3" /> Target {widgetConfig.target_value}
+                    {widgetConfig.value_unit}
+                  </div>
+                  {trackerActivity.value && (
+                    <div className={`${isAlerting ? 'bg-white/30' : 'bg-green-200'} rounded-full h-2 w-48 mx-auto`}>
+                      <div
+                        className={`${isAlerting ? 'bg-white' : getProgressColor(
+                          (parseFloat(trackerActivity.value) / parseFloat(widgetConfig.target_value)) * 100
+                        )} h-2 rounded-full`}
+                        style={{
+                          width: `${Math.min(
+                            (parseFloat(trackerActivity.value) / parseFloat(widgetConfig.target_value)) * 100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            
+          )}
 
-                         {/* Snooze countdown */}
-             {snoozeTimeLeft !== null && snoozeTimeLeft > 0 && (
-               <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded">
-                 <div className="text-xs text-yellow-800">
-                   ⏰ Snoozed for {formatSnoozeTime(snoozeTimeLeft)}
-                 </div>
-               </div>
-             )}
+          {/* Snooze countdown */}
+          {snoozeTimeLeft !== null && snoozeTimeLeft > 0 && (
+            <div className={`mt-3 px-3 py-1 rounded ${isAlerting ? 'bg-white/10 text-white' : 'bg-yellow-100 text-yellow-800 border border-yellow-300'}`}>
+              <span className="text-xs">⏰ Snoozed for {formatSnoozeTime(snoozeTimeLeft)}</span>
+            </div>
+          )}
+        </div>
 
-
-
-             {/* Activity History */}
-             {widgetData?.activity_data?.activity_history && 
-              widgetData?.activity_data?.activity_history.length > 0 && (
-               <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded">
-                 <div className="text-xs text-gray-600 mb-1">Activity History:</div>
-                 <div className="space-y-1">
-                   {widgetData?.activity_data?.activity_history.slice(-3).map((activity: any, index: number) => (
-                     <div key={index} className="text-xs text-gray-500 flex justify-between">
-                       <span>
-                         {activity.type === 'snooze' ? '⏰ Snoozed' : '🛑 Stopped'}
-                       </span>
-                       <span>
-                         {new Date(activity.timestamp).toLocaleTimeString('en-US', { 
-                           hour: 'numeric', 
-                           minute: '2-digit',
-                           hour12: true 
-                         })}
-                       </span>
-                     </div>
-                   ))}
-                 </div>
-               </div>
-             )}
-
-                         {/* Action buttons - only show when alerting */}
-             {isAlerting && (
-               <div className="flex gap-2 mt-3">
-                 <button
-                   onClick={snoozeAlarm}
-                   disabled={updating}
-                   className={`flex-1 px-3 py-1 rounded text-xs transition-colors flex items-center justify-center gap-1 ${updating ? 'bg-blue-300 text-white cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                 >
-                   <RotateCcw className={`h-3 w-3 ${updating ? 'animate-spin' : ''}`} />
-                   Snooze
-                 </button>
-                 <button
-                   onClick={stopAlarm}
-                   disabled={updating}
-                   className={`flex-1 px-3 py-1 rounded text-xs transition-colors flex items-center justify-center gap-1 ${updating ? 'bg-green-300 text-white cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'}`}
-                 >
-                   <Check className="h-3 w-3" />
-                   Stop
-                 </button>
-               </div>
-             )}
+        {/* Actions when ringing */}
+        {isAlerting && !isCompleted && (
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={snoozeAlarm}
+              disabled={updating}
+              className={`flex-1 px-3 py-2 rounded text-sm transition-colors flex items-center justify-center gap-2 ${
+                updating ? 'bg-white/40 text-white cursor-not-allowed' : 'bg-white text-red-600 hover:bg-white/90'
+              }`}
+            >
+              <RotateCcw className={`h-4 w-4 ${updating ? 'animate-spin' : ''}`} />
+              Snooze
+            </button>
+            <button
+              onClick={stopAlarm}
+              disabled={updating}
+              className={`flex-1 px-3 py-2 rounded text-sm transition-colors flex items-center justify-center gap-2 ${
+                updating ? 'bg-white/40 text-white cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'
+              }`}
+            >
+              <Check className="h-4 w-4" />
+              Stop
+            </button>
           </div>
         )}
+
+        {/* Minimal Activity History */}
+        {widgetData?.activity_data?.activity_history &&
+          widgetData?.activity_data?.activity_history.length > 0 && (
+            <div className={`mt-3 p-2 rounded ${isAlerting ? 'bg-white/10 text-white' : 'bg-gray-50 text-gray-700 border border-gray-200'}`}>
+              <div className={`text-xs mb-1 ${isAlerting ? 'text-white/80' : 'text-gray-600'}`}>Recent activity</div>
+              <div className="space-y-1">
+                {widgetData?.activity_data?.activity_history.slice(-3).map((activity: any, index: number) => (
+                  <div key={index} className="text-xs flex justify-between opacity-90">
+                    <span>{activity.type === 'snooze' ? '⏰ Snoozed' : '🛑 Stopped'}</span>
+                    <span>
+                      {new Date(activity.timestamp).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
 
         {/* Add Value Modal */}

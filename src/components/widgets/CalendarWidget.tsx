@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
 import { getDummyCalendarData } from '../../data/widgetDummyData';
-import { DailyWidget } from '../../services/api';
+import { DailyWidget, apiService } from '../../services/api';
 
 interface CalendarEvent {
   id: string;
@@ -13,6 +13,7 @@ interface CalendarEvent {
   type: 'event' | 'milestone' | 'reminder' | 'task';
   priority: 'High' | 'Medium' | 'Low';
   description?: string;
+  category?: string;
 }
 
 interface CalendarDay {
@@ -86,15 +87,99 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
       setLoading(true);
       setError(null);
       setIsUsingDummyData(false);
-      
-      // TODO: Replace with real API call
-      // const response = await apiService.getCalendarData(widget.daily_widget_id, { year, month });
-      // setCalendarData(response);
-      
-      // Using dummy data for now
-      const dummyData = getDummyCalendarData(year, month);
-      setIsUsingDummyData(true);
-      setCalendarData(dummyData);
+
+      // Compute start and end of month
+      const startOfMonth = new Date(year, month - 1, 1);
+      const endOfMonth = new Date(year, month, 0);
+
+      // Fetch widgets linked to this calendar by selected_calendar
+      const items = await apiService.getWidgetActivityForCalendar({
+        calendar_id: widget.widget_id,
+        start_date: startOfMonth.toISOString().split('T')[0],
+        end_date: endOfMonth.toISOString().split('T')[0],
+      });
+
+      // Use dummy skeleton and overlay real events
+      const base = getDummyCalendarData(year, month) as unknown as CalendarData;
+      // Clear monthly stats when using real data
+      // (keep as-is if dummy provides it, we won't display in API mode)
+      // Reset events per day
+      base.days = base.days.map(d => ({ ...d, events: [], todosCompleted: 0, todosTotal: 0, habitStreak: 0, milestones: 0 }));
+      base.events = [];
+      base.milestones = [];
+
+      // Map API items to calendar events
+      const toPriority = (p?: string): 'High' | 'Medium' | 'Low' => {
+        if (p === 'HIGH') return 'High';
+        if (p === 'LOW') return 'Low';
+        return 'Medium';
+      };
+
+      const events = items.map(item => ({
+        id: item.daily_widget_id || item.id,
+        title: item.title || item.widget_type,
+        date: item.date || new Date().toISOString().split('T')[0],
+        type: (item.widget_type?.includes('todo') ? 'task' : item.widget_type?.includes('alarm') ? 'reminder' : 'event') as 'event' | 'milestone' | 'reminder' | 'task',
+        priority: toPriority(item.priority),
+        description: item.description,
+      }));
+
+      // Place events into days
+      const dayByKey = new Map(base.days.map(d => [d.date, d] as const));
+      for (const ev of events) {
+        const key = ev.date;
+        const day = dayByKey.get(key);
+        if (day) {
+          day.events.push(ev);
+        }
+      }
+
+      // Mark streak completions (flame icon) when streak is enabled and task completed
+      const todayStr = new Date().toISOString().split('T')[0];
+      for (const item of items) {
+        const streakType = (item as any).widget_config?.streak_type;
+        const hasStreak = streakType && streakType !== 'none';
+        const itemDate = item.date || todayStr;
+        const day = dayByKey.get(itemDate);
+        if (!day) continue;
+
+        // Determine completion from activity_data
+        const todoActivity = (item as any).activity_data?.todo_activity;
+        const isCompleted = todoActivity?.status === 'completed' || (typeof todoActivity?.progress === 'number' && todoActivity.progress >= 100);
+
+        if (hasStreak && isCompleted) {
+          day.habitStreak = (day.habitStreak || 0) + 1; // show flame icon
+        }
+      }
+
+      // Add upcoming milestones from widget_config (within month and not past today)
+      for (const item of items) {
+        const milestones = Array.isArray((item as any).widget_config?.milestones) ? (item as any).widget_config.milestones : [];
+        for (const m of milestones) {
+          if (!m?.due_date) continue;
+          const due = new Date(m.due_date);
+          if (due >= startOfMonth && due <= endOfMonth && due >= new Date()) {
+            const dateKey = m.due_date;
+            const day = dayByKey.get(dateKey);
+            if (day) {
+              day.milestones = (day.milestones || 0) + 1;
+              const milestoneEvent: CalendarEvent = {
+                id: `${item.id || item.daily_widget_id}-milestone-${dateKey}`,
+                title: m.title || `${item.title || 'Milestone'}`,
+                date: dateKey,
+                type: 'milestone',
+                priority: 'Medium',
+                description: m.description,
+              };
+              day.events.push(milestoneEvent);
+              base.milestones.push(milestoneEvent);
+            }
+          }
+        }
+      }
+
+      base.events = events;
+      setCalendarData(base);
     } catch (err) {
       setError('Failed to load calendar data');
       setIsUsingDummyData(true);
@@ -162,7 +247,7 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
   }
 
   return (
-    <BaseWidget title="Calendar" icon="📅" onRemove={onRemove}>
+    <BaseWidget title={widget.title} icon="📅" onRemove={onRemove}>
       <div className="px-4">
         {/* Calendar Header */}
         <div className="flex items-center justify-between">
