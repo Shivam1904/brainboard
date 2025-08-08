@@ -21,7 +21,7 @@ from schemas.widget import CreateWidgetRequest, WidgetType, Frequency
 # Widget configurations
 WIDGET_CONFIGS = [
     {
-        "widget_type": WidgetType.ALARM,
+        "widget_type": WidgetType.TODO_TASK,
         "frequency": Frequency.DAILY,
         "importance": 0.9,
         "title": "Morning Wake Up",
@@ -29,7 +29,7 @@ WIDGET_CONFIGS = [
         "alarm_time": "07:00"
     },
     {
-        "widget_type": WidgetType.TODO_EVENT,
+        "widget_type": WidgetType.TODO_TASK,
         "frequency": Frequency.WEEKLY,
         "importance": 0.9,
         "title": "Go for a run with Tam",
@@ -37,7 +37,7 @@ WIDGET_CONFIGS = [
         "description": "Weekly running session with Tam"
     },
     {
-        "widget_type": WidgetType.SINGLEITEMTRACKER,
+        "widget_type": WidgetType.TODO_TASK,
         "frequency": Frequency.DAILY,
         "importance": 0.1,
         "title": "Weight Tracking",
@@ -47,7 +47,7 @@ WIDGET_CONFIGS = [
         "target_value": "65"
     },
     {
-        "widget_type": WidgetType.ALARM,
+        "widget_type": WidgetType.TODO_TASK,
         "frequency": Frequency.DAILY,
         "importance": 0.7,
         "title": "Lunch Break",
@@ -63,7 +63,7 @@ WIDGET_CONFIGS = [
         "description": "Complete daily work tasks"
     },
     {
-        "widget_type": WidgetType.WEBSEARCH,
+        "widget_type": WidgetType.TODO_TASK,
         "frequency": Frequency.DAILY,
         "importance": 0.7,
         "title": "AI Trends 2024",
