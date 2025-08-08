@@ -37,6 +37,11 @@ export const API_CONFIG = {
     getWidgetActivityForCalendar: '/api/v1/tracker/getWidgetActivityForCalendar',
   },
   
+  // Weather endpoints (/api/v1/weather/)
+  weather: {
+    getWeather: '/api/v1/weather/', // GET - Get current weather data
+  },
+  
   // Health check endpoints
   health: {
     getHealth: '/health', // GET - Basic health check

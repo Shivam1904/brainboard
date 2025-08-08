@@ -14,6 +14,7 @@ import AllSchedulesWidget from './widgets/AllSchedulesWidget'
 import AiChatWidget from './widgets/AiChatWidget';
 import MoodTrackerWidget from './widgets/MoodTrackerWidget';
 import SimpleClockWidget from './widgets/SimpleClockWidget';
+import WeatherWidget from './widgets/WeatherWidget';
 import { apiService, DailyWidget } from '../services/api';
 import { ApiCategory, ApiFrequency, ApiWidgetType } from '@/types/widgets';
 
@@ -646,6 +647,13 @@ const Dashboard = () => {
       case 'simpleClock':
         return (
           <SimpleClockWidget
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+        );
+      case 'weatherWidget':
+        return (
+          <WeatherWidget
             widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />

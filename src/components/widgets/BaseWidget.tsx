@@ -1,10 +1,12 @@
 import { ReactNode, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, RefreshCw } from 'lucide-react'
 
 interface BaseWidgetProps {
   title: string
   icon?: string
   onRemove: () => void
+  onRefresh?: () => void
+  loading?: boolean
   children: ReactNode
   className?: string
 }
@@ -13,6 +15,8 @@ const BaseWidget = ({
   title, 
   icon, 
   onRemove, 
+  onRefresh,
+  loading = false,
   children, 
   className = "" 
 }: BaseWidgetProps) => {
@@ -42,13 +46,27 @@ const BaseWidget = ({
             <span className="text-xs select-none">⋮⋮</span>
           </div>)}
         </div>
-        {hover && (<button
-          onClick={onRemove}
-          className="text-muted-foreground hover:text-destructive transition-colors p-2 rounded hover:bg-destructive/10 -m-1"
-          title="Remove widget"
-        >
-          <Trash2 size={16} />
-        </button>)}
+        <div className="flex items-center gap-1">
+          {onRefresh && hover && (
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              className="text-muted-foreground hover:text-primary transition-colors p-2 rounded hover:bg-primary/10 -m-1 disabled:opacity-50"
+              title="Refresh data"
+            >
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            </button>
+          )}
+          {hover && (
+            <button
+              onClick={onRemove}
+              className="text-muted-foreground hover:text-destructive transition-colors p-2 rounded hover:bg-destructive/10 -m-1"
+              title="Remove widget"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content area */}

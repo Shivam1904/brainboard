@@ -309,6 +309,27 @@ class ApiService {
     const url = buildApiUrl(API_CONFIG.health.getRoot);
     return this.request<{ message: string; version: string; docs: string; health: string }>(url);
   }
+
+  // ============================================================================
+  // WEATHER ENDPOINTS (/api/v1/weather/)
+  // ============================================================================
+
+  async getWeather(lat: number, lon: number, units: string = 'metric'): Promise<{
+    temperature: number;
+    humidity: number;
+    pressure: number;
+    description: string;
+    icon_code: string;
+    wind_speed: number;
+    wind_direction: number;
+    visibility: number;
+    data_timestamp: string;
+    location: string;
+    units: string;
+  }> {
+    const url = buildApiUrl(API_CONFIG.weather.getWeather, { lat: lat.toString(), lon: lon.toString(), units });
+    return this.request(url);
+  }
 }
 
 // Export singleton instance
