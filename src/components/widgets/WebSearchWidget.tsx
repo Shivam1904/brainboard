@@ -145,6 +145,12 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
         
         <div className="bg-card/50 border border-border rounded-lg p-4">
           <div className="space-y-3">
+            {/* Title */}
+            <h3 className="font-medium text-sm mb-2">Web Search</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {webSearchData.title}
+            </p>
+
             {/* Status and Read Checkbox */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

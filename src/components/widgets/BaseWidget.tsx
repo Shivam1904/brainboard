@@ -30,7 +30,7 @@ const BaseWidget = ({
       setHover(false);
     }}
     >
-      <div className="relative flex h-full flex-col">
+      <div className="flex h-full flex-col">
       {/* Header with title and delete button */}
       {hover && (<div className="absolute top-0 right-0 flex items-center px-2 py-1 bg-card/50 rounded-t-lg">
         <div className="widget-drag-handle items-center justify-end w-full">

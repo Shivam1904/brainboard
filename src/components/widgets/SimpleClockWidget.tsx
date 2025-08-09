@@ -59,14 +59,14 @@ const SimpleClockWidget = ({ widget, onRemove }: SimpleClockWidgetProps) => {
   return (
     <BaseWidget title={widget.title || 'Simple Clock'} icon={isDay ? '🌞' : '🌙'} onRemove={onRemove}>
       <div className={`h-full w-full p-3 `}>
-        <div className="flex flex-col items-center justify-between">
-          <div className="flex gap-1">
+        <div className="relative items-center justify-between">
+          <div className="flex absolute top-0 right-0 left-0 justify-center pt-12 z-10">
             <button
               onClick={() => setMode('analog')}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${
                 mode === 'analog'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  ? 'bg-gradient-to-r from-yellow-500 to-yellow-300 opacity-80'
+                  : 'bg-secondary '
               }`}
             >
               Analog
@@ -75,8 +75,8 @@ const SimpleClockWidget = ({ widget, onRemove }: SimpleClockWidgetProps) => {
               onClick={() => setMode('digital')}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${
                 mode === 'digital'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  ? 'bg-gradient-to-r from-indigo-500 to-indigo-300 opacity-80'
+                  : 'bg-secondary '
               }`}
             >
               Digital
@@ -163,7 +163,7 @@ const SimpleClockWidget = ({ widget, onRemove }: SimpleClockWidgetProps) => {
             </div>
           </div>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center">
+          <div className="h-full flex flex-col items-center justify-center pt-12">
             <div className={`rounded-2xl px-4 py-3 text-4xl font-semibold tracking-widest shadow-sm ${
               isDay ? 'bg-white/70 text-gray-800' : 'bg-slate-800/60 text-slate-100'
             }`}>

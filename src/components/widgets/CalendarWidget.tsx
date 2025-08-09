@@ -5,13 +5,14 @@ import { getDummyCalendarData } from '../../data/widgetDummyData';
 import { DailyWidget, apiService } from '../../services/api';
 
 
-const categoryColors = {
-  productivity : { value: 'productivity', label: 'Productivity', color: 'blue' },
-  health : { value: 'health', label: 'Health', color: 'red' },
-  job : { value: 'job', label: 'Job', color: 'purple' },
-  information : { value: 'information', label: 'Information', color: 'yellow' },
-  entertainment : { value: 'entertainment', label: 'Entertainment', color: 'pink' },
-  utilities : { value: 'utilities', label: 'Utilities', color: 'gray' }
+export const categoryColors = {
+  productivity: { value: 'productivity', label: 'Productivity', color: 'blue' },
+  health: { value: 'health', label: 'Health', color: 'red' },
+  job: { value: 'job', label: 'Job', color: 'purple' },
+  information: { value: 'information', label: 'Information', color: 'yellow' },
+  entertainment: { value: 'entertainment', label: 'Entertainment', color: 'pink' },
+  utilities: { value: 'utilities', label: 'Utilities', color: 'gray' },
+  personal: { value: 'personal', label: 'Personal', color: 'transparent' }
 };
 
 interface CalendarEvent {
@@ -43,7 +44,6 @@ interface CalendarDay {
   milestones: Set<any>;
   milestonesAchieved: Set<any>;
   // Enhanced data structure
-  todosByCategory?: Map<string, { completed: number, total: number }>;
   streaksByCategory?: Map<string, number>;
   top3Completed?: boolean;
   milestonesData?: {
@@ -52,10 +52,18 @@ interface CalendarDay {
   };
 }
 
+interface CalendarWeek {
+  weekIndex: number;
+  todosCompleted: any[];
+  todosTotal: any[];
+  weeklyHabitStreak: number;
+}
+
 interface CalendarData {
   year: number;
   month: number;
   days: CalendarDay[];
+  weeks: CalendarWeek[];
   events: CalendarEvent[];
   milestones: CalendarEvent[];
   monthlyStats?: {
@@ -119,35 +127,113 @@ const CircularProgress = ({ todosCompleted, todosTotal, day, size = 20, strokeWi
         />
         {/* Per-task arcs */}
         {todosTotal
-        .sort((a, b) => a.activity_data?.status === 'completed' ? -1 : 1)
-        .sort((a, b) => a.category > b.category ? 1 : -1)
-        .map((todo, index) => {
-          const isCompleted = todo?.activity_data?.status === 'completed'
-            || todosCompleted.includes(todo);
-          const strokeColor = isCompleted ? getCategoryColor(todo?.category) : 'transparent';
-          const dashArray = `${segmentLength} ${circumference - segmentLength}`;
-          const dashOffset = circumference - index * share;
-          return (
-            <circle
-              key={index}
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              stroke={strokeColor}
-              strokeWidth={strokeWidth}
-              fill="none"
-              strokeDasharray={dashArray}
-              strokeDashoffset={dashOffset}
-              strokeLinecap="round"
-              className="transition-all duration-300"
-            />
-          );
-        })}
+          .sort((a, b) => a.activity_data?.status === 'completed' ? -1 : 1)
+          .sort((a, b) => a.category > b.category ? 1 : -1)
+          .map((todo, index) => {
+            const isCompleted = todo?.activity_data?.status === 'completed'
+              || todosCompleted.includes(todo);
+            const strokeColor = isCompleted ? getCategoryColor(todo?.category) : 'transparent';
+            const dashArray = `${segmentLength} ${circumference - segmentLength}`;
+            const dashOffset = circumference - index * share;
+            return (
+              <circle
+                key={index}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeDasharray={dashArray}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                className="transition-all duration-300"
+              />
+            );
+          })}
       </svg>
       {/* Center date */}
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-xs font-medium text-gray-700">{day}</span>
       </div>
+    </div>
+  );
+};
+
+
+const CircularProgressConcentric = ({ todosCompleted, todosTotal, day, size = 20, strokeWidth = 3 }: CircularProgressProps) => {
+  if (todosTotal.length === 0) {
+    return (
+      <div className="flex items-center justify-center" style={{ width: size, height: size }}>
+
+        <Circle size={size-5} fill="#eeeeee" stroke="transparent" strokeWidth={strokeWidth} />
+              </div>
+    );
+  }
+
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const totalTasks = todosTotal.length;
+  const share = circumference / totalTasks;
+  const gap = Math.min(2, share * 0.2);
+  const segmentLength = Math.max(0, share - gap);
+
+  //group todosTotal by category
+  const todosByCategory = new Map<string, any[]>();
+  for (const todo of todosTotal) {
+    const category = todo.category;
+    if (!todosByCategory.has(category)) {
+      todosByCategory.set(category, []);
+    }
+    todosByCategory.get(category)!.push(todo);
+  }
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg
+        width={size}
+        height={size}
+        className="transform -rotate-90"
+      >
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#E5E7EB"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        {/* Per-task arcs */}
+        {Array.from(todosByCategory.entries()).map(([category, todos], tIndex) => (
+          <g key={category}>
+          {todos
+          .sort((a, b) => a.activity_data?.status === 'completed' ? -1 : 1)
+          .map((todo, index) => {
+            const isCompleted = todo?.activity_data?.status === 'completed'
+              || todosCompleted.includes(todo);
+            const strokeColor = isCompleted ? getCategoryColor(todo?.category) : 'transparent';
+            const dashArray = `${segmentLength} ${circumference - segmentLength}`;
+            const dashOffset = circumference - index * share;
+            return (
+              <circle
+                key={index}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius-tIndex*3}
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeDasharray={dashArray}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                className="transition-all duration-300"
+              />
+              );
+            })}
+          </g>
+        ))}
+      </svg>
     </div>
   );
 };
@@ -274,12 +360,18 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
         todosTotal: [],
         habitStreak: 0,
         milestones: new Set(),
-        todosByCategory: new Map(),
         streaksByCategory: new Map(),
         top3Completed: false
       }));
+      base.weeks = base.weeks.map(d => ({
+        ...d,
+        events: [],
+        todosCompleted: [],
+        todosTotal: [],
+        weeklyHabitStreak: 0,
+      }));
       base.events = [];
-      var tempMilestones : any[]= [];
+      var tempMilestones: any[] = [];
 
       // Map API items to calendar events
       const toPriority = (p?: string): 'High' | 'Medium' | 'Low' => {
@@ -315,19 +407,14 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
         const todos = items.filter(item => item.date === day.date);
         day.todosTotal = todos;
         day.todosCompleted = todos.filter(item => item.activity_data?.status === 'completed');
+      }
 
-        // Enhanced: Group todos by category
-        const todosByCategory = new Map<string, { completed: number, total: number }>();
-        for (const todo of todos) {
-          const category = todo.category;
-          const current = todosByCategory.get(category) || { completed: 0, total: 0 };
-          current.total++;
-          if (todo.activity_data?.status === 'completed') {
-            current.completed++;
-          }
-          todosByCategory.set(category, current);
-        }
-        day.todosByCategory = todosByCategory;
+      // count total todos and completed todos for each day
+      for (const week of base.weeks) {
+        const todos = items.filter(item => item.date && item.date >= base.days[week.weekIndex*7].date && item.date <= base.days[week.weekIndex*7+6].date);
+        week.todosTotal = todos;
+        week.todosCompleted = todos.filter(item => item.activity_data?.status === 'completed');
+
       }
 
       // Enhanced: Calculate streaks backwards from current day
@@ -583,79 +670,112 @@ const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
           </div>
         )}
 
-        {/* Day Headers */}
-        <div className="grid grid-cols-7 mb-1">
-          {dayNames.map(day => (
-            <div key={day} className="text-center text-xs font-medium text-gray-600 py-1">
-              {day}
-            </div>
-          ))}
-        </div>
+        <div className="flex flex-row">
+          <div className="flex flex-col">
 
-        {/* Enhanced Calendar Grid */}
-        <div className="grid grid-cols-7">
-          {calendarData.days.map((day, index) => (
-            <div
-              key={index}
-              className={`min-h-[40px] text-xs  rounded ${!day.isCurrentMonth ? 'bg-gray-50 text-gray-300' : 'bg-white text-gray-500'
-                } ${day.isToday ? 'bg-blue-500' : 'text-gray-500'}`}
-            >
-              {/* Enhanced Day Header with Streaks */}
-              <div className="flex flex-col items-center">
-                {/* Streak Indicators */}
-                {/* Date with Circular Progress */}
-                <div className="">
-                  <CircularProgress
-                    todosCompleted={day.todosCompleted}
-                    todosTotal={day.todosTotal}
-                    day={day.day}
-                    size={25}
-                    strokeWidth={2}
-                  />
+            <div className="text-center text-xs font-medium text-transparent">
+              0
+            </div>
+            {/* Enhanced Calendar Grid */}
+            <div className="grid grid-cols-1">
+              {calendarData.weeks.map((week, index) => (
+                <div key={index} className="min-h-[40px] ">
+                  <div className="flex flex-col items-center">
+                    <div className="">
+                      <CircularProgressConcentric
+                        todosCompleted={week.todosCompleted}
+                        todosTotal={week.todosTotal}
+                        day={week.weekIndex}
+                        size={25}
+                        strokeWidth={2}
+                      />
+                    </div>
+                    {/* {week.isCurrentMonth && week.streaksByCategory && week.streaksByCategory.size > 0 && (
+                      <div className="">
+                        <StreakIndicator streaksByCategory={week.streaksByCategory} />
+                      </div>
+                    )} */}
+                  </div>
                 </div>
-              </div>
-
-              {/* Enhanced Events Display */}
-              <div className="flex flex-row justify-center items-center">
-                {/* Milestone Indicator */}
-                {day.isCurrentMonth && day.milestonesAchieved?.size > 0 && (
-                  <div>
-                    {Array.from(day.milestonesAchieved).map((milestone) => (
-                      <div key={milestone.id} className="">
-                        <Trophy size={10} color={getCategoryColor(milestone.category)} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Milestone Indicator */}
-                {day.isCurrentMonth && day.milestones?.size > 0 && (
-                  <div className="">
-                    {Array.from(day.milestones).map((milestone) => (
-                      <div key={milestone.id} className="">
-                        <Trophy size={10} color={getCategoryColor(milestone.category)} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-
-                {/* Top 3 Indicator */}
-                {day.isCurrentMonth && day.top3Completed && (
-                  <div className="">
-                    <Top3Indicator completed={day.top3Completed} size={10} />
-                  </div>
-                )}
-                {day.isCurrentMonth && day.streaksByCategory && day.streaksByCategory.size > 0 && (
-                  <div className="">
-                    <StreakIndicator streaksByCategory={day.streaksByCategory} />
-                  </div>
-                )}
-
-              </div>
-
+              ))}
             </div>
-          ))}
+          </div>
+          <div className="flex flex-col flex-1">
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 ">
+              {dayNames.map(day => (
+                <div key={day} className="text-center text-xs font-medium text-gray-600 ">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Enhanced Calendar Grid */}
+            <div className="grid grid-cols-7">
+              {calendarData.days.map((day, index) => (
+                <div
+                  key={index}
+                  className={`min-h-[40px] text-xs  rounded ${!day.isCurrentMonth ? 'bg-gray-50 text-gray-300' : 'bg-white text-gray-500'
+                    } ${day.isToday ? 'bg-blue-500' : 'text-gray-500'}`}
+                >
+                  {/* Enhanced Day Header with Streaks */}
+                  <div className="flex flex-col items-center">
+                    {/* Streak Indicators */}
+                    {/* Date with Circular Progress */}
+                    <div className="">
+                      <CircularProgress
+                        todosCompleted={day.todosCompleted}
+                        todosTotal={day.todosTotal}
+                        day={day.day}
+                        size={25}
+                        strokeWidth={2}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Enhanced Events Display */}
+                  <div className="flex flex-row justify-center items-center">
+                    {/* Milestone Indicator */}
+                    {day.isCurrentMonth && day.milestonesAchieved?.size > 0 && (
+                      <div>
+                        {Array.from(day.milestonesAchieved).map((milestone) => (
+                          <div key={milestone.id} className="">
+                            <Trophy size={10} color={getCategoryColor(milestone.category)} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Milestone Indicator */}
+                    {day.isCurrentMonth && day.milestones?.size > 0 && (
+                      <div className="">
+                        {Array.from(day.milestones).map((milestone) => (
+                          <div key={milestone.id} className="">
+                            <Trophy size={10} color={getCategoryColor(milestone.category)} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+
+                    {/* Top 3 Indicator */}
+                    {day.isCurrentMonth && day.top3Completed && (
+                      <div className="">
+                        <Top3Indicator completed={day.top3Completed} size={10} />
+                      </div>
+                    )}
+                    {day.isCurrentMonth && day.streaksByCategory && day.streaksByCategory.size > 0 && (
+                      <div className="">
+                        <StreakIndicator streaksByCategory={day.streaksByCategory} />
+                      </div>
+                    )}
+
+                  </div>
+
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

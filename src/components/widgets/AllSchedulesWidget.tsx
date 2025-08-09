@@ -4,6 +4,7 @@ import { DashboardWidget, DailyWidget } from '../../services/api';
 import { dashboardService } from '../../services/dashboard';
 import { getDummyAllSchedulesWidgets } from '../../data/widgetDummyData';
 import AddWidgetForm from '../AddWidgetForm';
+import { createPortal } from 'react-dom';
 
 interface AllSchedulesWidgetProps {
   widget: DailyWidget;
@@ -378,7 +379,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
       </div>
 
       {/* Edit Widget Form Modal */}
-      {editingWidget && (
+      {editingWidget && createPortal(
         <AddWidgetForm
           widgetId={editingWidget.widget_type}
           onClose={handleFormClose}
@@ -386,7 +387,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
           editMode={true}
           existingWidget={editingWidget}
         />
-      )}
+      , document.body)}
     </BaseWidget>
   );
 };

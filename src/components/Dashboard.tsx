@@ -45,230 +45,141 @@ const Dashboard = () => {
   // Fetch all widgets and today's widgets
   const fetchTodayWidgets = async () => {
     try {
-      setDashboardLoading(true)
-      setDashboardError(null)
-
+      setDashboardLoading(true);
+      setDashboardError(null);
+    
+      const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
+      const trackerWidgetTypes = ['calendar', 'weekchart'];
+    
+      const makeWidget = (base: Partial<DailyWidget>, overrides: Partial<DailyWidget> = {}): DailyWidget => ({
+        id: base.id || '',
+        daily_widget_id: base.daily_widget_id || '',
+        widget_id: base.widget_id || '',
+        widget_type: base.widget_type || '',
+        title: base.title || '',
+        description: base.description || '',
+        frequency: 'daily',
+        importance: 0.5,
+        category: 'utilities',
+        is_permanent: false,
+        priority: 'LOW',
+        date: new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString(),
+        layout: buildPlaceholderLayout(base.id || ''),
+        ...base,
+        ...overrides
+      });
+    
+      const isValidWidget = (w: DailyWidget) =>
+        w && w.daily_widget_id && w.widget_id && w.widget_type;
+    
+      const hasUpcomingMilestone = (milestones: any[]) => {
+        const today = new Date();
+        const weekAhead = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+        return milestones.some(m => {
+          if (!m?.due_date) return false;
+          const date = new Date(m.due_date);
+          return date >= today && date <= weekAhead;
+        });
+      };
+    
+      // --- Fetch data ---
       let allWidgetsData: any[] = [];
       let todayWidgetsData: DailyWidget[] = [];
       try {
-        // Fetch all widgets first
         allWidgetsData = await dashboardService.getAllWidgets();
-        console.log('Successfully fetched all widgets from API:', allWidgetsData);
-
-        // Fetch today's widgets
         todayWidgetsData = await dashboardService.getTodayWidgets();
-        console.log('Successfully fetched today\'s widgets from API:', todayWidgetsData);
-
-        // Enhanced logging for debugging
-        todayWidgetsData.forEach((widget, index) => {
-          console.log(`Widget ${index + 1}:`, {
-            daily_widget_id: widget.daily_widget_id,
-            widget_id: widget.widget_id,
-            title: widget.title,
-            widget_type: widget.widget_type,
-            widget_config: widget.widget_config
-          });
-        });
       } catch (apiError) {
         console.warn('API call failed, falling back to dummy data:', apiError);
       }
-
-      // Convert widgets to UI format with proper placement
+    
+      setViewWidgetStates(allWidgetsData.filter(w => viewWidgetTypes.includes(w.widget_type)));
+    
+      // --- Prepare widget lists ---
       const uiWidgets: DailyWidget[] = [];
-
-      // Track view widget states for the AddWidgetButton
-      const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
-      const allWidgetsDataViewWidgets = allWidgetsData.filter(w => viewWidgetTypes.includes(w.widget_type));
-      setViewWidgetStates(allWidgetsDataViewWidgets);
-
-      // Step 1: Handle view widgets (allSchedules, aiChat, moodTracker) from all widgets list
-      viewWidgetTypes.forEach(widgetType => {
-        // Find the widget in all widgets list
-        const allWidgetsViewWidget = allWidgetsData.find(w => w.widget_type === widgetType);
-        const isVisible = allWidgetsViewWidget?.widget_config?.visibility; // Default to true if not set
-        if (isVisible) {
-          const config = getWidgetConfig(widgetType);
+      const advancedWidgets: DailyWidget[] = [];
+      const regularWidgets: DailyWidget[] = [];
+      const trackerWidgets: DailyWidget[] = [];
+      const webSearchWidgets: DailyWidget[] = [];
+    
+      // Step 1: Add permanent view widgets
+      viewWidgetTypes.forEach(type => {
+        const w = allWidgetsData.find(x => x.widget_type === type);
+        if (w?.widget_config?.visibility) {
+          const config = getWidgetConfig(type);
           if (config) {
-            const viewWidget: DailyWidget = {
-              id: `auto-${widgetType}`,
-              daily_widget_id: `auto-${widgetType}`,
-              widget_id: allWidgetsViewWidget?.id || '',
-              widget_type: widgetType,
+            uiWidgets.push(makeWidget({
+              id: `auto-${type}`,
+              daily_widget_id: `auto-${type}`,
+              widget_id: w.id || '',
+              widget_type: type,
               title: config.title,
-              frequency: 'daily',
-              importance: 0.5,
-              category: 'utilities',
               description: config.description,
               is_permanent: true,
-              priority: 'LOW',
-              reasoning: 'View widget managed by visibility setting',
-              date: new Date().toISOString().split('T')[0],
-              created_at: allWidgetsViewWidget?.created_at || new Date().toISOString(),
-              widget_config: allWidgetsViewWidget?.widget_config,
-              layout: buildPlaceholderLayout(`auto-${widgetType}`)
-            };
-
-            uiWidgets.push(viewWidget);
+              widget_config: w.widget_config
+            }));
           }
         }
       });
-      const trackerWidgetTypes: any[] = ['calendar', 'weekchart'];
-
-      // Step 2: Process today's widgets according to new logic
-      const advancedSingleTaskWidgets: DailyWidget[] = [];
-      const regularTaskWidgets: DailyWidget[] = [];
-      const webSearchWidgets: DailyWidget[] = [];
-      const individualTrackerWidgets: DailyWidget[] = [];
-      console.log('Processing today\'s widgets:', todayWidgetsData.length, 'widgets');
-
-      // Validate and filter out invalid widgets
-      const validWidgets = todayWidgetsData.filter((widget: DailyWidget) => {
-        if (!widget || !widget.daily_widget_id || !widget.widget_id || !widget.widget_type) {
-          console.warn('Invalid widget data:', widget);
-          return false;
-        }
-        return true;
-      });
-
-      console.log(`Found ${validWidgets.length} valid widgets out of ${todayWidgetsData.length} total`);
-
-      validWidgets.forEach((widget: DailyWidget) => {
-        // Skip view widgets as they're already handled above
-        if (viewWidgetTypes.includes(widget.widget_type)) {
-          return;
-        }
-
-        const widgetConfig = widget.widget_config || {};
-
-        // Check if widget meets criteria for advanced single task
-        const hasTrackerDetails = widgetConfig?.include_tracker_details === true;
-        const hasAlarmDetails = widgetConfig?.include_alarm_details === true;
-        const hasProgressDetails = widgetConfig?.include_progress_details === true;
-
-        // Check if milestone is coming up in 7 days
-        const milestones = Array.isArray(widgetConfig?.milestones) ? widgetConfig.milestones : [];
-        const hasUpcomingMilestone = hasProgressDetails &&
-          milestones.some((milestone: any) => {
-            if (!milestone?.due_date) return false;
-            try {
-              const milestoneDate = new Date(milestone.due_date);
-              const today = new Date();
-              const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-              return milestoneDate >= today && milestoneDate <= sevenDaysFromNow;
-            } catch (err) {
-              console.warn('Invalid milestone date:', milestone.due_date);
-              return false;
-            }
-          });
-
-        console.log(`Widget "${widget.title}":`, {
-          hasTrackerDetails,
-          hasAlarmDetails,
-          hasProgressDetails,
-          hasUpcomingMilestone,
-          milestones
-        });
-
-        // Determine widget type based on criteria
-        if (hasTrackerDetails || hasAlarmDetails || hasUpcomingMilestone) {
-          console.log(`Creating advanced single task widget for: ${widget.title}`);
-          // Create advanced single task widget
-
-          const advancedWidget: DailyWidget = {
-            ...widget,
-            id: `advanced-single-task-${widget.daily_widget_id}`,
-            daily_widget_id: widget.daily_widget_id,
+    
+      // Step 2: Process today's widgets
+      const validWidgets = todayWidgetsData.filter(isValidWidget);
+    
+      validWidgets.forEach(widget => {
+        if (viewWidgetTypes.includes(widget.widget_type)) return;
+    
+        const cfg = widget.widget_config || {};
+        const milestones = Array.isArray(cfg.milestones) ? cfg.milestones : [];
+    
+        const advCondition = cfg.include_tracker_details || cfg.include_alarm_details ||
+                              (cfg.include_progress_details && hasUpcomingMilestone(milestones));
+    
+        if (advCondition) {
+          advancedWidgets.push(makeWidget(widget, {
+            id: `advanced-${widget.daily_widget_id}`,
             widget_type: 'advancedsingletask',
             title: `Advanced: ${widget.title}`,
-            priority: widget.importance >= 0.7 ? 'HIGH' : 'LOW',
-            reasoning: 'Advanced single task widget with tracker, alarm, and progress details',
-            date: new Date().toISOString().split('T')[0],
-            created_at: widget.created_at,
-            layout: buildPlaceholderLayout(`advanced-single-task-${widget.daily_widget_id}`)
-          };
-
-          advancedSingleTaskWidgets.push(advancedWidget);
+            reasoning: 'Advanced single task widget with tracker/alarm/progress'
+          }));
         } else if (trackerWidgetTypes.includes(widget.widget_type)) {
-          console.log(`Adding to tracker widget list: ${widget.title}`);
-          // Add to tracker widget list
-
-          const trackerWidget: DailyWidget = {
-            ...widget,
+          trackerWidgets.push(makeWidget(widget, {
             id: `tracker-${widget.daily_widget_id}`,
-            daily_widget_id: widget.daily_widget_id,
-            widget_type: widget.widget_type,
             title: `Tracker: ${widget.title}`,
-            priority: widget.importance >= 0.7 ? 'HIGH' : 'LOW',
-            reasoning: 'Tracker widget for ' + widget.title,
-            date: new Date().toISOString().split('T')[0],
-            created_at: widget.created_at,
-            layout: buildPlaceholderLayout(`tracker-${widget.daily_widget_id}`)
-          }
-          individualTrackerWidgets.push(trackerWidget);
+            reasoning: 'Tracker widget'
+          }));
+        } else {
+          regularWidgets.push(widget);
         }
-        else {
-          console.log(`Adding to regular task list: ${widget.title}`);
-          // Add to regular task list
-          regularTaskWidgets.push(widget);
-        }
-
-        // Check if web search widget should be added
-        if (widgetConfig?.include_websearch_details === true) {
-          console.log(`Creating web search widget for: ${widget.title}`);
+    
+        if (cfg.include_websearch_details) {
           const config = getWidgetConfig('websearch');
-          if (!config) {
-            console.warn('Web search widget config not found');
-            return;
+          if (config) {
+            webSearchWidgets.push(makeWidget(widget, {
+              id: `websearch-${widget.daily_widget_id}`,
+              widget_type: 'websearch',
+              title: `Web Search: ${widget.title}`,
+              category: 'information',
+              description: `Web search for ${widget.title}`,
+              reasoning: 'Web search widget for task'
+            }));
           }
-
-          const webSearchWidget: DailyWidget = {
-            id: `websearch-${widget.daily_widget_id}`,
-            daily_widget_id: `${widget.daily_widget_id}`,
-            widget_id: widget.widget_id,
-            widget_type: 'websearch',
-            title: `Web Search: ${widget.title}`,
-            frequency: 'daily',
-            importance: widget.importance,
-            category: 'information',
-            description: `Web search for ${widget.title}`,
-            is_permanent: false,
-            priority: widget.importance >= 0.7 ? 'HIGH' : 'LOW',
-            reasoning: 'Web search widget for task information',
-            date: new Date().toISOString().split('T')[0],
-            created_at: widget.created_at,
-            widget_config: widgetConfig,
-            layout: buildPlaceholderLayout(`websearch-${widget.daily_widget_id}`)
-          };
-
-          webSearchWidgets.push(webSearchWidget);
         }
       });
-
-      // Step 3: Add advanced single task widgets
-      console.log(`Adding ${advancedSingleTaskWidgets.length} advanced single task widgets`);
-      uiWidgets.push(...advancedSingleTaskWidgets);
-
-      // Step 4: Create single task list widget if there are regular tasks
-      console.log(`Creating combined task list with ${regularTaskWidgets.length} regular tasks`);
-      if (regularTaskWidgets.length > 0) {
-
-        const taskListWidget: DailyWidget = {
+    
+      // Step 3: Assemble final list
+      uiWidgets.push(...advancedWidgets);
+    
+      if (regularWidgets.length) {
+        uiWidgets.push(makeWidget({
           id: 'task-list-combined',
           daily_widget_id: 'task-list-combined',
           widget_id: 'task-list-combined',
           widget_type: 'todo-task',
           title: 'Task List',
-          frequency: 'daily',
-          importance: 0.5,
           category: 'productivity',
-          description: 'Combined task list for regular tasks',
-          is_permanent: false,
-          priority: 'LOW',
-          reasoning: 'Combined task list widget for regular tasks',
-          date: new Date().toISOString().split('T')[0],
-          created_at: new Date().toISOString(),
+          description: 'Combined task list',
           widget_config: {
-            combined_tasks: regularTaskWidgets.map(w => ({
+            combined_tasks: regularWidgets.map(w => ({
               id: w.daily_widget_id,
               widget_id: w.widget_id,
               title: w.title,
@@ -277,30 +188,20 @@ const Dashboard = () => {
               category: w.category,
               widget_config: w.widget_config
             }))
-          },
-          layout: buildPlaceholderLayout('task-list-combined')
-        };
-
-        uiWidgets.push(taskListWidget);
+          }
+        }));
       }
-
-      if (individualTrackerWidgets.length > 0) {
-        individualTrackerWidgets.forEach((widget: DailyWidget) => {
-          uiWidgets.push(widget);
-        });
-      }
-
-      // Step 5: Add web search widgets
-      console.log(`Adding ${webSearchWidgets.length} web search widgets`);
-      uiWidgets.push(...webSearchWidgets);
-
+    
+      uiWidgets.push(...trackerWidgets, ...webSearchWidgets);
+    
       setWidgets(uiWidgets);
     } catch (err) {
-      console.error('Failed to fetch widgets:', err)
-      setDashboardError('Failed to load dashboard configuration')
+      console.error('Failed to fetch widgets:', err);
+      setDashboardError('Failed to load dashboard configuration');
     } finally {
-      setDashboardLoading(false)
+      setDashboardLoading(false);
     }
+    
   }
 
   // Fetch today's widgets on component mount

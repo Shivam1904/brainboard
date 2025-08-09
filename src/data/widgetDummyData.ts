@@ -328,10 +328,13 @@ export const getDummyCalendarData = (year: number, month: number) => {
   // Generate milestones for the month
   const milestones = generateMonthMilestones(year, month);
 
+  const weeks = generateMonthWeeks();
+
   return {
     year,
     month,
     days,
+    weeks,
     events,
     milestones,
     monthlyStats: {
@@ -344,6 +347,19 @@ export const getDummyCalendarData = (year: number, month: number) => {
   };
 };
 
+const generateMonthWeeks = () => {
+  const weeks = [];
+  for (let i = 0; i < 6; i++) {
+    weeks.push({
+      weekIndex: i,
+      todosCompleted: Math.floor(Math.random() * 8) + 2, // 2-9 todos
+      todosTotal: Math.floor(Math.random() * 5) + 8, // 8-12 total todos
+      weeklyHabitStreak: Math.floor(Math.random() * 15) + 1, // 1-15 day streak
+    });
+  }
+  return weeks;
+};
+  
 // Helper function to generate events for a specific day
 const generateDayEvents = (date: Date, isCurrentMonth: boolean) => {
   if (!isCurrentMonth) return [];

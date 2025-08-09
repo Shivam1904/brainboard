@@ -11,12 +11,13 @@ interface Task {
   description?: string;
   completed: boolean;
   priority: 'High' | 'Medium' | 'Low';
-  category?: string;
+  category: string;
   dueDate?: string;
   createdAt: string;
 }
 
 import { FrequencySettings } from '../../types/frequency';
+import { categoryColors } from './CalendarWidget';
 
 interface MissionFormData {
   title: string;
@@ -27,23 +28,10 @@ interface MissionFormData {
   frequency: FrequencySettings;
 }
 
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case 'High': return 'text-red-600 bg-red-50';
-    case 'Medium': return 'text-yellow-600 bg-yellow-50';
-    case 'Low': return 'text-green-600 bg-green-50';
-    default: return 'text-gray-600 bg-gray-50';
-  }
-};
 
 const getCategoryColor = (category: string) => {
-  switch (category) {
-    case 'work': return 'bg-blue-100 text-blue-800';
-    case 'health': return 'bg-green-100 text-green-800';
-    case 'learning': return 'bg-purple-100 text-purple-800';
-    case 'personal': return 'bg-pink-100 text-pink-800';
-    default: return 'bg-gray-100 text-gray-800';
-  }
+  console.log(category, categoryColors[category as keyof typeof categoryColors]);
+  return categoryColors[category as keyof typeof categoryColors].color;
 };
 
 const getPriorityFromNumber = (priority: number): 'High' | 'Medium' | 'Low' => {
@@ -109,10 +97,10 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
         .map((todo: DailyWidget) => ({
           id: todo.daily_widget_id,
           title: todo.title,
+          category: todo.category,
           description: todo.description || '',
           completed: todo.activity_data?.status === 'completed',
           priority: getPriorityFromNumber(todo.activity_data?.progress / 25), // Convert progress to priority
-          category: 'personal', // Default category
           dueDate: todo.activity_data?.due_date || '',
           createdAt: todo.created_at || ''
         }));
@@ -180,7 +168,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
         title: '',
         description: '',
         priority: 'Medium',
-        category: 'personal',
+        category: 'productivity',
         dueDate: new Date().toISOString().split('T')[0],
         frequency: {
           frequencySet: 'BALANCED',
@@ -211,7 +199,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
         title: '',
         description: '',
         priority: 'Medium',
-        category: 'personal',
+        category: 'productivity',
         dueDate: new Date().toISOString().split('T')[0],
         frequency: {
           frequencySet: 'BALANCED',
@@ -267,7 +255,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
 
   return (
     <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
-      <div className="p-4 h-full overflow-y-auto">
+      <div className={`p-4 h-full overflow-y-auto `}>
         {/* Offline Indicator */}
         {error && (
           <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
@@ -303,8 +291,8 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
               <div
                 key={task.id}
                 className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${task.completed
-                    ? 'bg-blue-50 border border-blue-200 rounded-lg border-gray-200'
-                    : 'bg-blue-50 border border-blue-200 rounded-lg hover:border-blue-300'
+                    ? `bg-${getCategoryColor(task.category)}-100 border border-${getCategoryColor(task.category)}-200 rounded-lg border-gray-200`
+                    : `bg-${getCategoryColor(task.category)}-100 border border-${getCategoryColor(task.category)}-200 rounded-lg hover:border-${getCategoryColor(task.category)}-300`
                   }`}
               >
                 <button
@@ -328,7 +316,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
                       {task.description}
                     </span>
                     {task.category && (
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(task.category)}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-${getCategoryColor(task.category)}-800 bg-${getCategoryColor(task.category)}-100`}>
                         {task.category}
                       </span>
                     )}

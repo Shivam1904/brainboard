@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import BaseWidget from './BaseWidget';
 import {
   Target,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 import { DailyWidget } from '../../services/api';
 import { dashboardService } from '../../services/dashboard';
+import { categoryColors } from './CalendarWidget';
 
 interface AdvancedSingleTaskWidgetProps {
   onRemove: () => void;
@@ -33,15 +35,6 @@ const getValueTypeInput = (valueType: string) => {
       return 'text';
   }
 };
-
-const getProgressColor = (percentage: number) => {
-  if (percentage >= 80) return 'bg-green-500';
-  if (percentage >= 60) return 'bg-blue-500';
-  if (percentage >= 40) return 'bg-yellow-500';
-  return 'bg-red-500';
-};
-
-
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -90,7 +83,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
   useEffect(() => {
     var height = 2;
     if (widgetData?.activity_data?.activity_history) {
-      height += (widgetData.activity_data.activity_history.length*0.75) +2;
+      height += (widgetData.activity_data.activity_history.length*0.75) +1;
     }
     if(widgetData?.description) {
       height += 1;
@@ -273,13 +266,8 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
   };
 
   const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'work': return 'bg-blue-100 text-blue-800';
-      case 'health': return 'bg-green-100 text-green-800';
-      case 'learning': return 'bg-purple-100 text-purple-800';
-      case 'personal': return 'bg-pink-100 text-pink-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    console.log(category, categoryColors[category as keyof typeof categoryColors]);
+    return categoryColors[category as keyof typeof categoryColors].color;
   };
   // Check for triggered alarms
   useEffect(() => {
@@ -475,7 +463,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
       <div
         className={`flex flex-1 h-full p-2 flex-col overflow-y-auto rounded-lg transition-all ${isAlerting
           ? 'bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 text-white animate-pulse'
-          : 'bg-blue-50 border border-blue-200 rounded-lg'
+          : `bg-${getCategoryColor(widgetData.category)}-100 border border-${getCategoryColor(widgetData.category)}-200 rounded-lg`
           }`}
       >
         {/* Error Indicator */}
@@ -506,7 +494,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
                 {widgetData.title}
               </h4>
                     {widgetData.category && (
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(widgetData.category)}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-${getCategoryColor(widgetData.category)}-800  `}>
                         {widgetData.category}
                       </span>
                     )}
@@ -618,7 +606,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
             <div className={`mt-3 p-2 rounded ${isAlerting ? 'bg-white/10 text-white' : 'bg-gray-50 text-gray-700 border border-gray-200'}`}>
               <div className={`text-xs mb-1 ${isAlerting ? 'text-white/80' : 'text-gray-600'}`}>Recent activity</div>
               <div className="space-y-1">
-                {widgetData?.activity_data?.activity_history.slice(-3).map((activity: any, index: number) => (
+                {widgetData?.activity_data?.activity_history.map((activity: any, index: number) => (
                   <div key={index} className="text-xs flex justify-between opacity-90">
                     <span>{activity.type === 'snooze' ? '⏰ Snoozed' : '🛑 Stopped'}</span>
                     <span>
@@ -636,7 +624,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
 
 
         {/* Add Value Modal */}
-        {showAddForm && (
+        {showAddForm && createPortal(
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
               {/* Header */}
@@ -714,7 +702,8 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </BaseWidget>
