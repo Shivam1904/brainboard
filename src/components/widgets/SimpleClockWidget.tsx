@@ -58,7 +58,7 @@ const SimpleClockWidget = ({ widget, onRemove }: SimpleClockWidgetProps) => {
 
   return (
     <BaseWidget title={widget.title || 'Simple Clock'} icon={isDay ? '🌞' : '🌙'} onRemove={onRemove}>
-      <div className={`h-full w-full p-3 bg-gradient-to-br ${themeClasses}`}>
+      <div className={`h-full w-full p-3 `}>
         <div className="flex flex-col items-center justify-between">
           <div className="flex gap-1">
             <button
@@ -83,7 +83,7 @@ const SimpleClockWidget = ({ widget, onRemove }: SimpleClockWidgetProps) => {
             </button>
           </div>
 
-          <div className="flex gap-1">
+          {false && (<div className="flex gap-1">
             <button
               onClick={() => setTheme('day')}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${
@@ -106,7 +106,7 @@ const SimpleClockWidget = ({ widget, onRemove }: SimpleClockWidgetProps) => {
             >
               🌙 Night
             </button>
-          </div>
+          </div>)}
         </div>
 
         {mode === 'analog' ? (

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import BaseWidget from './BaseWidget';
-import { Bell, Clock, RotateCcw, Check, AlertTriangle } from 'lucide-react';
-import { AlarmDetailsAndActivityResponse, AlarmDetails, AlarmActivity } from '../../types/widgets';
+import { Clock, RotateCcw, Check, AlertTriangle } from 'lucide-react';
+import { AlarmDetailsAndActivityResponse } from '../../types/widgets';
 import { apiService, DailyWidget } from '../../services/api';
 
 interface AlarmWidgetProps {
@@ -9,43 +9,7 @@ interface AlarmWidgetProps {
   widget: DailyWidget;
 }
 
-const formatTime = (timeString: string) => {
-  const time = new Date(timeString);
-  return time.toLocaleTimeString('en-US', { 
-    hour: 'numeric', 
-    minute: '2-digit',
-    hour12: true 
-  });
-};
-
-const getTimeUntil = (targetTime: string) => {
-  const now = new Date();
-  const target = new Date(targetTime);
-  const diff = target.getTime() - now.getTime();
-  
-  if (diff <= 0) return 'Now!';
-  
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  return `${minutes}m`;
-};
-
-const isAlarmTriggered = (alarmTime: string) => {
-  const now = new Date();
-  
-  // Parse alarm time (format: "HH:MM")
-  const [hours, minutes] = alarmTime.split(':').map(Number);
-  const today = new Date();
-  today.setHours(hours, minutes, 0, 0);
-  
-  // Check if current time is within 1 minute of alarm time
-  const diff = Math.abs(now.getTime() - today.getTime());
-  return diff <= 60 * 1000; // Within 1 minute
-};
+// Removed unused helpers; using time window-based alerting below
 
 const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
   const [alarmData, setAlarmData] = useState<AlarmDetailsAndActivityResponse | null>(null);
@@ -81,9 +45,9 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
     if (!alarmData?.activity?.id) return;
     
     try {
-      await apiService.snoozeAlarm(alarmData.activity.id, 2);
+      await apiService.snoozeAlarm(alarmData.activity.id, 10);
       setIsAlerting(false);
-      setSnoozeTimeLeft(120); // 2 minutes in seconds
+      setSnoozeTimeLeft(600); // 10 minutes in seconds
       await fetchAlarms(); // Refresh data
     } catch (err) {
       console.error('Error snoozing alarm:', err);
@@ -121,21 +85,27 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
       // Check if currently snoozed
       if (alarmData.activity?.snooze_until) {
         const snoozeUntil = new Date(alarmData.activity.snooze_until);
+        const snoozeWindowEnd = new Date(snoozeUntil.getTime() + 60 * 60 * 1000);
         if (now < snoozeUntil) {
           // Still snoozed, calculate time left
           const timeLeft = Math.ceil((snoozeUntil.getTime() - now.getTime()) / 1000);
           setSnoozeTimeLeft(timeLeft > 0 ? timeLeft : null);
           setIsAlerting(false);
           return;
-        } else {
-          // Snooze expired, check if should trigger
+        } else if (now >= snoozeUntil && now < snoozeWindowEnd) {
+          // Snooze expired, ring within the 1-hour window after snooze
           setSnoozeTimeLeft(null);
+          shouldAlert = true;
         }
       }
       
-      // Check if any alarm times are triggered
+      // Check if now falls within any alarm's 1-hour alert window
       alarmData.alarm_details?.alarm_times.forEach((alarmTime) => {
-        if (isAlarmTriggered(alarmTime)) {
+        const [hours, minutes] = alarmTime.split(':').map(Number);
+        const alarmStart = new Date();
+        alarmStart.setHours(hours, minutes, 0, 0);
+        const alarmEnd = new Date(alarmStart.getTime() + 60 * 60 * 1000);
+        if (now >= alarmStart && now < alarmEnd) {
           shouldAlert = true;
         }
       });

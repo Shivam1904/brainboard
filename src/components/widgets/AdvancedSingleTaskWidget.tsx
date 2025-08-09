@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import BaseWidget from './BaseWidget';
-import { 
-  Target, 
-  Plus, 
-  X, 
-  Save, 
-  Clock, 
-  RotateCcw, 
+import {
+  Target,
+  Plus,
+  X,
+  Save,
+  Clock,
+  RotateCcw,
   Check
 } from 'lucide-react';
 import { DailyWidget } from '../../services/api';
@@ -15,22 +15,12 @@ import { dashboardService } from '../../services/dashboard';
 interface AdvancedSingleTaskWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
+  onHeightChange: (dailyWidgetId: string, height: number) => void;
 }
 
-const snoozeTime = 6;
+const snoozeTime = 10;
 
-const isAlarmTriggered = (alarmTime: string) => {
-  const now = new Date();
-  
-  // Parse alarm time (format: "HH:MM")
-  const [hours, minutes] = alarmTime.split(':').map(Number);
-  const today = new Date();
-  today.setHours(hours, minutes, 0, 0);
-  
-  // Check if current time is within 1 minute of alarm time
-  const diff = Math.abs(now.getTime() - today.getTime());
-  return diff <= 60 * 1000; // Within 1 minute
-};
+// Removed: exact trigger helper is no longer needed due to window-based alerting
 
 const getValueTypeInput = (valueType: string) => {
   switch (valueType) {
@@ -63,29 +53,28 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidgetProps) => {
+const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: AdvancedSingleTaskWidgetProps) => {
   const [widgetData, setWidgetData] = useState<DailyWidget | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
-  
+
   // Alarm states
   const [isAlerting, setIsAlerting] = useState(false);
   const [snoozeTimeLeft, setSnoozeTimeLeft] = useState<number | null>(null);
-  const [firstRingTime, setFirstRingTime] = useState<Date | null>(null);
-  
+
   // Tracker states
   const [showAddForm, setShowAddForm] = useState(false);
   const [newValue, setNewValue] = useState('');
   const [notes, setNotes] = useState('');
-  
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchWidgetData = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch widget data using the getTodayWidget API
       const response = await dashboardService.getTodayWidget(widget.daily_widget_id);
       setWidgetData(response);
@@ -98,18 +87,34 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
     }
   };
 
+  useEffect(() => {
+    var height = 2;
+    if (widgetData?.activity_data?.activity_history) {
+      height += (widgetData.activity_data.activity_history.length*0.75) +2;
+    }
+    if(widgetData?.description) {
+      height += 1;
+    }
+    if(widgetData?.widget_config?.target_value) {
+      height += 1;
+    }
+    if (isAlerting || (snoozeTimeLeft !== null && snoozeTimeLeft > 0)) {
+      height += 1;
+    }
+    onHeightChange(widget.daily_widget_id, height);
+  }, [widgetData, isAlerting, snoozeTimeLeft]);
   // Helper function to update activity data locally
   const updateActivityData = (updates: Record<string, any>) => {
     if (!widgetData) return;
-    
+
     setWidgetData(prev => {
       if (!prev) return prev;
-      
+
       const updatedActivityData = {
         ...prev.activity_data,
         ...updates
       };
-      
+
       return {
         ...prev,
         activity_data: updatedActivityData
@@ -119,11 +124,11 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
 
   // Alarm functions
   const snoozeAlarm = async () => {
-    
+
     setUpdating(true);
     const now = new Date();
     const newSnoozeCount = (widgetData?.activity_data?.snooze_count || 0) + 1;
-    
+
     // Get existing activity history or create new
     const existingActivity = widgetData?.activity_data?.activity_history || [];
     const newActivity = {
@@ -131,17 +136,17 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
       timestamp: now.toISOString(),
       snooze_count: newSnoozeCount
     };
-    
+
     // Update locally first for immediate UI feedback
-    updateActivityData({  
-        ...widgetData?.activity_data,
-        snooze_count: newSnoozeCount,
-        activity_history: [...existingActivity, newActivity]
+    updateActivityData({
+      ...widgetData?.activity_data,
+      snooze_count: newSnoozeCount,
+      activity_history: [...existingActivity, newActivity]
     });
-    
+
     setIsAlerting(false);
     setSnoozeTimeLeft(snoozeTime * 60); // snoozeTime minutes in seconds
-    
+
     // Then update on server
     try {
       await dashboardService.updateAlarmActivity(widget.daily_widget_id, {
@@ -159,11 +164,11 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
 
   const stopAlarm = async () => {
     if (!widgetData?.id || updating) return;
-    
+
     setUpdating(true);
     const now = new Date();
     const startedAt = now.toISOString();
-    
+
     // Get existing activity history or create new
     const existingActivity = widgetData?.activity_data?.activity_history || [];
     const newActivity = {
@@ -171,26 +176,26 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
       timestamp: now.toISOString(),
       total_snooze_count: widgetData?.activity_data?.snooze_count || 0
     };
-    
+
     // Update locally first for immediate UI feedback
     updateActivityData({
-        ...widgetData?.activity_data,
-        started_at: startedAt,
-        status: 'completed',
-        progress: 100,
-        activity_history: [...existingActivity, newActivity]
+      ...widgetData?.activity_data,
+      started_at: startedAt,
+      status: 'completed',
+      progress: 100,
+      activity_history: [...existingActivity, newActivity]
     });
-    
+
     setIsAlerting(false);
     setSnoozeTimeLeft(null);
-    
+
     // Then update on server
     try {
       await dashboardService.updateAlarmActivity(widget.daily_widget_id, {
         started_at: startedAt,
         activity_history: [...existingActivity, newActivity]
       });
-      
+
       // Also update the task status to completed
       await dashboardService.updateTodoActivity(widget.daily_widget_id, {
         status: 'completed',
@@ -208,24 +213,24 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
   // Tracker functions
   const updateTrackerValue = async () => {
     if (!newValue.trim() || updating) return;
-    
+
     setUpdating(true);
     const trackerUpdate = {
       value: newValue,
       time_added: new Date().toISOString(),
       notes: notes || undefined
     };
-    
+
     // Update locally first for immediate UI feedback
     updateActivityData({
-        ...widgetData?.activity_data,
-        ...trackerUpdate
+      ...widgetData?.activity_data,
+      ...trackerUpdate
     });
-    
+
     setNewValue('');
     setNotes('');
     setShowAddForm(false);
-    
+
     // Then update on server
     try {
       await dashboardService.updateTrackerActivity(widget.daily_widget_id, trackerUpdate);
@@ -241,17 +246,17 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
   // Task status functions
   const updateTaskStatus = async (status: 'pending' | 'in_progress' | 'completed' | 'cancelled') => {
     if (updating) return;
-    
+
     setUpdating(true);
     const progress = status === 'completed' ? 100 : status === 'in_progress' ? 50 : 0;
-    
+
     // Update locally first for immediate UI feedback
     updateActivityData({
-        ...widgetData?.activity_data,
-        status,
-        progress
+      ...widgetData?.activity_data,
+      status,
+      progress
     });
-    
+
     // Then update on server
     try {
       await dashboardService.updateTodoActivity(widget.daily_widget_id, {
@@ -267,90 +272,87 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
     }
   };
 
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'work': return 'bg-blue-100 text-blue-800';
+      case 'health': return 'bg-green-100 text-green-800';
+      case 'learning': return 'bg-purple-100 text-purple-800';
+      case 'personal': return 'bg-pink-100 text-pink-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
   // Check for triggered alarms
   useEffect(() => {
     const checkAlarms = () => {
       if (!widgetData?.widget_config?.alarm_times) return;
-      
+
       const now = new Date();
       let shouldAlert = false;
-      
+
       // Check if alarm was already started today
       if (widgetData?.activity_data?.started_at) {
         setIsAlerting(false);
         setSnoozeTimeLeft(null);
-        setFirstRingTime(null);
         return;
       }
-      
+
       // Check if currently snoozed by calculating from activity history
       const activityHistory = widgetData?.activity_data?.activity_history || [];
       const lastSnoozeActivity = activityHistory
         .filter((activity: any) => activity.type === 'snooze')
         .pop();
-      
+
       if (lastSnoozeActivity) {
         const lastSnoozeTime = new Date(lastSnoozeActivity.timestamp);
         const snoozeUntil = new Date(lastSnoozeTime.getTime() + snoozeTime * 60 * 1000);
-        
+        const snoozeWindowEnd = new Date(snoozeUntil.getTime() + 60 * 60 * 1000);
+
         if (now < snoozeUntil) {
           // Still snoozed, calculate time left
           const timeLeft = Math.ceil((snoozeUntil.getTime() - now.getTime()) / 1000);
           setSnoozeTimeLeft(timeLeft > 0 ? timeLeft : null);
           setIsAlerting(false);
           return;
-        } else {
-          // Snooze expired, trigger alarm again
+        } else if (now >= snoozeUntil && now < snoozeWindowEnd) {
+          // Snooze expired, ring within the 1-hour window after snooze
           setSnoozeTimeLeft(null);
           shouldAlert = true;
         }
       }
-      
-      // Check if any alarm times are triggered
+
+      // Check if now falls within any alarm's 1-hour alert window
       widgetData.widget_config.alarm_times.forEach((alarmTime: string) => {
-        if (isAlarmTriggered(alarmTime)) {
+        const [hours, minutes] = alarmTime.split(':').map(Number);
+        const alarmStart = new Date();
+        alarmStart.setHours(hours, minutes, 0, 0);
+        const alarmEnd = new Date(alarmStart.getTime() + 60 * 60 * 1000);
+        if (now >= alarmStart && now < alarmEnd) {
           shouldAlert = true;
         }
       });
-      
 
-      
-      // Check if an hour has passed since first ring
-      if (firstRingTime) {
-        const oneHourAfterFirstRing = new Date(firstRingTime.getTime() + 60 * 60 * 1000);
-        if (now >= oneHourAfterFirstRing) {
-          // Stop the alarm after an hour
-          setIsAlerting(false);
-          setFirstRingTime(null);
-          return;
-        }
-      }
-      
+
+
       if (shouldAlert && !isAlerting) {
         setIsAlerting(true);
         setSnoozeTimeLeft(null);
-        
-        // Set first ring time if not already set
-        if (!firstRingTime) {
-          setFirstRingTime(now);
-        }
-        
+
         // Play alert sound
         try {
           const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
           const oscillator = audioContext.createOscillator();
           const gainNode = audioContext.createGain();
-          
+
           oscillator.connect(gainNode);
           gainNode.connect(audioContext.destination);
-          
+
           oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
           oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
           oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-          
+
           gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-          
+
           oscillator.start(audioContext.currentTime);
           oscillator.stop(audioContext.currentTime + 0.3);
         } catch (error) {
@@ -369,7 +371,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
         clearInterval(intervalRef.current);
       }
     };
-  }, [widgetData, isAlerting, firstRingTime]); // Added firstRingTime to dependencies
+  }, [widgetData, isAlerting]);
 
   // Update countdowns
   useEffect(() => {
@@ -441,7 +443,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
 
   const activityData = widgetData.activity_data || {};
   const widgetConfig = widgetData.widget_config || {};
-  
+
   // Extract data for different features
   const trackerActivity = activityData || {};
   const todoActivity = activityData || {};
@@ -465,17 +467,16 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
   };
 
   return (
-    <BaseWidget 
-      title={isAlerting ? `🚨 Time for ${widgetData.title}! 🚨` : widgetData.title} 
-      icon={isAlerting ? "" : widgetData.activity_data?.status==='completed' ? "✅" : "◻️"} 
+    <BaseWidget
+      title={isAlerting ? `🚨 Time for ${widgetData.title}! 🚨` : widgetData.title}
+      icon={isAlerting ? "" : widgetData.activity_data?.status === 'completed' ? "✅" : "◻️"}
       onRemove={onRemove}
     >
       <div
-        className={`h-full flex flex-col p-4 overflow-y-auto rounded-lg transition-all ${
-          isAlerting
-            ? 'bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 text-white animate-pulse'
-            : ''
-        }`}
+        className={`flex flex-1 h-full p-2 flex-col overflow-y-auto rounded-lg transition-all ${isAlerting
+          ? 'bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 text-white animate-pulse'
+          : 'bg-blue-50 border border-blue-200 rounded-lg'
+          }`}
       >
         {/* Error Indicator */}
         {error && (
@@ -484,151 +485,117 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
           </div>
         )}
 
+        <div
+          className={`flex flex-row items-start gap-3 transition-all `}
+        >
+          <button
+            onClick={() => updateTaskStatus(widgetData.activity_data?.status === 'completed' ? 'pending' : 'completed')}
+            className="mt-0.5 flex-shrink-0"
+          >
+            {widgetData.activity_data?.status === 'completed' ? (
+              '✅'
+            ) : (
+              '◻️'
+            )}
+          </button>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <h4 className={`font-medium text-sm ${widgetData.activity_data?.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'
+                }`}>
+                {widgetData.title}
+              </h4>
+                    {widgetData.category && (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(widgetData.category)}`}>
+                        {widgetData.category}
+                      </span>
+                    )}
+            </div>
+
+            <div className="flex flex-col">
+
+              {widgetData.description && (
+                <p className={`text-xs mt-1 ${widgetData.activity_data?.status === 'completed' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                  {widgetData.description}
+                </p>
+              )}
+              {widgetConfig.value_type && (
+                <div className={`  rounded-xl text-center flex flex-row items-center justify-end gap-2`}>
+                  <div className={`text-lg font-extrabold ${isAlerting ? 'text-white' : 'text-green-900'}`}>
+                    {trackerActivity.value || '0'}
+                    {widgetConfig.value_unit && (
+                      <span className={`ml-1 text-base ${isAlerting ? 'text-white/80' : 'text-green-600'}`}>{widgetConfig.value_unit}</span>
+                    )}
+                  </div>
+                  {!isCompleted && (<div className="">
+                    <button
+                      onClick={() => setShowAddForm(true)}
+                      disabled={updating || isCompleted}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium ${updating || isCompleted
+                        ? `${isAlerting ? 'bg-white/30 text-white/70' : 'bg-green-300 text-white'} cursor-not-allowed`
+                        : `${isAlerting ? 'bg-white text-red-600 hover:bg-white/90' : 'bg-green-600 text-white hover:bg-green-700'}`
+                        }`}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </button>
+                  </div>)}
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+            {/* Snooze countdown */}
+            {snoozeTimeLeft !== null && snoozeTimeLeft > 0 && (
+              <div className={`mt-3 px-3 py-1 mb-1 rounded ${isAlerting ? 'bg-white/10 text-white' : 'bg-yellow-100 text-yellow-800 border border-yellow-300'}`}>
+                <span className="text-xs">⏰ Snoozed for {formatSnoozeTime(snoozeTimeLeft)}</span>
+              </div>
+            )}
+        {false && todoActivity.progress !== undefined && (
+          <div className="px-2 ">
+            <div className="w-full bg-blue-200 rounded-full h-1">
+              <div
+                className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                style={{ width: `${todoActivity.progress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+
         {/* Top bar: Next alarm + completed badge */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
+
+          <span className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(todoActivity.status || 'pending')}`}>
+            {todoActivity.status || 'pending'}
+          </span>
+          <div className={`text-xs ${isAlerting ? 'text-white/80' : 'text-green-700'} 
+                           flex items-center justify-center gap-2`}>
+            <Target className="h-4 w-4" /> Target {widgetConfig.target_value}
+            {widgetConfig.value_unit}
+          </div>
           {widgetConfig.alarm_times && widgetConfig.alarm_times.length > 0 && (
             <div className="flex items-center gap-2">
               <Clock className={`h-4 w-4 ${isAlerting ? 'text-white' : 'text-yellow-600'}`} />
               <span className={`text-xs ${isAlerting ? 'text-white' : 'text-yellow-800'}`}>
-                Next: {getNextAlarmTime(widgetConfig.alarm_times)}
+                Reminders {getNextAlarmTime(widgetConfig.alarm_times)}
               </span>
               <span className={`text-[10px] ${isAlerting ? 'text-white/80' : 'text-yellow-700'}`}>
-                [{widgetConfig.alarm_times.join(', ')}]
+                {widgetConfig.alarm_times.join(', ')}
               </span>
             </div>
           )}
-          {isCompleted && (
-            <span className={`${isAlerting ? 'bg-white/20 text-white' : 'bg-green-50 text-green-700'} px-2 py-1 rounded text-xs inline-flex items-center gap-1`}>
-              <Check className="h-3 w-3" />
-              Completed
-            </span>
-          )}
         </div>
-
-        {/* Task Status Section */}
-        {widgetData.widget_type === 'todo' && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-medium text-blue-800">Task Status</h4>
-              <div className="flex items-center gap-2">
-                {updating && (
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                )}
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(todoActivity.status || 'pending')}`}>
-                  {todoActivity.status || 'pending'}
-                </span>
-              </div>
-            </div>
-            
-                         <div className="flex gap-2">
-               <button
-                 onClick={() => updateTaskStatus('pending')}
-                 disabled={updating}
-                 className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${todoActivity.status === 'pending' ? 'bg-blue-500 text-white' : 'bg-white text-blue-600 border border-blue-300'} ${updating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
-               >
-                 Pending
-               </button>
-               <button
-                 onClick={() => updateTaskStatus('in_progress')}
-                 disabled={updating}
-                 className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${todoActivity.status === 'in_progress' ? 'bg-blue-500 text-white' : 'bg-white text-blue-600 border border-blue-300'} ${updating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
-               >
-                 In Progress
-               </button>
-               <button
-                 onClick={() => updateTaskStatus('completed')}
-                 disabled={updating}
-                 className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${todoActivity.status === 'completed' ? 'bg-green-500 text-white' : 'bg-white text-green-600 border border-green-300'} ${updating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100'}`}
-               >
-                 Complete
-               </button>
-             </div>
-            
-            {todoActivity.progress !== undefined && (
-              <div className="mt-2">
-                <div className="flex justify-between text-xs text-blue-600 mb-1">
-                  <span>Progress</span>
-                  <span>{todoActivity.progress}%</span>
-                </div>
-                <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${todoActivity.progress}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Centered tracker & minimal details */}
-        <div className="flex-1 flex flex-col items-center justify-center">
-          {widgetConfig.value_type && (
-            <div className={`${isAlerting ? 'bg-white/10' : 'bg-green-50'} ${isAlerting ? 'border-white/30' : 'border-green-200'} border rounded-xl px-5 py-4 text-center` }>
-              <div className={`text-4xl font-extrabold ${isAlerting ? 'text-white' : 'text-green-900'}`}>
-                {trackerActivity.value || '0'}
-                {widgetConfig.value_unit && (
-                  <span className={`ml-1 text-base ${isAlerting ? 'text-white/80' : 'text-green-600'}`}>{widgetConfig.value_unit}</span>
-                )}
-              </div>
-              <div className="mt-3">
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  disabled={updating || isCompleted}
-                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium ${
-                    updating || isCompleted
-                      ? `${isAlerting ? 'bg-white/30 text-white/70' : 'bg-green-300 text-white'} cursor-not-allowed`
-                      : `${isAlerting ? 'bg-white text-red-600 hover:bg-white/90' : 'bg-green-600 text-white hover:bg-green-700'}`
-                  }`}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add value
-                </button>
-              </div>
-
-              {widgetConfig.target_value && (
-                <div className="mt-3">
-                  <div className={`text-xs ${isAlerting ? 'text-white/80' : 'text-green-700'} mb-1 flex items-center justify-center gap-1`}>
-                    <Target className="h-3 w-3" /> Target {widgetConfig.target_value}
-                    {widgetConfig.value_unit}
-                  </div>
-                  {trackerActivity.value && (
-                    <div className={`${isAlerting ? 'bg-white/30' : 'bg-green-200'} rounded-full h-2 w-48 mx-auto`}>
-                      <div
-                        className={`${isAlerting ? 'bg-white' : getProgressColor(
-                          (parseFloat(trackerActivity.value) / parseFloat(widgetConfig.target_value)) * 100
-                        )} h-2 rounded-full`}
-                        style={{
-                          width: `${Math.min(
-                            (parseFloat(trackerActivity.value) / parseFloat(widgetConfig.target_value)) * 100,
-                            100
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Snooze countdown */}
-          {snoozeTimeLeft !== null && snoozeTimeLeft > 0 && (
-            <div className={`mt-3 px-3 py-1 rounded ${isAlerting ? 'bg-white/10 text-white' : 'bg-yellow-100 text-yellow-800 border border-yellow-300'}`}>
-              <span className="text-xs">⏰ Snoozed for {formatSnoozeTime(snoozeTimeLeft)}</span>
-            </div>
-          )}
-        </div>
-
         {/* Actions when ringing */}
-        {isAlerting && !isCompleted && (
+        {isAlerting && (
           <div className="flex gap-2 mt-3">
             <button
               onClick={snoozeAlarm}
               disabled={updating}
-              className={`flex-1 px-3 py-2 rounded text-sm transition-colors flex items-center justify-center gap-2 ${
-                updating ? 'bg-white/40 text-white cursor-not-allowed' : 'bg-white text-red-600 hover:bg-white/90'
-              }`}
+              className={`flex-1 px-3 py-2 rounded text-sm transition-colors flex items-center justify-center gap-2 ${updating ? 'bg-white/40 text-white cursor-not-allowed' : 'bg-white text-red-600 hover:bg-white/90'
+                }`}
             >
               <RotateCcw className={`h-4 w-4 ${updating ? 'animate-spin' : ''}`} />
               Snooze
@@ -636,9 +603,8 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
             <button
               onClick={stopAlarm}
               disabled={updating}
-              className={`flex-1 px-3 py-2 rounded text-sm transition-colors flex items-center justify-center gap-2 ${
-                updating ? 'bg-white/40 text-white cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'
-              }`}
+              className={`flex-1 px-3 py-2 rounded text-sm transition-colors flex items-center justify-center gap-2 ${updating ? 'bg-white/40 text-white cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'
+                }`}
             >
               <Check className="h-4 w-4" />
               Stop
@@ -688,7 +654,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
                   </button>
                 </div>
               </div>
-              
+
               {/* Form Content */}
               <div className="p-4">
                 <div className="space-y-3">
@@ -706,7 +672,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
                       required
                     />
                   </div>
-                  
+
                   {/* Notes Input */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -722,7 +688,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
                   </div>
                 </div>
               </div>
-              
+
               {/* Footer */}
               <div className="bg-gray-50 p-4 rounded-b-xl">
                 <div className="flex gap-2">
@@ -733,18 +699,18 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget }: AdvancedSingleTaskWidget
                   >
                     Cancel
                   </button>
-                                     <button
-                     onClick={updateTrackerValue}
-                     disabled={!newValue.trim() || updating}
-                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center ${updating || !newValue.trim() ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-gradient-to-r from-green-600 to-blue-600 text-white hover:from-green-700 hover:to-blue-700'}`}
-                   >
-                     {updating ? (
-                       <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                     ) : (
-                       <Save className="h-3 w-3 mr-1" />
-                     )}
-                     {updating ? 'Saving...' : 'Save'}
-                   </button>
+                  <button
+                    onClick={updateTrackerValue}
+                    disabled={!newValue.trim() || updating}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center ${updating || !newValue.trim() ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-gradient-to-r from-green-600 to-blue-600 text-white hover:from-green-700 hover:to-blue-700'}`}
+                  >
+                    {updating ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                    ) : (
+                      <Save className="h-3 w-3 mr-1" />
+                    )}
+                    {updating ? 'Saving...' : 'Save'}
+                  </button>
                 </div>
               </div>
             </div>
