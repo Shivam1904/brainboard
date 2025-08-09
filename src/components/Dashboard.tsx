@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Responsive, WidthProvider, Layout } from 'react-grid-layout'
+import { useState, useEffect, useMemo } from 'react'
+import { Responsive, WidthProvider } from 'react-grid-layout'
 import WebSearchWidget from './widgets/WebSearchWidget';
 import TaskListWidget from './widgets/TaskListWidget'
 import BaseWidget from './widgets/BaseWidget'
@@ -7,7 +7,7 @@ import CalendarWidget from './widgets/CalendarWidget'
 import AdvancedSingleTaskWidget from './widgets/AdvancedSingleTaskWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { getWidgetConfig } from '../config/widgets'
-import { GRID_CONFIG, getGridCSSProperties, findEmptyPosition } from '../config/grid'
+import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
 import { dashboardService } from '../services/dashboard'
 // import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
@@ -27,6 +27,8 @@ const Dashboard = () => {
   const [dashboardError, setDashboardError] = useState<string | null>(null)
   const [widgets, setWidgets] = useState<DailyWidget[]>([])
   const [viewWidgetStates, setViewWidgetStates] = useState<DailyWidget[]>([])
+  // Centralized layout: track per-widget size overrides (e.g., dynamic height changes)
+  const [sizeOverrides, setSizeOverrides] = useState<Record<string, { w?: number; h?: number }>>({})
   // Apply grid CSS properties on component mount
   useEffect(() => {
     const cssProperties = getGridCSSProperties()
@@ -35,46 +37,10 @@ const Dashboard = () => {
     })
   }, [])
 
-  // Find optimal position for a new widget
-  const findOptimalPosition = (widgetType: string, existingWidgets: DailyWidget[]): { x: number; y: number } => {
-    const config = getWidgetConfig(widgetType);
-    if (!config) return { x: 0, y: 0 };
+  // No manual data-grid; rely on library defaults
 
-    // Try to find empty space using the existing function
-    const emptyPosition = findEmptyPosition({
-      widgetId: widgetType,
-      widgets: existingWidgets,
-      getWidgetConfig,
-      gridCols: GRID_CONFIG.cols.lg,
-      maxRows: 100
-    });
-
-    if (emptyPosition) {
-      return emptyPosition;
-    }
-
-    // Fallback: simple horizontal placement with wrapping
-    let currentX = 0;
-    let currentY = 0;
-    const maxX = GRID_CONFIG.cols.lg - config.defaultSize.w;
-
-    // Find the rightmost widget to start from
-    if (existingWidgets.length > 0) {
-      const rightmostWidget = existingWidgets.reduce((rightmost, widget) => {
-        return widget.layout.x + widget.layout.w > rightmost.layout.x + rightmost.layout.w ? widget : rightmost;
-      });
-      currentX = rightmostWidget.layout.x + rightmostWidget.layout.w;
-      currentY = rightmostWidget.layout.y;
-    }
-
-    // If we can't fit horizontally, move to next row
-    if (currentX + config.defaultSize.w > maxX) {
-      currentX = 0;
-      currentY += 2; // Add some spacing between rows
-    }
-
-    return { x: currentX, y: currentY };
-  };
+  // Helper to build a minimal placeholder layout to satisfy type; actual layout is centralized
+  const buildPlaceholderLayout = (id: string) => ({ i: id, x: 0, y: 0, w: 1, h: 1 })
 
   // Fetch all widgets and today's widgets
   const fetchTodayWidgets = async () => {
@@ -123,7 +89,6 @@ const Dashboard = () => {
         if (isVisible) {
           const config = getWidgetConfig(widgetType);
           if (config) {
-            const position = findOptimalPosition(widgetType, uiWidgets);
             const viewWidget: DailyWidget = {
               id: `auto-${widgetType}`,
               daily_widget_id: `auto-${widgetType}`,
@@ -140,17 +105,7 @@ const Dashboard = () => {
               date: new Date().toISOString().split('T')[0],
               created_at: allWidgetsViewWidget?.created_at || new Date().toISOString(),
               widget_config: allWidgetsViewWidget?.widget_config,
-              layout: {
-                i: `auto-${widgetType}`,
-                x: position.x,
-                y: position.y,
-                w: config.defaultSize.w,
-                h: config.defaultSize.h,
-                minW: config.minSize.w,
-                minH: config.minSize.h,
-                maxW: config.maxSize.w,
-                maxH: config.maxSize.h,
-              }
+              layout: buildPlaceholderLayout(`auto-${widgetType}`)
             };
 
             uiWidgets.push(viewWidget);
@@ -218,8 +173,6 @@ const Dashboard = () => {
         if (hasTrackerDetails || hasAlarmDetails || hasUpcomingMilestone) {
           console.log(`Creating advanced single task widget for: ${widget.title}`);
           // Create advanced single task widget
-          const config = getWidgetConfig('advancedsingletask');
-          const position = findOptimalPosition('advancedsingletask', uiWidgets);
 
           const advancedWidget: DailyWidget = {
             ...widget,
@@ -231,25 +184,13 @@ const Dashboard = () => {
             reasoning: 'Advanced single task widget with tracker, alarm, and progress details',
             date: new Date().toISOString().split('T')[0],
             created_at: widget.created_at,
-            layout: {
-              i: `advanced-single-task-${widget.daily_widget_id}`,
-              x: position.x,
-              y: position.y,
-              w: config?.defaultSize?.w || 12,
-              h: config?.defaultSize?.h || 14,
-              minW: config?.minSize?.w || 8,
-              minH: config?.minSize?.h || 6,
-              maxW: config?.maxSize?.w || 18,
-              maxH: config?.maxSize?.h || 20,
-            }
+            layout: buildPlaceholderLayout(`advanced-single-task-${widget.daily_widget_id}`)
           };
 
           advancedSingleTaskWidgets.push(advancedWidget);
         } else if (trackerWidgetTypes.includes(widget.widget_type)) {
           console.log(`Adding to tracker widget list: ${widget.title}`);
           // Add to tracker widget list
-          const config = getWidgetConfig(widget.widget_type);
-          const position = findOptimalPosition(widget.widget_type, uiWidgets);
 
           const trackerWidget: DailyWidget = {
             ...widget,
@@ -261,17 +202,7 @@ const Dashboard = () => {
             reasoning: 'Tracker widget for ' + widget.title,
             date: new Date().toISOString().split('T')[0],
             created_at: widget.created_at,
-            layout: {
-              i: `tracker-${widget.daily_widget_id}`,
-              x: position.x,
-              y: position.y,
-              w: config?.defaultSize?.w || 12,
-              h: config?.defaultSize?.h || 14,
-              minW: config?.minSize?.w || 8,
-              minH: config?.minSize?.h || 6,
-              maxW: config?.maxSize?.w || 18,
-              maxH: config?.maxSize?.h || 20,
-            }
+            layout: buildPlaceholderLayout(`tracker-${widget.daily_widget_id}`)
           }
           individualTrackerWidgets.push(trackerWidget);
         }
@@ -289,7 +220,6 @@ const Dashboard = () => {
             console.warn('Web search widget config not found');
             return;
           }
-          const position = findOptimalPosition('websearch', uiWidgets);
 
           const webSearchWidget: DailyWidget = {
             id: `websearch-${widget.daily_widget_id}`,
@@ -307,17 +237,7 @@ const Dashboard = () => {
             date: new Date().toISOString().split('T')[0],
             created_at: widget.created_at,
             widget_config: widgetConfig,
-            layout: {
-              i: `websearch-${widget.daily_widget_id}`,
-              x: position.x,
-              y: position.y,
-              w: config?.defaultSize?.w || 11,
-              h: config?.defaultSize?.h || 14,
-              minW: config?.minSize?.w || 8,
-              minH: config?.minSize?.h || 8,
-              maxW: config?.maxSize?.w || 20,
-              maxH: config?.maxSize?.h || 24,
-            }
+            layout: buildPlaceholderLayout(`websearch-${widget.daily_widget_id}`)
           };
 
           webSearchWidgets.push(webSearchWidget);
@@ -331,8 +251,6 @@ const Dashboard = () => {
       // Step 4: Create single task list widget if there are regular tasks
       console.log(`Creating combined task list with ${regularTaskWidgets.length} regular tasks`);
       if (regularTaskWidgets.length > 0) {
-        const config = getWidgetConfig('todo-task');
-        const position = findOptimalPosition('todo-task', uiWidgets);
 
         const taskListWidget: DailyWidget = {
           id: 'task-list-combined',
@@ -360,17 +278,7 @@ const Dashboard = () => {
               widget_config: w.widget_config
             }))
           },
-          layout: {
-            i: 'task-list-combined',
-            x: position.x,
-            y: position.y,
-            w: config?.defaultSize?.w || 12,
-            h: config?.defaultSize?.h || 15,
-            minW: config?.minSize?.w || 8,
-            minH: config?.minSize?.h || 8,
-            maxW: config?.maxSize?.w || 30,
-            maxH: config?.maxSize?.h || 36,
-          }
+          layout: buildPlaceholderLayout('task-list-combined')
         };
 
         uiWidgets.push(taskListWidget);
@@ -400,80 +308,43 @@ const Dashboard = () => {
     fetchTodayWidgets()
   }, [])
 
-  // Handle window resize to update constraints
-  useEffect(() => {
-    const handleResize = () => {
-      // Re-constrain all widgets when window is resized
-      setWidgets((prev: DailyWidget[]) =>
-        prev.map((widget: DailyWidget) => ({
-          ...widget,
-          layout: constrainLayout(widget.layout)
-        }))
-      )
+  // No explicit layouts or handlers; let library manage placement
+
+  // Compute initial row-wise positions so items are spread across the row before wrapping
+  const computeRowWiseLayout = (
+    items: Array<{ id: string; w: number; h: number }>
+  ) => {
+    const cols = GRID_CONFIG.cols.lg
+    let currentX = 0
+    let currentY = 0
+    let currentRowHeight = 0
+    const positions = new Map<string, { x: number; y: number }>()
+
+    for (const item of items) {
+      const width = Math.min(item.w, cols)
+      if (currentX + width > cols) {
+        currentX = 0
+        currentY += currentRowHeight
+        currentRowHeight = 0
+      }
+      positions.set(item.id, { x: currentX, y: currentY })
+      currentX += width
+      currentRowHeight = Math.max(currentRowHeight, item.h)
     }
 
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  // Simple layout constraint function
-  const constrainLayout = (layout: Layout): Layout => {
-    const gridCols = GRID_CONFIG.cols.lg;
-    const maxHeight = 50; // Maximum grid height
-
-    return {
-      ...layout,
-      x: Math.max(0, Math.min(layout.x, gridCols - layout.w)),
-      y: Math.max(0, Math.min(layout.y, maxHeight - layout.h)),
-      w: Math.max(layout.minW || 1, Math.min(layout.w, layout.maxW || gridCols)),
-      h: Math.max(layout.minH || 1, Math.min(layout.h, layout.maxH || maxHeight))
-    };
+    return positions
   }
 
-  // Create layouts object for react-grid-layout
-  const layouts = {
-    lg: widgets.map(widget => widget.layout)
-  };
-
-  const onLayoutChange = (layout: Layout[]) => {
-    // Update widget layouts
-    setWidgets((prev: DailyWidget[]) =>
-      prev.map((widget: DailyWidget) => {
-        const newLayout = layout.find(l => l.i === widget.daily_widget_id)
-        return newLayout ? { ...widget, layout: newLayout } : widget
-      })
-    )
-  }
-
-  const onDragStop = (layout: Layout[]) => {
-    // Apply constraints when the user finishes dragging
-    applyConstraints(layout)
-  }
-
-  const onResizeStop = (layout: Layout[]) => {
-    // Apply constraints when the user finishes resizing
-    applyConstraints(layout)
-  }
-
-  const applyConstraints = (layout: Layout[]) => {
-    const constrainedLayout = layout.map(l => constrainLayout(l));
-
-    const updatedWidgets = widgets.map((widget: DailyWidget) => {
-      const newLayout = constrainedLayout.find(l => l.i === widget.daily_widget_id)
-      return newLayout ? { ...widget, layout: newLayout } : widget
-    });
-
-    setWidgets(updatedWidgets)
-
-    // Add visual feedback
-    const constrainedElements = document.querySelectorAll('.widget-container')
-    constrainedElements.forEach((element) => {
-      element.classList.add('constrained')
-      setTimeout(() => {
-        element.classList.remove('constrained')
-      }, 500)
+  const computedPositions = useMemo(() => {
+    const layoutItems = widgets.map((w) => {
+      const config = getWidgetConfig(w.widget_type)
+      const override = sizeOverrides[w.daily_widget_id] || sizeOverrides[String(w.id)] || {}
+      const width = override.w ?? (config?.defaultSize?.w ?? 12)
+      const height = override.h ?? (config?.defaultSize?.h ?? 8)
+      return { id: String(w.id), w: width, h: height }
     })
-  }
+    return computeRowWiseLayout(layoutItems)
+  }, [widgets, sizeOverrides])
 
   // Add new widget using addNewWidget API
   const addWidget = async (widgetId: string) => {
@@ -509,6 +380,14 @@ const Dashboard = () => {
       console.error('Failed to add widget:', error);
 
     }
+  }
+
+  const onHeightChange = (dailyWidgetId: string, newHeight: number) => {
+    console.log('Widget height changed:', dailyWidgetId, newHeight)
+    setSizeOverrides((prev) => ({
+      ...prev,
+      [dailyWidgetId]: { ...(prev[dailyWidgetId] || {}), h: newHeight },
+    }))
   }
 
   const removeWidget = async (dailyWidgetId: string) => {
@@ -566,7 +445,6 @@ const Dashboard = () => {
       }
       return;
     }
-
     if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
       try {
         // Call API to set is_active = 0
@@ -594,6 +472,7 @@ const Dashboard = () => {
         if (widget.widget_config?.combined_tasks) {
           return (
             <TaskListWidget
+              onHeightChange={onHeightChange}
               widget={{
                 ...widget,
                 title: 'Task List',
@@ -614,6 +493,7 @@ const Dashboard = () => {
               description: 'Advanced single task with tracker, alarm, and progress details'
             }}
             onRemove={() => removeWidget(widget.daily_widget_id)}
+            onHeightChange={onHeightChange}
           />
         );
       case 'calendar':
@@ -640,6 +520,8 @@ const Dashboard = () => {
       case 'allSchedules':
         return (
           <AllSchedulesWidget
+            widget={widget}
+            onHeightChange={onHeightChange}
             onWidgetAddedToToday={() => fetchTodayWidgets()}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
@@ -752,8 +634,8 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col bg-yellow-100">
-      <div className="px-4 py-3 flex justify-between items-center border-b bg-card shrink-0">
+    <div className={`h-full w-full flex flex-col bg-gradient-to-br from-yellow-100 via-sky-100 to-white text-gray-800 dark:from-indigo-900 dark:via-slate-900 dark:to-black dark:text-slate-100`}>
+      <div className="px-4 py-3 flex justify-between items-center border-b  shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
             <h1 className="text-xl font-bold text-foreground">
@@ -784,27 +666,31 @@ const Dashboard = () => {
       <div className="flex-1 overflow-auto">
         <ResponsiveGridLayout
           className={`layout min-h-full ${showGridLines ? 'show-grid-lines' : ''}`}
-          layouts={layouts}
           breakpoints={GRID_CONFIG.breakpoints}
           cols={GRID_CONFIG.cols}
           rowHeight={GRID_CONFIG.rowHeight}
           margin={GRID_CONFIG.margin}
           containerPadding={GRID_CONFIG.containerPadding}
-          isDraggable={true}
-          isResizable={true}
-          preventCollision={true}
-          compactType={null}
-          useCSSTransforms={false}
           draggableHandle=".widget-drag-handle"
-          onLayoutChange={onLayoutChange}
-          onDragStop={onDragStop}
-          onResizeStop={onResizeStop}
+          compactType="vertical"
         >
-          {widgets.map((widget: DailyWidget) => (
-            <div key={widget.id} className="widget-container">
-              {renderWidget(widget)}
-            </div>
-          ))}
+          {widgets.map((widget: DailyWidget) => {
+            const config = getWidgetConfig(widget.widget_type);
+            const override = sizeOverrides[widget.daily_widget_id] || sizeOverrides[String(widget.id)] || {};
+            const baseW = config?.defaultSize?.w ?? 12;
+            const baseH = config?.defaultSize?.h ?? 8;
+            const w = override.w ?? baseW;
+            const h = override.h ?? baseH;
+            const pos = computedPositions.get(String(widget.id));
+            const x = pos?.x ?? 0;
+            const y = pos?.y ?? (Infinity as number);
+            const dataGrid = { i: String(widget.id), x, y, w, h } as const;
+            return (
+              <div key={widget.id} className="widget-container" data-grid={dataGrid}>
+                {renderWidget(widget)}
+              </div>
+            );
+          })}
         </ResponsiveGridLayout>
       </div>
     </div>

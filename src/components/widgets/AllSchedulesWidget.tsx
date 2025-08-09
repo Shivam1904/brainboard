@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { DashboardWidget } from '../../services/api';
+import { DashboardWidget, DailyWidget } from '../../services/api';
 import { dashboardService } from '../../services/dashboard';
 import { getDummyAllSchedulesWidgets } from '../../data/widgetDummyData';
 import AddWidgetForm from '../AddWidgetForm';
 
 interface AllSchedulesWidgetProps {
+  widget: DailyWidget;
   onRemove: () => void;
   onWidgetAddedToToday: (widget: DashboardWidget) => void;
+  onHeightChange: (dailyWidgetId: string, newHeight: number) => void;
 }
 
 interface GroupedWidgets {
   [key: string]: DashboardWidget[];
 }
 
-const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidgetProps) => {
+const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightChange }: AllSchedulesWidgetProps) => {
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,23 +141,7 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
     }
   };
 
-  // Get widget type display name
-  const getWidgetTypeDisplayName = (type: string): string => {
-    const typeNames: Record<string, string> = {
-      'todo-habit': 'Habit Tracker',
-      'todo-task': 'Task List',
-      'todo-event': 'Event Tracker',
-      'alarm': 'Alarm',
-      'single_item_tracker': 'Item Tracker',
-      'websearch': 'Web Search',
-      'aiChat': 'Brainy AI',
-      'allSchedules': 'All Schedules',
-      'moodTracker': 'Mood Tracker',
-      'weatherWidget': 'Weather',
-      'simpleClock': 'Simple Clock'
-    };
-    return typeNames[type] || type;
-  };
+  
 
   // Get widget type icon
   const getWidgetTypeIcon = (type: string): string => {
@@ -198,16 +184,24 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
     return frequencyNames[frequency] || frequency;
   };
 
-  // Group widgets by type
+  // Group widgets into Trackers and Missions, excluding specific types
   const groupedWidgets = widgets.reduce((groups: GroupedWidgets, widget) => {
     const type = widget.widget_type;
-    const displayName = getWidgetTypeDisplayName(type);
-    if (!groups[displayName]) {
-      groups[displayName] = [];
+    const trackerTypes = new Set(['calendar', 'weekchart']);
+    const excludedTypes = new Set(['aiChat', 'moodTracker', 'weatherWidget', 'simpleClock', 'allSchedules']);
+
+    // Skip excluded types
+    if (excludedTypes.has(type)) {
+      return groups;
     }
-    groups[displayName].push(widget);
+
+    const groupName = trackerTypes.has(type) ? 'trackers' : 'missions';
+    if (!groups[groupName]) {
+      groups[groupName] = [];
+    }
+    groups[groupName].push(widget);
     return groups;
-  }, {});
+  }, {} as GroupedWidgets);
 
   // Toggle group expansion
   const toggleGroup = (groupName: string) => {
@@ -218,6 +212,11 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
       newExpanded.add(groupName);
     }
     setExpandedGroups(newExpanded);
+    // set number of total items in the list = total groups + sum of items in expanded groups only
+    const expandedItemsCount = Object.entries(groupedWidgets)
+      .reduce((sum, [name, group]) => sum + (newExpanded.has(name) ? group.length : 0), 0);
+    const totalItems = Object.keys(groupedWidgets).length + expandedItemsCount;
+    onHeightChange(widget.id, totalItems * 2 + 2);
   };
 
   if (loading) {
@@ -252,8 +251,9 @@ const AllSchedulesWidget = ({ onRemove, onWidgetAddedToToday }: AllSchedulesWidg
   }
 
   return (
-    <BaseWidget title={`Widget Library (${widgets.length})`} icon="📚" onRemove={onRemove}>
+    <BaseWidget title={`Widget Library (${widgets.length})`} icon="📚" onRemove={onRemove} >
       <div className="h-full flex flex-col">
+        <div className="flex mt-2"><h4>Widget Library</h4></div>
         {/* Widget groups */}
         <div className="flex-1 overflow-y-auto space-y-3">
           {Object.keys(groupedWidgets).length === 0 ? (

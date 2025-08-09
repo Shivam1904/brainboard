@@ -333,19 +333,19 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
                 <h4 className="text-lg font-bold text-gray-800 mb-4">Category</h4>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: 'productivity', label: 'Productivity', color: 'from-blue-500 to-blue-600' },
-                    { value: 'health', label: 'Health', color: 'from-green-500 to-green-600' },
-                    { value: 'job', label: 'Job', color: 'from-purple-500 to-purple-600' },
-                    { value: 'information', label: 'Information', color: 'from-yellow-500 to-yellow-600' },
-                    { value: 'entertainment', label: 'Entertainment', color: 'from-pink-500 to-pink-600' },
-                    { value: 'utilities', label: 'Utilities', color: 'from-gray-500 to-gray-600' }
+                    { value: 'productivity', label: 'Productivity', color: 'bg-gradient-to-r from-blue-500 to-blue-600' },
+                    { value: 'health', label: 'Health', color: 'bg-red-500' },
+                    { value: 'job', label: 'Job', color: 'bg-gradient-to-r from-purple-500 to-purple-600' },
+                    { value: 'information', label: 'Information', color: 'bg-gradient-to-r from-yellow-500 to-yellow-600' },
+                    { value: 'entertainment', label: 'Entertainment', color: 'bg-gradient-to-r from-pink-500 to-pink-600' },
+                    { value: 'utilities', label: 'Utilities', color: 'bg-gradient-to-r from-gray-500 to-gray-600' }
                   ].map((category) => (
                     <button
                       key={category.value}
                       type="button"
                       onClick={() => setFormData({ ...formData, category: category.value as ApiCategory })}
                       className={`px-3 py-2 rounded-lg font-medium transition-all ${formData.category === category.value
-                          ? `bg-gradient-to-r ${category.color} text-white shadow-lg transform scale-105`
+                          ? `${category.color} text-white shadow-lg transform scale-105`
                           : 'bg-white/70 text-gray-700 hover:bg-gray-100 hover:scale-102'
                         }`}
                     >

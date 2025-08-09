@@ -27,8 +27,6 @@ const MOODS: MoodOption[] = [
   { id: 'angry', label: 'Angry', emoji: '😠' },
 ];
 
-const getTodayKey = () => new Date().toISOString().split('T')[0];
-
 const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
   const [selectedMoodIds, setSelectedMoodIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -62,23 +60,26 @@ const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
     ensureDailyWidget();
   }, [widget]);
 
-  const toggleMood = (moodId: string) => {
-    setSelectedMoodIds(prev => {
-      const next = new Set(prev);
-      if (next.has(moodId)) {
-        next.delete(moodId);
-      } else {
-        next.add(moodId);
-      }
-      return next;
-    });
+  const toggleMood = async (moodId: string) => {
+    const next = new Set(selectedMoodIds);
+    if (next.has(moodId)) {
+      next.delete(moodId);
+    } else {
+      next.add(moodId);
+    }
+    setSelectedMoodIds(next);
+    // Auto-save on every change
+    saveSelection(Array.from(next));
   };
 
   const clearSelection = () => {
-    setSelectedMoodIds(new Set());
+    const cleared = new Set<string>();
+    setSelectedMoodIds(cleared);
+    // Auto-save clear
+    saveSelection([]);
   };
 
-  const saveSelection = async () => {
+  const saveSelection = async (moodsOverride?: string[]) => {
     if (!widget.widget_id) {
       alert('Mood widget is not properly configured.');
       return;
@@ -95,7 +96,7 @@ const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
       if (!currentDailyWidgetId) throw new Error('Failed to create daily widget.');
 
       await dashboardService.updateActivity(currentDailyWidgetId, {
-        selected_moods: Array.from(selectedMoodIds),
+        selected_moods: moodsOverride ?? Array.from(selectedMoodIds),
         saved_at: new Date().toISOString(),
       });
       setSavedAt(new Date().toLocaleTimeString());
@@ -116,12 +117,12 @@ const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
           <>
             <div className="p-3">
               <p className="text-sm text-muted-foreground">
-                Select how you feel today. You can choose multiple moods.
+                How am I feeling today?
               </p>
             </div>
 
             <div className="px-3">
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-5 ">
                 {MOODS.map((mood) => {
                   const isSelected = selectedMoodIds.has(mood.id);
                   return (
@@ -129,39 +130,17 @@ const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
                       key={mood.id}
                       onClick={() => toggleMood(mood.id)}
                       className={
-                        `flex flex-col items-center justify-center rounded-md border py-3 transition-colors select-none ` +
-                        (isSelected
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-card text-card-foreground border-border hover:bg-accent hover:text-accent-foreground')
-                      }
+                        `flex flex-col items-center justify-center select-none ` }
                       title={mood.label}
                     >
-                      <div className="text-xl mb-1">{mood.emoji}</div>
+                      <div className={`rounded-full border p-2 px-3 transition-colors text-4xl
+                         ${isSelected ? 'bg-primary text-primary-foreground border-primary' 
+                         : 'bg-card text-card-foreground border-border hover:bg-accent hover:text-accent-foreground'}`}>
+                           {mood.emoji}
+                          </div>
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            <div className="mt-auto p-3 flex items-center justify-between gap-2">
-              <div className="text-xs text-muted-foreground">
-                {savedAt ? `Saved at ${savedAt}` : 'Not saved yet'}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={clearSelection}
-                  className="px-3 py-1 text-sm rounded border bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  disabled={saving}
-                >
-                  Clear
-                </button>
-                <button
-                  onClick={saveSelection}
-                  className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-                  disabled={saving}
-                >
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
               </div>
             </div>
           </>

@@ -250,14 +250,6 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove }) => {
                 </div>
               </div>
             </div>
-
-            {/* Location info */}
-            <div className="mt-3 pt-3 border-t border-border">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>📍</span>
-                <span>Current Location</span>
-              </div>
-            </div>
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
