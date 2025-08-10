@@ -39,6 +39,7 @@ def get_default_user_id() -> str:
 # ============================================================================
 @router.get("/getTodayWidgetList", response_model=List[TodayWidgetListResponse])
 async def get_today_widget_list(
+    target_date: str,
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
     """
@@ -49,7 +50,7 @@ async def get_today_widget_list(
     try:
         
         service = DailyWidgetService(db)
-        return await service.get_today_widget_list()
+        return await service.get_today_widget_list(target_date)
     except Exception as e:
         raise raise_database_error(f"Failed to get today's widget list: {str(e)}")
 
@@ -139,11 +140,12 @@ async def get_activity_data(
 @router.get("/daily-widgets/{widget_id}/getTodayWidgetbyWidgetId")
 async def get_activity_data(
     widget_id: str,
+    target_date: str,
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
     """Get activity data for a daily widget."""
     try:
         service = DailyWidgetService(db)
-        return await service.get_today_widget_by_widget_id(widget_id)
+        return await service.get_today_widget_by_widget_id(widget_id, target_date)
     except Exception as e:
         raise raise_database_error(f"Failed to get activity data: {str(e)}")

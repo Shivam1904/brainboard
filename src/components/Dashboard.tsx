@@ -27,6 +27,7 @@ const Dashboard = () => {
   const [dashboardError, setDashboardError] = useState<string | null>(null)
   const [widgets, setWidgets] = useState<DailyWidget[]>([])
   const [viewWidgetStates, setViewWidgetStates] = useState<DailyWidget[]>([])
+  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0])
   // Centralized layout: track per-widget size overrides (e.g., dynamic height changes)
   const [sizeOverrides, setSizeOverrides] = useState<Record<string, { w?: number; h?: number }>>({})
   // Apply grid CSS properties on component mount
@@ -37,6 +38,9 @@ const Dashboard = () => {
     })
   }, [])
 
+  useEffect(() => {
+    fetchTodayWidgets()
+  }, [currentDate])
   // No manual data-grid; rely on library defaults
 
   // Helper to build a minimal placeholder layout to satisfy type; actual layout is centralized
@@ -88,7 +92,7 @@ const Dashboard = () => {
       let todayWidgetsData: DailyWidget[] = [];
       try {
         allWidgetsData = await dashboardService.getAllWidgets();
-        todayWidgetsData = await dashboardService.getTodayWidgets();
+        todayWidgetsData = await dashboardService.getTodayWidgets(currentDate);
       } catch (apiError) {
         console.warn('API call failed, falling back to dummy data:', apiError);
       }
@@ -373,6 +377,7 @@ const Dashboard = () => {
         if (widget.widget_config?.combined_tasks) {
           return (
             <TaskListWidget
+              targetDate={currentDate}
               onHeightChange={onHeightChange}
               widget={{
                 ...widget,
@@ -400,6 +405,7 @@ const Dashboard = () => {
       case 'calendar':
         return (
           <CalendarWidget
+            targetDate={currentDate}
             widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
@@ -414,6 +420,7 @@ const Dashboard = () => {
       case 'moodTracker':
         return (
           <MoodTrackerWidget
+            targetDate={currentDate}
             widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
@@ -421,6 +428,7 @@ const Dashboard = () => {
       case 'allSchedules':
         return (
           <AllSchedulesWidget
+            targetDate={currentDate}
             widget={widget}
             onHeightChange={onHeightChange}
             onWidgetAddedToToday={() => fetchTodayWidgets()}
@@ -430,6 +438,7 @@ const Dashboard = () => {
       case 'simpleClock':
         return (
           <SimpleClockWidget
+            targetDate={currentDate}
             widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
@@ -437,6 +446,7 @@ const Dashboard = () => {
       case 'weatherWidget':
         return (
           <WeatherWidget
+            targetDate={currentDate}
             widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
           />
@@ -535,7 +545,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className={`h-full w-full flex flex-col bg-gradient-to-br from-yellow-100 via-sky-100 to-white text-gray-800 dark:from-indigo-900 dark:via-slate-900 dark:to-black dark:text-slate-100`}>
+    <div className={`flex flex-col h-full w-full  bg-gradient-to-br from-yellow-100 via-sky-100 to-white text-gray-800 dark:from-indigo-900 dark:via-slate-900 dark:to-black dark:text-slate-100`}>
       <div className="px-4 py-3 flex justify-between items-center border-b  shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
@@ -547,16 +557,22 @@ const Dashboard = () => {
             </p>
           </div>
         </div>
+        <div className="flex-1">
+          <div className="flex items-center justify-center gap-3">
+            <div className="flex flex-row">
+                <button className="text-sm text-muted-foreground" onClick={() => setCurrentDate(new Date(new Date(currentDate).setDate(new Date(currentDate).getDate() - 1)).toISOString().split('T')[0])}>
+                {'<<<'}
+                </button>
+                <span className="text-sm text-muted-foreground">
+                  {currentDate}
+                </span>
+                <button className="text-sm text-muted-foreground" onClick={() => setCurrentDate(new Date(new Date(currentDate).setDate(new Date(currentDate).getDate() + 1)).toISOString().split('T')[0])}>
+                  {'>>>'}
+                </button>
+            </div>
+          </div>
+        </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowGridLines(!showGridLines)}
-            className={`px-3 py-1 text-sm rounded transition-colors ${showGridLines
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-              }`}
-          >
-            {showGridLines ? 'Hide Grid' : 'Show Grid'}
-          </button>
           <AddWidgetButton
             onAddWidget={addWidget}
             existingViewWidgets={viewWidgetStates}
@@ -566,7 +582,7 @@ const Dashboard = () => {
 
       <div className="flex-1 overflow-auto">
         <ResponsiveGridLayout
-          className={`layout min-h-full ${showGridLines ? 'show-grid-lines' : ''}`}
+          className={`layout min-h-full ${true ? 'show-grid-lines' : ''}`}
           breakpoints={GRID_CONFIG.breakpoints}
           cols={GRID_CONFIG.cols}
           rowHeight={GRID_CONFIG.rowHeight}

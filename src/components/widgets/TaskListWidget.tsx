@@ -47,9 +47,10 @@ interface TaskListWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
   onHeightChange: (dailyWidgetId: string, height: number) => void;
+  targetDate: string;
 }
 
-const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetProps) => {
+const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskListWidgetProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +78,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
       setError(null);
 
       // Use real API call
-      const response = await dashboardService.getTodayWidgets();
+      const response = await dashboardService.getTodayWidgets(targetDate);
 
       // Convert API response to internal Task format
       const allTasksToCount = response.filter((todo: DailyWidget) =>
@@ -221,7 +222,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [targetDate]);
 
   const completedTasks = tasks.filter(task => task.completed);
   const pendingTasks = tasks.filter(task => !task.completed);
@@ -266,7 +267,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
 
 
         {/* Progress Bar */}
-        <div className="mb-4">
+        {false && (<div className="mb-4">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium text-gray-700">Progress</span>
             <span className="text-sm text-gray-500">{progressText} completed</span>
@@ -277,7 +278,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange }: TaskListWidgetPro
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
-        </div>
+        </div>)}
 
         {/* Tasks List */}
         <div className="space-y-3 ">

@@ -30,7 +30,7 @@ export class DashboardService {
   // ============================================================================
 
   // Get today's widget list from API
-  async getTodayWidgets(targetDate?: string): Promise<DailyWidget[]> {
+  async getTodayWidgets(targetDate: string): Promise<DailyWidget[]> {
     return apiService.getTodayWidgetList(targetDate);
   }
 
@@ -103,8 +103,8 @@ export class DashboardService {
   }
 
   // Get today's daily widget by underlying widget id
-  async getTodayWidgetByWidgetId(widgetId: string): Promise<DailyWidget | null> {
-    return apiService.getTodayWidgetByWidgetId(widgetId);
+  async getTodayWidgetByWidgetId(widgetId: string, targetDate: string): Promise<DailyWidget | null> {
+    return apiService.getTodayWidgetByWidgetId(widgetId, targetDate);
   }
 
   // ============================================================================

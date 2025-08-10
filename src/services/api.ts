@@ -189,7 +189,7 @@ class ApiService {
   // ============================================================================
 
   // GET /api/v1/dashboard/getTodayWidgetList
-  async getTodayWidgetList(targetDate?: string): Promise<DailyWidget[]> {
+  async getTodayWidgetList(targetDate: string): Promise<DailyWidget[]> {
     const params = targetDate ? { target_date: targetDate } : undefined;
     const url = buildApiUrl(API_CONFIG.dashboard.getTodayWidgetList, params);
     return this.request<DailyWidget[]>(url);
@@ -243,8 +243,8 @@ class ApiService {
   }
 
   // GET /api/v1/dashboard/daily-widgets/{widget_id}/getTodayWidgetbyWidgetId
-  async getTodayWidgetByWidgetId(widgetId: string): Promise<DailyWidget | null> {
-    const url = buildApiUrlWithParams(API_CONFIG.dashboard.getTodayWidgetbyWidgetId, { widget_id: widgetId });
+  async getTodayWidgetByWidgetId(widgetId: string, targetDate: string): Promise<DailyWidget | null> {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboard.getTodayWidgetbyWidgetId, { widget_id: widgetId }, { target_date: targetDate });
     return this.request<DailyWidget | null>(url);
   }
 

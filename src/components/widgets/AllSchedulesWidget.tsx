@@ -11,13 +11,14 @@ interface AllSchedulesWidgetProps {
   onRemove: () => void;
   onWidgetAddedToToday: (widget: DashboardWidget) => void;
   onHeightChange: (dailyWidgetId: string, newHeight: number) => void;
+  targetDate: string;
 }
 
 interface GroupedWidgets {
   [key: string]: DashboardWidget[];
 }
 
-const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightChange }: AllSchedulesWidgetProps) => {
+const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightChange, targetDate }: AllSchedulesWidgetProps) => {
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
         // Load all widgets and today's widgets in parallel
         const [allWidgetsResponse, todayWidgetsResponse] = await Promise.all([
           dashboardService.getAllWidgets(),
-          dashboardService.getTodayWidgets()
+          dashboardService.getTodayWidgets(targetDate)
         ]);
         
         console.log('All widgets response:', allWidgetsResponse);
@@ -122,7 +123,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
       console.log('Widget added to today:', response);
       
       // Refresh today's widgets to update the list
-      const todayWidgetsResponse = await dashboardService.getTodayWidgets();
+      const todayWidgetsResponse = await dashboardService.getTodayWidgets(targetDate);
       const todayIds = extractTodayWidgetIds(todayWidgetsResponse);
       setTodayWidgetIds(todayIds);
       

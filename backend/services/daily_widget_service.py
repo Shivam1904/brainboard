@@ -36,14 +36,14 @@ class DailyWidgetService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_today_widget_list(self) -> List[Dict[str, Any]]:
+    async def get_today_widget_list(self, target_date: str) -> List[Dict[str, Any]]:
         """
         Get today's widget list from table DailyWidget.
         
         Note: This method only reads data and does not modify the session.
         """
-        print("getting today's widget list", date.today())
-        todaysdate = date.today() # in sqlaclchemy Date
+        print("getting today's widget list", target_date)
+        todaysdate = target_date # in sqlaclchemy Date
         try:
             # Join DailyWidget with DashboardWidgetDetails to get widget information
             stmt = select(
@@ -287,13 +287,13 @@ class DailyWidgetService:
             print(f"Failed to update activity data for DailyWidget {daily_widget_id}: {e}")
             raise
 
-    async def get_today_widget_by_widget_id(self, widget_id: str) -> Dict[str, Any]:
+    async def get_today_widget_by_widget_id(self, widget_id: str, target_date: str) -> Dict[str, Any]:
         """Get activity data for a daily widget by widget_id."""
         try:
             stmt = select(DailyWidget).where(
                 and_(
                     DailyWidget.widget_id == widget_id,
-                    DailyWidget.date == date.today(),
+                    DailyWidget.date == target_date,
                     DailyWidget.delete_flag == False
                 )
             )

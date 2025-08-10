@@ -5,6 +5,7 @@ import { DailyWidget } from '../../services/api'
 interface SimpleClockWidgetProps {
   widget: DailyWidget
   onRemove: () => void
+  targetDate: string
 }
 
 type ClockMode = 'analog' | 'digital'
@@ -12,8 +13,27 @@ type ClockTheme = 'day' | 'night'
 
 const pad = (num: number) => num.toString().padStart(2, '0')
 
-const SimpleClockWidget = ({ widget, onRemove }: SimpleClockWidgetProps) => {
-  const [now, setNow] = useState<Date>(new Date())
+const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetProps) => {
+  // Check if targetDate is today
+  const isToday = useMemo(() => {
+    const today = new Date()
+    const target = new Date(targetDate + 'T00:00:00') // Parse yyyy-mm-dd format
+    return today.getFullYear() === target.getFullYear() && 
+           today.getMonth() === target.getMonth() && 
+           today.getDate() === target.getDate()
+  }, [targetDate])
+
+  // If not today, show midnight, otherwise show current time
+  const [now, setNow] = useState<Date>(() => {
+    if (isToday) {
+      return new Date()
+    } else {
+      const target = new Date(targetDate)
+      target.setHours(0, 0, 0, 0) // Set to midnight
+      return target
+    }
+  })
+
   const [mode, setMode] = useState<ClockMode>('analog')
   const inferredTheme: ClockTheme = useMemo(() => {
     const hour = now.getHours()
@@ -22,9 +42,12 @@ const SimpleClockWidget = ({ widget, onRemove }: SimpleClockWidgetProps) => {
   const [theme, setTheme] = useState<ClockTheme>(inferredTheme)
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
+    // Only update time if it's today
+    if (isToday) {
+      const timer = setInterval(() => setNow(new Date()), 1000)
+      return () => clearInterval(timer)
+    }
+  }, [isToday])
 
   // Keep theme in sync when user hasn't toggled manually (only on mount)
   useEffect(() => {

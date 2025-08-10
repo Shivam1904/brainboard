@@ -272,7 +272,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
   // Check for triggered alarms
   useEffect(() => {
     const checkAlarms = () => {
-      if (!widgetData?.widget_config?.alarm_times) return;
+      if (!widgetData?.widget_config?.alarm_times || widgetData?.date !== new Date().toISOString().split('T')[0]) return;
 
       const now = new Date();
       let shouldAlert = false;

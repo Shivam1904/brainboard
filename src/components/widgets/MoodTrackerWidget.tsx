@@ -6,6 +6,7 @@ import { dashboardService } from '../../services/dashboard';
 interface MoodTrackerWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
+  targetDate: string;
 }
 
 type MoodOption = {
@@ -25,9 +26,11 @@ const MOODS: MoodOption[] = [
   { id: 'stressed', label: 'Stressed', emoji: '😣' },
   { id: 'grateful', label: 'Grateful', emoji: '🙏' },
   { id: 'angry', label: 'Angry', emoji: '😠' },
+  { id: 'excited', label: 'Excited', emoji: '🤩' },
+  { id: 'motivated', label: 'Motivated', emoji: '💪' },
 ];
 
-const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
+const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetProps) => {
   const [selectedMoodIds, setSelectedMoodIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -44,7 +47,7 @@ const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
       }
       try {
         setLoading(true);
-        const todayDw = await dashboardService.getTodayWidgetByWidgetId(widget.widget_id);
+        const todayDw = await dashboardService.getTodayWidgetByWidgetId(widget.widget_id, targetDate);
         if (todayDw && todayDw.id) {
           setDailyWidgetId(todayDw.id);
           const currentMoods: string[] = todayDw.activity_data?.selected_moods || [];
@@ -58,7 +61,7 @@ const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
       }
     };
     ensureDailyWidget();
-  }, [widget]);
+  }, [widget, targetDate]);
 
   const toggleMood = async (moodId: string) => {
     const next = new Set(selectedMoodIds);
@@ -122,7 +125,7 @@ const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
             </div>
 
             <div className="px-3">
-              <div className="grid grid-cols-5 ">
+              <div className="grid grid-cols-4 ">
                 {MOODS.map((mood) => {
                   const isSelected = selectedMoodIds.has(mood.id);
                   return (
@@ -134,8 +137,8 @@ const MoodTrackerWidget = ({ onRemove, widget }: MoodTrackerWidgetProps) => {
                       title={mood.label}
                     >
                       <div className={`rounded-full border p-2 px-3 transition-colors text-4xl
-                         ${isSelected ? 'bg-primary text-primary-foreground border-primary' 
-                         : 'bg-card text-card-foreground border-border hover:bg-accent hover:text-accent-foreground'}`}>
+                         ${isSelected ? 'bg-blue-300' 
+                         : 'bg-card text-card-foreground opacity-50 border-border hover:bg-accent hover:text-accent-foreground'}`}>
                            {mood.emoji}
                           </div>
                     </button>

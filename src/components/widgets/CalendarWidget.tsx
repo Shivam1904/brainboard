@@ -127,8 +127,8 @@ const CircularProgress = ({ todosCompleted, todosTotal, day, size = 20, strokeWi
         />
         {/* Per-task arcs */}
         {todosTotal
-          .sort((a, b) => a.activity_data?.status === 'completed' ? -1 : 1)
           .sort((a, b) => a.category > b.category ? 1 : -1)
+          .sort((a, b) => a.activity_data?.status === 'completed' ? -1 : 1)
           .map((todo, index) => {
             const isCompleted = todo?.activity_data?.status === 'completed'
               || todosCompleted.includes(todo);
@@ -196,17 +196,17 @@ const CircularProgressConcentric = ({ todosCompleted, todosTotal, day, size = 20
         className="transform -rotate-90"
       >
         {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#E5E7EB"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
         {/* Per-task arcs */}
         {Array.from(todosByCategory.entries()).map(([category, todos], tIndex) => (
           <g key={category}>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius-tIndex*3}
+            stroke="#E5E7EB"
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
           {todos
           .sort((a, b) => a.activity_data?.status === 'completed' ? -1 : 1)
           .map((todo, index) => {
@@ -321,10 +321,11 @@ const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 interface CalendarWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
+  targetDate: string;
 }
 
-const CalendarWidget = ({ onRemove, widget }: CalendarWidgetProps) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) => {
+  const [currentDate, setCurrentDate] = useState(new Date(targetDate));
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

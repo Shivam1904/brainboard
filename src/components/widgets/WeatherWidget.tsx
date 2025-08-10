@@ -17,11 +17,12 @@ interface WeatherData {
 }
 
 interface WeatherWidgetProps {
+  targetDate: string;
   widget: DailyWidget;
   onRemove: () => void;
 }
 
-const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove }) => {
+const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove, targetDate }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
