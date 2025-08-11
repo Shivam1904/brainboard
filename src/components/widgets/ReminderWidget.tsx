@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Check, Clock, Trash2 } from 'lucide-react'
 import BaseWidget from './BaseWidget'
-import { getDummyReminders } from '../../data/widgetDummyData'
 
 interface Reminder {
   id: string
@@ -24,15 +23,19 @@ interface ReminderWidgetProps {
 }
 
 const ReminderWidget = ({ onRemove, widget }: ReminderWidgetProps) => {
-  const [reminders, setReminders] = useState<Reminder[]>([])
-  const [newReminderText, setNewReminderText] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isUsingDummyData, setIsUsingDummyData] = useState(false)
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [newReminder, setNewReminder] = useState<Partial<Reminder>>({
+    title: '',
+    time: '',
+    date: new Date().toISOString().split('T')[0],
+    priority: 'Medium'
+  });
 
-  // Load reminders from API
+  // Initialize with empty array instead of dummy data
   useEffect(() => {
-    loadReminders()
-  }, [widget.daily_widget_id])
+    setReminders([]);
+  }, []);
 
   const loadReminders = async () => {
     setIsLoading(true)

@@ -25,6 +25,7 @@ async def get_widget_activity_for_calendar(
     calendar_id: str = Query(..., description="Calendar widget_id to filter on (matches widget_config.selected_calendar)"),
     start_date: date = Query(..., description="Start date (YYYY-MM-DD) inclusive"),
     end_date: date = Query(..., description="End date (YYYY-MM-DD) inclusive"),
+    calendar_type: str = Query(..., description="Calendar type (monthly or yearly)"),
     db: AsyncSession = Depends(get_db_session_dependency)
 ) -> List[Dict[str, Any]]:
     """Get daily widgets joined with dashboard widgets for a given calendar over a period.
@@ -33,7 +34,7 @@ async def get_widget_activity_for_calendar(
     """
     try:
         service = DailyWidgetService(db)
-        return await service.get_widgets_for_calendar_period(calendar_id, start_date, end_date)
+        return await service.get_widgets_for_calendar_period(calendar_id, start_date, end_date, calendar_type)
     except Exception as e:
         raise raise_database_error(
             f"Failed to get widget activity for calendar {calendar_id}: {str(e)}"

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { DashboardWidget, DailyWidget } from '../../services/api';
 import { dashboardService } from '../../services/dashboard';
-import { getDummyAllSchedulesWidgets } from '../../data/widgetDummyData';
+
 import AddWidgetForm from '../AddWidgetForm';
 import { createPortal } from 'react-dom';
 
@@ -61,20 +61,11 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
         console.log('Today widgets ids:', todayIds);
         console.log('Today widgets response:', todayWidgetsResponse);
         
-        // If no widgets from API, use dummy data
-        if (allWidgetsResponse.length === 0) {
-          console.log('No widgets found, using dummy data');
-          const dummyWidgets = getDummyAllSchedulesWidgets();
-          setWidgets(dummyWidgets as any);
-        } else {
-          setWidgets(allWidgetsResponse);
-        }
+        setWidgets(allWidgetsResponse);
       } catch (err) {
         console.error('Failed to load widgets:', err);
         setError('Failed to load widget schedules');
-        // Use dummy data on error
-        const dummyWidgets = getDummyAllSchedulesWidgets();
-        setWidgets(dummyWidgets as any);
+        setWidgets([]);
       } finally {
         setLoading(false);
       }
@@ -115,11 +106,11 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
   };
 
   // Handle add to today
-  const handleAddToToday = async (widget: DashboardWidget) => {
+  const handleAddToToday = async (widget: DashboardWidget, targetDate: string) => {
     try {
       setAddingToToday(widget.id);
       
-      const response = await dashboardService.addWidgetToToday(widget.id);
+      const response = await dashboardService.addWidgetToToday(widget.id, targetDate);
       console.log('Widget added to today:', response);
       
       // Refresh today's widgets to update the list
@@ -189,7 +180,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
   // Group widgets into Trackers and Missions, excluding specific types
   const groupedWidgets = widgets.reduce((groups: GroupedWidgets, widget) => {
     const type = widget.widget_type;
-    const trackerTypes = new Set(['calendar', 'weekchart']);
+    const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar']);
     const excludedTypes = new Set(['aiChat', 'moodTracker', 'weatherWidget', 'simpleClock', 'allSchedules']);
 
     // Skip excluded types
@@ -347,14 +338,14 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
                                 
                                 {!todayWidgetIds.includes(widget.id) && (
                                   <button
-                                    onClick={() => handleAddToToday(widget)}
+                                    onClick={() => handleAddToToday(widget, targetDate)}
                                     disabled={addingToToday === widget.id}
                                     className={`p-1.5 rounded transition-colors ${
                                       addingToToday === widget.id
                                         ? 'text-muted-foreground cursor-not-allowed'
                                         : 'text-green-600 hover:text-green-700 hover:bg-green-50'
                                     }`}
-                                    title="Add to today"
+                                    title="Add to this day"
                                   >
                                     {addingToToday === widget.id ? (
                                       <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>

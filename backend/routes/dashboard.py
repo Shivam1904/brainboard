@@ -57,6 +57,7 @@ async def get_today_widget_list(
 @router.post("/widget/addtotoday/{widget_id}", response_model=AddWidgetToTodayResponse)
 async def add_widget_to_today(
     widget_id: str,
+    target_date: str,
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
     """
@@ -67,7 +68,7 @@ async def add_widget_to_today(
     try:
         
         service = DailyWidgetService(db)
-        result = await service.add_widget_to_today(widget_id)
+        result = await service.add_widget_to_today(widget_id, target_date)
         
         # Commit the transaction at the route level
         await db.commit()
@@ -81,6 +82,7 @@ async def add_widget_to_today(
 @router.post("/widget/removefromtoday/{daily_widget_id}", response_model=RemoveWidgetFromTodayResponse)
 async def remove_widget_from_today(
     daily_widget_id: str,
+    target_date: str,
     db: AsyncSession = Depends(get_db_session_dependency)
 ):
     """
@@ -90,7 +92,7 @@ async def remove_widget_from_today(
     """
     try:
         service = DailyWidgetService(db)
-        result = await service.remove_widget_from_today(daily_widget_id)
+        result = await service.remove_widget_from_today(daily_widget_id, target_date)
         
         # Commit the transaction at the route level
         await db.commit()

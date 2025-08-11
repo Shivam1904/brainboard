@@ -17,6 +17,7 @@ import SimpleClockWidget from './widgets/SimpleClockWidget';
 import WeatherWidget from './widgets/WeatherWidget';
 import { apiService, DailyWidget } from '../services/api';
 import { ApiCategory, ApiFrequency, ApiWidgetType } from '@/types/widgets';
+import YearCalendarWidget from './widgets/YearCalendarWidget';
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -53,7 +54,7 @@ const Dashboard = () => {
       setDashboardError(null);
     
       const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
-      const trackerWidgetTypes = ['calendar', 'weekchart'];
+      const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar'];
     
       const makeWidget = (base: Partial<DailyWidget>, overrides: Partial<DailyWidget> = {}): DailyWidget => ({
         id: base.id || '',
@@ -400,6 +401,14 @@ const Dashboard = () => {
             }}
             onRemove={() => removeWidget(widget.daily_widget_id)}
             onHeightChange={onHeightChange}
+          />
+        );
+      case 'yearCalendar':
+        return (
+          <YearCalendarWidget
+            targetDate={currentDate}
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
           />
         );
       case 'calendar':

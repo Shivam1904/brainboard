@@ -1,4 +1,4 @@
-// This file is deprecated. All dummy data has been moved to widgetDummyData.ts
-// Please use the centralized dummy data functions from widgetDummyData.ts instead
+// This file is deprecated. All dummy data has been removed.
+// Please use real API data instead.
 
-export { getDummyTodayWidgets } from './widgetDummyData'; 
+export {}; 

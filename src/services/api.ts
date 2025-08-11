@@ -196,29 +196,27 @@ class ApiService {
   }
 
   // POST /api/v1/dashboard/widget/addtotoday/{widget_id}
-  async addWidgetToToday(widgetId: string, targetDate?: string): Promise<{
+  async addWidgetToToday(widgetId: string, targetDate: string): Promise<{
     success: boolean;
     message: string;
     daily_widget_id: string;
     widget_id: string;
   }> {
-    const url = buildApiUrlWithParams(API_CONFIG.dashboard.addWidgetToToday, { widget_id: widgetId });
-    const fullUrl = targetDate ? `${url}?target_date=${targetDate}` : url;
-    return this.request(fullUrl, {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboard.addWidgetToToday, { widget_id: widgetId }, { target_date: targetDate });
+    return this.request(url, {
       method: 'POST',
     });
   }
 
   // POST /api/v1/dashboard/widget/removefromtoday/{daily_widget_id}
-  async removeWidgetFromToday(dailyWidgetId: string, targetDate?: string): Promise<{
+  async removeWidgetFromToday(dailyWidgetId: string, targetDate: string): Promise<{
     success: boolean;
     message: string;
     daily_widget_id: string;
     is_active: boolean;
   }> {
-    const url = buildApiUrlWithParams(API_CONFIG.dashboard.removeWidgetFromToday, { daily_widget_id: dailyWidgetId });
-    const fullUrl = targetDate ? `${url}?target_date=${targetDate}` : url;
-    return this.request(fullUrl, {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboard.removeWidgetFromToday, { daily_widget_id: dailyWidgetId }, { target_date: targetDate });
+    return this.request(url, {
       method: 'POST',
     });
   }
@@ -295,11 +293,13 @@ class ApiService {
     calendar_id: string;
     start_date: string; // YYYY-MM-DD
     end_date: string;   // YYYY-MM-DD
+    calendar_type: string;
   }): Promise<DailyWidget[]> {
     const url = buildApiUrl(API_CONFIG.tracker.getWidgetActivityForCalendar, {
       calendar_id: params.calendar_id,
       start_date: params.start_date,
       end_date: params.end_date,
+      calendar_type: params.calendar_type,
     });
     return this.request<DailyWidget[]>(url);
   }

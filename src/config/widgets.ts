@@ -108,6 +108,21 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     icon: '🔍'
   },
 
+  // YEAR CALENDAR Widget
+  yearCalendar: {
+    id: 'yearCalendar',
+    apiWidgetType: 'yearCalendar',
+    title: 'Year Calendar',
+    description: 'Year calendar widget',
+    component: 'YearCalendarWidget',
+    minSize: { w: 8, h: 8 },
+    maxSize: { w: 20, h: 24 },
+    defaultSize: { w: 20, h: 10 },
+    deletable: true,
+    resizable: true,
+    category: 'information',
+    icon: '📅'
+  },
   calendar: {
     id: 'calendar',
     apiWidgetType: 'calendar',
@@ -116,7 +131,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'CalendarWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 20, h: 24 },
-    defaultSize: { w: 12, h: 10 },
+    defaultSize: { w: 12, h: 12 },
     deletable: true,
     resizable: true,
     category: 'information',
@@ -247,6 +262,7 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
     WIDGET_CONFIGS.weatherWidget,
     WIDGET_CONFIGS.simpleClock,
     WIDGET_CONFIGS.alarm,
+    WIDGET_CONFIGS.yearCalendar,
   ];
 };
 

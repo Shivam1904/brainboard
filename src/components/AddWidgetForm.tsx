@@ -96,10 +96,11 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
 
     return {
       title: widgetConfig?.apiWidgetType === 'calendar' ? 'My Calendar' :
+        widgetConfig?.apiWidgetType === 'yearCalendar' ? 'Yearly progress' :
         widgetConfig?.apiWidgetType === 'allSchedules' ? 'My Schedules' :
           widgetConfig?.apiWidgetType === 'aiChat' ? 'Brainy AI' : '',
       description: '',
-      is_permanent: ['calendar', 'allSchedules', 'aiChat'].includes(widgetConfig?.apiWidgetType as string) ? true : false,
+      is_permanent: ['calendar', 'allSchedules', 'aiChat', 'yearCalendar'].includes(widgetConfig?.apiWidgetType as string) ? true : false,
       frequency_details: {
         frequencySet: 'BALANCED',
         frequencySetValue: 0.6,
@@ -367,7 +368,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
                 />
               </div>
             )}
-            {widgetConfig.apiWidgetType !== 'calendar' && widgetConfig.apiWidgetType !== 'allSchedules' && (
+            {widgetConfig.apiWidgetType !== 'calendar' && widgetConfig.apiWidgetType !== 'allSchedules' && widgetConfig.apiWidgetType !== 'yearCalendar' && (
               <div className="">
 
                 <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border border-orange-200">

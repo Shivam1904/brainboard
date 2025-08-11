@@ -95,7 +95,7 @@ class DailyWidgetService:
             print(f"Error getting today's widget list: {e}")
             raise
 
-    async def add_widget_to_today(self, widget_id: str) -> Dict[str, Any]:
+    async def add_widget_to_today(self, widget_id: str, td: str) -> Dict[str, Any]:
         """
         Add a widget to today's dashboard.
         Creates entries in DailyWidget with JSON activity data.
@@ -103,6 +103,7 @@ class DailyWidgetService:
         Note: This method does NOT commit the transaction.
         The calling layer is responsible for committing.
         """
+        target_date = datetime.strptime(td, '%Y-%m-%d').date()
         try:
             # Check if widget exists and belongs to user
             stmt = select(DashboardWidgetDetails).where(
@@ -121,7 +122,7 @@ class DailyWidgetService:
             # Check if widget is already in today's dashboard
             stmt = select(DailyWidget).where(
                 and_(
-                    DailyWidget.date == date.today(),
+                    DailyWidget.date == target_date,
                     DailyWidget.widget_id == widget_id,
                     DailyWidget.delete_flag == False
                 )
@@ -132,7 +133,7 @@ class DailyWidgetService:
             if existing_daily_widget:
                 if not existing_daily_widget.is_active:
                     existing_daily_widget.is_active = True
-                    existing_daily_widget.updated_at = date.today()
+                    existing_daily_widget.updated_at = target_date
                     # Note: No commit here - calling layer handles it
                     return {
                         "success": True,
@@ -150,7 +151,7 @@ class DailyWidgetService:
                 widget_id=widget_id,
                 priority="HIGH",
                 reasoning=f"Manually added {widget.title} to today's dashboard",
-                date=date.today(),
+                date=target_date,
                 activity_data=initial_activity_data,
                 created_by=DEFAULT_USER_ID
             )
@@ -209,7 +210,7 @@ class DailyWidgetService:
         else:
             return {}
 
-    async def remove_widget_from_today(self, daily_widget_id: str) -> Dict[str, Any]:
+    async def remove_widget_from_today(self, daily_widget_id: str, target_date: str) -> Dict[str, Any]:
         """
         Remove a widget from today's list.
         
@@ -360,7 +361,8 @@ class DailyWidgetService:
         self,
         calendar_widget_id: str,
         start_date: date,
-        end_date: date
+        end_date: date,
+        calendar_type: str
     ) -> List[Dict[str, Any]]:
         """Get widgets linked to a calendar via widget_config.selected_calendar for a period.
 
@@ -370,6 +372,10 @@ class DailyWidgetService:
         - Both records not deleted
         - DashboardWidgetDetails.widget_config.selected_calendar == calendar_widget_id
         """
+        if calendar_type == 'monthly':
+            type = 'selected_calendar'
+        elif calendar_type == 'yearly':
+            type = 'selected_yearly_calendar'
         try:
             stmt = select(
                 DailyWidget,
@@ -385,12 +391,13 @@ class DailyWidgetService:
                     DailyWidget.delete_flag == False,
                     DashboardWidgetDetails.delete_flag == False,
                     # Filter on JSON widget_config.selected_calendar using SQLite JSON_EXTRACT
-                    func.json_extract(DashboardWidgetDetails.widget_config, '$.selected_calendar') == calendar_widget_id
+                    func.json_extract(DashboardWidgetDetails.widget_config, f'$.{type}') == calendar_widget_id
                 )
             ).order_by(DailyWidget.date.asc(), DailyWidget.priority.desc())
 
             result = await self.db.execute(stmt)
             rows = result.all()
+            print(f"rows: {rows}")
 
             widgets_data: List[Dict[str, Any]] = []
             for daily_widget, widget_details in rows:

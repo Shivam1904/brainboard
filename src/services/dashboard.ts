@@ -69,7 +69,7 @@ export class DashboardService {
   // ============================================================================
 
   // Add widget to today's dashboard
-  async addWidgetToToday(widgetId: string, targetDate?: string): Promise<{
+  async addWidgetToToday(widgetId: string, targetDate: string): Promise<{
     success: boolean;
     message: string;
     daily_widget_id: string;
@@ -79,7 +79,7 @@ export class DashboardService {
   }
 
   // Remove widget from today's dashboard
-  async removeWidgetFromToday(dailyWidgetId: string, targetDate?: string): Promise<{
+  async removeWidgetFromToday(dailyWidgetId: string, targetDate: string): Promise<{
     success: boolean;
     message: string;
     daily_widget_id: string;

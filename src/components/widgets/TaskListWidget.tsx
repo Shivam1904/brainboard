@@ -93,8 +93,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskL
 
       // Convert API response to internal Task format
       const convertedTasks: Task[] = response.filter((todo: DailyWidget) =>
-        !['calendar', 'allSchedules', 'aiChat', 'websearch', 'moodTracker'].includes(todo.widget_type)
-        && !(todo.widget_config?.include_alarm_details || todo.widget_config?.include_tracker_details))
+        !['calendar', 'allSchedules', 'aiChat', 'moodTracker'].includes(todo.widget_type))
         .map((todo: DailyWidget) => ({
           id: todo.daily_widget_id,
           title: todo.title,
@@ -313,9 +312,6 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskL
                       }`}>
                       {task.title}
                     </h4>
-                    <span className={`px-2 py-1 text-xs font-medium}`}>
-                      {task.description}
-                    </span>
                     {task.category && (
                       <span className={`px-2 py-1 rounded-full text-xs font-medium text-${getCategoryColor(task.category)}-800 bg-${getCategoryColor(task.category)}-100`}>
                         {task.category}
@@ -329,14 +325,11 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskL
                   </div>
 
                   {task.description && (
-                    <p className={`text-xs mt-1 ${task.completed ? 'text-gray-400' : 'text-gray-600'
+                    <p className={`text-xs ${task.completed ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                       {task.description}
                     </p>
                   )}
-
-                  <div className="flex items-center gap-2 mt-2">
-                  </div>
                 </div>
               </div>
             ))
