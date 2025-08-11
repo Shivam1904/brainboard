@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { DashboardWidget, DailyWidget } from '../../services/api';
-import { dashboardService } from '../../services/dashboard';
+import { useAllWidgetsData, useTodayWidgetsData } from '../../hooks/useDashboardData';
 
 import AddWidgetForm from '../AddWidgetForm';
 import { createPortal } from 'react-dom';
+import { dashboardService } from '@/services/dashboard';
 
 interface AllSchedulesWidgetProps {
   widget: DailyWidget;
@@ -19,9 +20,8 @@ interface GroupedWidgets {
 }
 
 const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightChange, targetDate }: AllSchedulesWidgetProps) => {
-  const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { allWidgets: widgets, isLoading, error } = useAllWidgetsData()
+  const { todayWidgets } = useTodayWidgetsData(targetDate)
   const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
   const [todayWidgetIds, setTodayWidgetIds] = useState<string[]>([]);
   const [addingToToday, setAddingToToday] = useState<string | null>(null);
@@ -40,53 +40,22 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
     return todayIds;
   };
 
-  // Load widgets from API using getAllWidgets
+  // Extract today widget IDs when todayWidgets changes
   useEffect(() => {
-    const loadWidgets = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Load all widgets and today's widgets in parallel
-        const [allWidgetsResponse, todayWidgetsResponse] = await Promise.all([
-          dashboardService.getAllWidgets(),
-          dashboardService.getTodayWidgets(targetDate)
-        ]);
-        
-        console.log('All widgets response:', allWidgetsResponse);
-        
-        // Extract widget IDs that are already in today's dashboard
-        const todayIds = extractTodayWidgetIds(todayWidgetsResponse);
-        setTodayWidgetIds(todayIds);
-        console.log('Today widgets ids:', todayIds);
-        console.log('Today widgets response:', todayWidgetsResponse);
-        
-        setWidgets(allWidgetsResponse);
-      } catch (err) {
-        console.error('Failed to load widgets:', err);
-        setError('Failed to load widget schedules');
-        setWidgets([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadWidgets();
-  }, []);
+    const todayIds = extractTodayWidgetIds(todayWidgets);
+    setTodayWidgetIds(todayIds);
+  }, [todayWidgets]);
 
   // Handle edit widget
   const handleEditWidget = async (widget: DashboardWidget) => {
     try {
-      setLoading(true);
       
       // Fetch widget-specific details based on widget type
       const widgetDetails = await dashboardService.getWidget(widget.id);      
       setEditingWidget(widgetDetails);
     } catch (err) {
       console.error('Failed to fetch widget details:', err);
-      setError('Failed to load widget details for editing');
     } finally {
-      setLoading(false);
     }
   };
 
@@ -97,12 +66,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
 
   // Handle form success (refresh widget list)
   const handleFormSuccess = async () => {
-    try {
-      const response = await dashboardService.getAllWidgets();
-      setWidgets(response);
-    } catch (err) {
-      console.error('Failed to refresh widgets after edit:', err);
-    }
+    // Data will be refreshed automatically by the store
   };
 
   // Handle add to today
@@ -110,17 +74,15 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
     try {
       setAddingToToday(widget.id);
       
-      const response = await dashboardService.addWidgetToToday(widget.id, targetDate);
-      console.log('Widget added to today:', response);
+      // Use the centralized state management
+      await onWidgetAddedToToday(widget);
       
-      // Refresh today's widgets to update the list
-      const todayWidgetsResponse = await dashboardService.getTodayWidgets(targetDate);
-      const todayIds = extractTodayWidgetIds(todayWidgetsResponse);
+      // Data will be refreshed automatically by the store
+      const todayIds = extractTodayWidgetIds(todayWidgets);
       setTodayWidgetIds(todayIds);
       
       // Show success message
       // alert(`${widget.title} has been added to today's dashboard!`);
-      onWidgetAddedToToday(widget);
       
     } catch (err) {
       console.error('Failed to add widget to today:', err);
@@ -212,7 +174,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
     onHeightChange(widget.id, totalItems * 2 + 2);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <BaseWidget title="All Widgets" icon="⚙️" onRemove={onRemove}>
         <div className="flex items-center justify-center h-full">

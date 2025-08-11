@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import BaseWidget from './BaseWidget';
 import { CheckCircle, Circle, Plus, X } from 'lucide-react';
 import FrequencySection from './FrequencySection';
-import { dashboardService } from '../../services/dashboard';
+import { useTodayWidgetsData } from '../../hooks/useDashboardData';
 import { DailyWidget } from '../../services/api';
+import { useUpdateWidgetActivity } from '@/stores/dashboardStore';
 
 interface Task {
   id: string;
@@ -18,6 +19,7 @@ interface Task {
 
 import { FrequencySettings } from '../../types/frequency';
 import { categoryColors } from './CalendarWidget';
+import { useDashboardActions } from '@/stores/dashboardStore';
 
 interface MissionFormData {
   title: string;
@@ -30,7 +32,6 @@ interface MissionFormData {
 
 
 const getCategoryColor = (category: string) => {
-  console.log(category, categoryColors[category as keyof typeof categoryColors]);
   return categoryColors[category as keyof typeof categoryColors].color;
 };
 
@@ -50,10 +51,10 @@ interface TaskListWidgetProps {
   targetDate: string;
 }
 
-const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskListWidgetProps) => {
+const TaskListWidget = ({  onRemove, widget,  onHeightChange, targetDate }: TaskListWidgetProps) => {
+  const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
+  const updateWidgetActivity = useUpdateWidgetActivity();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [progressText, setProgressText] = useState<string>('');
   const [formData, setFormData] = useState<MissionFormData>({
@@ -72,55 +73,12 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskL
     }
   });
 
-  const fetchTasks = async () => {
-    try {
-      setLoading(true);
-      setError(null);
 
-      // Use real API call
-      const response = await dashboardService.getTodayWidgets(targetDate);
-
-      // Convert API response to internal Task format
-      const allTasksToCount = response.filter((todo: DailyWidget) =>
-        !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type)
-      ).length;
-      // Convert API response to internal Task format
-      const allTasksCompleted = response.filter((todo: DailyWidget) =>
-        !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type) && todo.activity_data?.status === 'completed'
-      ).length;
-
-      setProgressText(`${allTasksCompleted} / ${allTasksToCount} `);
-
-      // Convert API response to internal Task format
-      const convertedTasks: Task[] = response.filter((todo: DailyWidget) =>
-        !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type))
-        .map((todo: DailyWidget) => ({
-          id: todo.daily_widget_id,
-          title: todo.title,
-          category: todo.category,
-          description: todo.description || '',
-          completed: todo.activity_data?.status === 'completed',
-          priority: getPriorityFromNumber(todo.activity_data?.progress / 25), // Convert progress to priority
-          dueDate: todo.activity_data?.due_date || '',
-          createdAt: todo.created_at || ''
-        }));
-
-      setTasks(convertedTasks);
-      onHeightChange(widget.daily_widget_id, convertedTasks.length * 2 + 2);
-    } catch (err) {
-      console.error('Failed to fetch tasks:', err);
-      setError('Failed to load tasks');
-      // Fallback to empty array
-      setTasks([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Memoize the updateTaskStatus function to prevent unnecessary re-renders
   const updateTaskStatus = async (taskId: string, completed: boolean) => {
     try {
       // Use real API call to update task status
-      await dashboardService.updateTodoActivity(taskId, {
+      await updateWidgetActivity(taskId, {
         status: completed ? 'completed' : 'pending',
         progress: completed ? 100 : 0
       });
@@ -142,6 +100,26 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskL
     }
   };
 
+  // Memoize the form data reset to prevent unnecessary re-renders
+  const resetFormData = useCallback(() => {
+    setFormData({
+      title: '',
+      description: '',
+      priority: 'Medium',
+      category: 'productivity',
+      dueDate: new Date().toISOString().split('T')[0],
+      frequency: {
+        frequencySet: 'BALANCED',
+        frequencySetValue: 0.6,
+        frequency: 3,
+        frequencyUnit: 'TIMES',
+        frequencyPeriod: 'WEEKLY',
+        isDailyHabit: false
+      }
+    });
+  }, []);
+
+  // Memoize the addMission function to prevent unnecessary re-renders
   const addMission = async (missionData: MissionFormData) => {
     try {
       // TODO: Replace with real API call when endpoint is available
@@ -164,21 +142,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskL
 
       setTasks(prevTasks => [newTask, ...prevTasks]);
       setShowAddForm(false);
-      setFormData({
-        title: '',
-        description: '',
-        priority: 'Medium',
-        category: 'productivity',
-        dueDate: new Date().toISOString().split('T')[0],
-        frequency: {
-          frequencySet: 'BALANCED',
-          frequencySetValue: 0.6,
-          frequency: 3,
-          frequencyUnit: 'TIMES',
-          frequencyPeriod: 'WEEKLY',
-          isDailyHabit: false
-        }
-      });
+      resetFormData();
     } catch (err) {
       console.error('Error adding mission:', err);
       // Still add to local state even if API fails
@@ -195,39 +159,60 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskL
 
       setTasks(prevTasks => [newTask, ...prevTasks]);
       setShowAddForm(false);
-      setFormData({
-        title: '',
-        description: '',
-        priority: 'Medium',
-        category: 'productivity',
-        dueDate: new Date().toISOString().split('T')[0],
-        frequency: {
-          frequencySet: 'BALANCED',
-          frequencySetValue: 0.6,
-          frequency: 3,
-          frequencyUnit: 'TIMES',
-          frequencyPeriod: 'WEEKLY',
-          isDailyHabit: false
-        }
-      });
+      resetFormData();
     }
   };
 
+  // Memoize the form submission handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
     addMission(formData);
   };
 
+  // Process today's widgets to extract tasks
   useEffect(() => {
-    fetchTasks();
-  }, [targetDate]);
+    if (todayWidgets.length > 0) {
+      try {
+        // Convert API response to internal Task format
+        const allTasksToCount = todayWidgets.filter((todo: DailyWidget) =>
+          !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type)
+        ).length;
+        
+        const allTasksCompleted = todayWidgets.filter((todo: DailyWidget) =>
+          !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type) && todo.activity_data?.status === 'completed'
+        ).length;
+
+        setProgressText(`${allTasksCompleted} / ${allTasksToCount} `);
+
+        // Convert API response to internal Task format
+        const convertedTasks: Task[] = todayWidgets.filter((todo: DailyWidget) =>
+          !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type))
+          .map((todo: DailyWidget) => ({
+            id: todo.daily_widget_id,
+            title: todo.title,
+            category: todo.category,
+            description: todo.description || '',
+            completed: todo.activity_data?.status === 'completed',
+            priority: getPriorityFromNumber(todo.activity_data?.progress / 25), // Convert progress to priority
+            dueDate: todo.activity_data?.due_date || '',
+            createdAt: todo.created_at || ''
+          }));
+
+        setTasks(convertedTasks);
+        onHeightChange(widget.daily_widget_id, convertedTasks.length * 2 + 2);
+      } catch (err) {
+        console.error('Failed to process tasks:', err);
+        setTasks([]);
+      }
+    }
+  }, [todayWidgets]);
 
   const completedTasks = tasks.filter(task => task.completed);
   const pendingTasks = tasks.filter(task => !task.completed);
   const progressPercentage = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
         <div className="flex items-center justify-center h-32">
@@ -243,7 +228,7 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskL
         <div className="flex flex-col items-center justify-center h-32 text-center">
           <p className="text-orange-600 mb-2">{error}</p>
           <button
-            onClick={fetchTasks}
+                            onClick={() => {/* Tasks are automatically updated from the store */}}
             className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
           >
             Retry

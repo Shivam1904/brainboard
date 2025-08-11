@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Check, Pencil } from 'lucide-react';
 import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
+import { useUpdateWidgetActivity } from '@/stores/dashboardStore';
 
 export const categoryColors = {
   productivity: { value: 'productivity', label: 'Productivity', color: '#3B82F6' }, // blue
@@ -107,7 +108,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingWidgets, setEditingWidgets] = useState(false);
   const [radius, setRadius] = useState(100);
-
+  const updateWidgetActivity = useUpdateWidgetActivity();
   const fetchHabitData = async (year: number, month: number) => {
     try {
       setLoading(true);
@@ -407,7 +408,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                               if(dayTask?.id && dayTask.date === currentDate.toISOString().split('T')[0]) {
                                 try {
                                   // Update the API
-                                  await apiService.updateActivity(dayTask.id, { status: isCompleted ? 'not_completed' : 'completed' });
+                                  await updateWidgetActivity(dayTask.id, { status: isCompleted ? 'not_completed' : 'completed' });
                                   
                                   // Update local state immediately for responsive UI
                                   setHabitData(prevData => {

@@ -1,67 +1,37 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { dashboardService } from '../../services/dashboard';
 import { DailyWidget } from '../../services/api';
+import { useTodayWidgetsData } from '../../hooks/useDashboardData';
+import { useDashboardActions } from '../../stores/dashboardStore';
 
 interface WebSearchWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
+  targetDate: string;
 }
 
-const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
+const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps) => {
+  const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
+  const { updateWidgetActivity } = useDashboardActions();
+  
   const [webSearchData, setWebSearchData] = useState<any | null>(null);
-  const [activityData, setActivityData] = useState<DailyWidget | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isRead, setIsRead] = useState(false);
 
-  // Fetch web search data for this specific widget
-  const fetchWebSearchData = async () => {
-    try {
-      // Get the widget_id from the widget_ids array (first one for websearch widgets)
-      
-      // Call both APIs in parallel
-      const [aiSummary] = await Promise.all([
-        dashboardService.getTodayWidget(widget.daily_widget_id)
-      ]);
-      
-      setActivityData(aiSummary);
-      setWebSearchData(aiSummary);
-      
-      // Set initial read status based on activity data
-      setIsRead(aiSummary.activity_data?.status === 'completed');
-    } catch (err) {
-      console.error('Failed to fetch web search data:', err);
-      setError('Failed to load web search data');
-      // Fallback to empty state
-      setWebSearchData(null);
-      setActivityData(null);
-    }
-  };
+  // Use the passed widget prop directly - it already contains the widget data
+  // const webSearchWidget = todayWidgets.find(w => w.widget_type === 'websearch');
 
   // Update read status
   const updateReadStatus = async (read: boolean) => {
-    if (!webSearchData || !activityData) return;
+    if (!widget || !webSearchData) return;
     
     try {
-      // Update the activity status using the activity_id we already have
-      await dashboardService.updateWebSearchActivity(activityData.daily_widget_id, {
+      // Update the activity status
+      await updateWidgetActivity(widget.daily_widget_id, {
         status: read ? 'completed' : 'pending',
         reaction: read ? 'read' : 'unread',
         summary: webSearchData.summary,
         source_json: webSearchData.sources,
       });
-      
-      // Update local activity data
-      setActivityData(prev => prev ? {
-        ...prev,
-        activity_data: {
-          ...prev.activity_data,
-          status: read ? 'completed' : 'pending',
-          reaction: read ? 'read' : 'unread',
-          updated_at: new Date().toISOString()
-        }
-      } : null);
       
       setIsRead(read);
     } catch (err) {
@@ -71,20 +41,16 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
     }
   };
 
+  // Set initial data when widget is found
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      setError(null);
-      
-      await fetchWebSearchData();
-      
-      setLoading(false);
-    };
+    if (widget) {
+      setWebSearchData(widget);
+      setIsRead(widget.activity_data?.status === 'completed');
+    }
+  }, [widget]);
 
-    loadData();
-  }, [widget.widget_id]); // Changed dependency to widget_ids[0]
-
-  if (loading) {
+  // Show loading state
+  if (isLoading) {
     return (
       <BaseWidget 
         title="Web Search" 
@@ -94,13 +60,14 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 mx-auto mb-2"></div>
-            <p className="text-muted-foreground">Loading web search...</p>
+            <p className="text-gray-600">Loading web search...</p>
           </div>
         </div>
       </BaseWidget>
     );
   }
 
+  // Show error state
   if (error) {
     return (
       <BaseWidget 
@@ -110,15 +77,21 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
       >
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <p className="text-destructive mb-2">{error}</p>
-            <p className="text-sm text-muted-foreground">Showing dummy data for development</p>
+            <p className="text-red-600 mb-2">Failed to load web search</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </BaseWidget>
     );
   }
 
-  if (!webSearchData) {
+  // Show no data state
+  if (!widget || !webSearchData) {
     return (
       <BaseWidget 
         title="Web Search" 
@@ -127,7 +100,7 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
       >
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <p className="text-muted-foreground">No web search data available</p>
+            <p className="text-gray-600 mb-2">No web search data available</p>
           </div>
         </div>
       </BaseWidget>
@@ -214,8 +187,8 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
             <div className="text-xs text-muted-foreground pt-2 border-t">
               <div>AI Model: {webSearchData.ai_model_used}</div>
               <div>Generated: {new Date(webSearchData.created_at).toLocaleDateString()}</div>
-              {activityData && (
-                <div>Last Activity: {new Date(activityData.activity_data?.updated_at).toLocaleDateString()}</div>
+              {webSearchData.activity_data && (
+                <div>Last Activity: {new Date(webSearchData.activity_data?.updated_at).toLocaleDateString()}</div>
               )}
             </div>
           </div>

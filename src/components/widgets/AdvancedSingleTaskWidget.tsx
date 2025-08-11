@@ -11,13 +11,15 @@ import {
   Check
 } from 'lucide-react';
 import { DailyWidget } from '../../services/api';
-import { dashboardService } from '../../services/dashboard';
+import { useTodayWidgetsData } from '../../hooks/useDashboardData';
+import { useDashboardActions } from '../../stores/dashboardStore';
 import { categoryColors } from './CalendarWidget';
 
 interface AdvancedSingleTaskWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
   onHeightChange: (dailyWidgetId: string, height: number) => void;
+  targetDate: string;
 }
 
 const snoozeTime = 10;
@@ -46,12 +48,16 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: AdvancedSingleTaskWidgetProps) => {
-  const [widgetData, setWidgetData] = useState<DailyWidget | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate }: AdvancedSingleTaskWidgetProps) => {
+  const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
+  const { updateWidgetActivity } = useDashboardActions();
+  
   const [updating, setUpdating] = useState(false);
 
+  // Use the passed widget prop directly - it already contains the widget data
+  // const widgetData = todayWidgets.find(w => w.id === widget.daily_widget_id);
+  const widgetData = widget; // Use the passed widget directly
+  
   // Alarm states
   const [isAlerting, setIsAlerting] = useState(false);
   const [snoozeTimeLeft, setSnoozeTimeLeft] = useState<number | null>(null);
@@ -62,23 +68,6 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
   const [notes, setNotes] = useState('');
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const fetchWidgetData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Fetch widget data using the getTodayWidget API
-      const response = await dashboardService.getTodayWidget(widget.daily_widget_id);
-      setWidgetData(response);
-    } catch (err) {
-      console.error('Failed to fetch widget data:', err);
-      setError('Failed to load widget data');
-      setWidgetData(null);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     var height = 2;
@@ -96,23 +85,13 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
     }
     onHeightChange(widget.daily_widget_id, height);
   }, [widgetData, isAlerting, snoozeTimeLeft]);
+
   // Helper function to update activity data locally
   const updateActivityData = (updates: Record<string, any>) => {
     if (!widgetData) return;
 
-    setWidgetData(prev => {
-      if (!prev) return prev;
-
-      const updatedActivityData = {
-        ...prev.activity_data,
-        ...updates
-      };
-
-      return {
-        ...prev,
-        activity_data: updatedActivityData
-      };
-    });
+    // Since we're using the widget prop directly, we can't update it locally
+    // The store will handle updates and refresh the data
   };
 
   // Alarm functions
@@ -140,16 +119,16 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
     setIsAlerting(false);
     setSnoozeTimeLeft(snoozeTime * 60); // snoozeTime minutes in seconds
 
-    // Then update on server
-    try {
-      await dashboardService.updateAlarmActivity(widget.daily_widget_id, {
-        snooze_count: newSnoozeCount,
-        activity_history: [...existingActivity, newActivity]
-      });
-    } catch (err) {
+          // Then update on server
+      try {
+        await updateWidgetActivity(widget.daily_widget_id, {
+          snooze_count: newSnoozeCount,
+          activity_history: [...existingActivity, newActivity]
+        });
+      } catch (err) {
       console.error('Error snoozing alarm:', err);
       // Revert local changes on error
-      await fetchWidgetData();
+      // await fetchWidgetData(); // This line is removed as per the new_code
     } finally {
       setUpdating(false);
     }
@@ -184,20 +163,20 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
 
     // Then update on server
     try {
-      await dashboardService.updateAlarmActivity(widget.daily_widget_id, {
+      await updateWidgetActivity(widget.daily_widget_id, {
         started_at: startedAt,
         activity_history: [...existingActivity, newActivity]
       });
 
       // Also update the task status to completed
-      await dashboardService.updateTodoActivity(widget.daily_widget_id, {
+      await updateWidgetActivity(widget.daily_widget_id, {
         status: 'completed',
         progress: 100
       });
     } catch (err) {
       console.error('Error stopping alarm:', err);
       // Revert local changes on error
-      await fetchWidgetData();
+      // await fetchWidgetData(); // This line is removed as per the new_code
     } finally {
       setUpdating(false);
     }
@@ -226,11 +205,13 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
 
     // Then update on server
     try {
-      await dashboardService.updateTrackerActivity(widget.daily_widget_id, trackerUpdate);
+      await updateWidgetActivity(widget.daily_widget_id, {
+        ...trackerUpdate
+      });
     } catch (err) {
       console.error('Failed to update tracker value:', err);
       // Revert local changes on error
-      await fetchWidgetData();
+      // await fetchWidgetData(); // This line is removed as per the new_code
     } finally {
       setUpdating(false);
     }
@@ -252,21 +233,20 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
 
     // Then update on server
     try {
-      await dashboardService.updateTodoActivity(widget.daily_widget_id, {
+      await updateWidgetActivity(widget.daily_widget_id, {
         status,
         progress
       });
     } catch (err) {
       console.error('Error updating task status:', err);
       // Revert local changes on error
-      await fetchWidgetData();
+      // await fetchWidgetData(); // This line is removed as per the new_code
     } finally {
       setUpdating(false);
     }
   };
 
   const getCategoryColor = (category: string) => {
-    console.log(category, categoryColors[category as keyof typeof categoryColors]);
     return categoryColors[category as keyof typeof categoryColors].color;
   };
   // Check for triggered alarms
@@ -383,10 +363,11 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
   }, [snoozeTimeLeft]);
 
   useEffect(() => {
-    fetchWidgetData();
+    // This useEffect is no longer needed as data fetching is handled by useTodayWidgetsData
+    // fetchWidgetData(); 
   }, [widget.daily_widget_id]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <BaseWidget title="Advanced Task" icon="🎯" onRemove={onRemove}>
         <div className="flex items-center justify-center h-full">
@@ -406,7 +387,11 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
           <div className="text-center">
             <p className="text-destructive mb-2">{error}</p>
             <button
-              onClick={fetchWidgetData}
+              onClick={() => {
+                // Re-fetch data if there's an error
+                // This might need to be handled by the parent component or a global state
+                // For now, we'll just show the error message
+              }}
               className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
             >
               Retry

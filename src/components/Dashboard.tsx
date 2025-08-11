@@ -1,37 +1,47 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
-import WebSearchWidget from './widgets/WebSearchWidget';
-import TaskListWidget from './widgets/TaskListWidget'
-import BaseWidget from './widgets/BaseWidget'
-import CalendarWidget from './widgets/CalendarWidget'
-import AdvancedSingleTaskWidget from './widgets/AdvancedSingleTaskWidget'
-import AddWidgetButton from './AddWidgetButton'
-import { getWidgetConfig } from '../config/widgets'
-import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
-import { dashboardService } from '../services/dashboard'
-// import { getDummyTodayWidgets } from '../data/widgetDummyData'
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
 import AiChatWidget from './widgets/AiChatWidget';
 import MoodTrackerWidget from './widgets/MoodTrackerWidget';
 import SimpleClockWidget from './widgets/SimpleClockWidget';
 import WeatherWidget from './widgets/WeatherWidget';
 import HabitTrackerWidget from './widgets/HabitTrackerWidget';
-import { apiService, DailyWidget } from '../services/api';
-import { ApiCategory, ApiFrequency, ApiWidgetType } from '@/types/widgets';
 import YearCalendarWidget from './widgets/YearCalendarWidget';
+import WebSearchWidget from './widgets/WebSearchWidget';
+import TaskListWidget from './widgets/TaskListWidget'
+import BaseWidget from './widgets/BaseWidget'
+import CalendarWidget from './widgets/CalendarWidget'
+import AdvancedSingleTaskWidget from './widgets/AdvancedSingleTaskWidget'
+import AddWidgetButton from './AddWidgetButton'
+import { DailyWidget } from '../services/api';
+import { getWidgetConfig } from '../config/widgets'
+import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
+import { useDashboardData } from '../hooks/useDashboardData'
+import { useDashboardActions } from '../stores/dashboardStore'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
 
 const Dashboard = () => {
   const [showGridLines, setShowGridLines] = useState(false)
-  const [dashboardLoading, setDashboardLoading] = useState(true)
-  const [dashboardError, setDashboardError] = useState<string | null>(null)
-  const [widgets, setWidgets] = useState<DailyWidget[]>([])
-  const [viewWidgetStates, setViewWidgetStates] = useState<DailyWidget[]>([])
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0])
   // Centralized layout: track per-widget size overrides (e.g., dynamic height changes)
   const [sizeOverrides, setSizeOverrides] = useState<Record<string, { w?: number; h?: number }>>({})
+  
+  // Track last height values to prevent unnecessary updates
+  const lastHeightValues = useRef<Record<string, number>>({})
+  
+  // Use the simplified centralized state management
+  const {
+    allWidgets: allWidgetsData,
+    todayWidgets: todayWidgetsData,
+    isLoading,
+    error
+  } = useDashboardData(currentDate)
+
+  // Get actions from store
+  const { addWidgetToToday, removeWidgetFromToday } = useDashboardActions()
+
   // Apply grid CSS properties on component mount
   useEffect(() => {
     const cssProperties = getGridCSSProperties()
@@ -40,180 +50,155 @@ const Dashboard = () => {
     })
   }, [])
 
-  useEffect(() => {
-    fetchTodayWidgets()
-  }, [currentDate])
-  // No manual data-grid; rely on library defaults
+  // Data automatically loads when date changes via the hook
 
   // Helper to build a minimal placeholder layout to satisfy type; actual layout is centralized
   const buildPlaceholderLayout = (id: string) => ({ i: id, x: 0, y: 0, w: 1, h: 1 })
 
-  // Fetch all widgets and today's widgets
-  const fetchTodayWidgets = async () => {
-    try {
-      setDashboardLoading(true);
-      setDashboardError(null);
+  // Process widgets for UI display
+  const processWidgetsForUI = useMemo(() => {
+    const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
+    const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar', 'habitTracker'];
     
-      const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
-      const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar', 'habitTracker'];
+    const makeWidget = (base: Partial<DailyWidget>, overrides: Partial<DailyWidget> = {}): DailyWidget => ({
+      id: base.id || '',
+      daily_widget_id: base.daily_widget_id || '',
+      widget_id: base.widget_id || '',
+      widget_type: base.widget_type || '',
+      title: base.title || '',
+      description: base.description || '',
+      frequency: 'daily',
+      importance: 0.5,
+      category: 'utilities',
+      is_permanent: false,
+      priority: 'LOW',
+      date: new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString(),
+      layout: buildPlaceholderLayout(base.id || ''),
+      ...base,
+      ...overrides
+    });
     
-      const makeWidget = (base: Partial<DailyWidget>, overrides: Partial<DailyWidget> = {}): DailyWidget => ({
-        id: base.id || '',
-        daily_widget_id: base.daily_widget_id || '',
-        widget_id: base.widget_id || '',
-        widget_type: base.widget_type || '',
-        title: base.title || '',
-        description: base.description || '',
-        frequency: 'daily',
-        importance: 0.5,
-        category: 'utilities',
-        is_permanent: false,
-        priority: 'LOW',
-        date: new Date().toISOString().split('T')[0],
-        created_at: new Date().toISOString(),
-        layout: buildPlaceholderLayout(base.id || ''),
-        ...base,
-        ...overrides
+    const isValidWidget = (w: DailyWidget) =>
+      w && w.daily_widget_id && w.widget_id && w.widget_type;
+    
+    const hasUpcomingMilestone = (milestones: any[]) => {
+      const today = new Date();
+      const weekAhead = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return milestones.some(m => {
+        if (!m?.due_date) return false;
+        const date = new Date(m.due_date);
+        return date >= today && date <= weekAhead;
       });
+    };
     
-      const isValidWidget = (w: DailyWidget) =>
-        w && w.daily_widget_id && w.widget_id && w.widget_type;
+    // --- Prepare widget lists ---
+    const uiWidgets: DailyWidget[] = [];
+    const advancedWidgets: DailyWidget[] = [];
+    const regularWidgets: DailyWidget[] = [];
+    const trackerWidgets: DailyWidget[] = [];
+    const webSearchWidgets: DailyWidget[] = [];
     
-      const hasUpcomingMilestone = (milestones: any[]) => {
-        const today = new Date();
-        const weekAhead = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-        return milestones.some(m => {
-          if (!m?.due_date) return false;
-          const date = new Date(m.due_date);
-          return date >= today && date <= weekAhead;
-        });
-      };
-    
-      // --- Fetch data ---
-      let allWidgetsData: any[] = [];
-      let todayWidgetsData: DailyWidget[] = [];
-      try {
-        allWidgetsData = await dashboardService.getAllWidgets();
-        todayWidgetsData = await dashboardService.getTodayWidgets(currentDate);
-      } catch (apiError) {
-        console.warn('API call failed, falling back to dummy data:', apiError);
+    // Step 1: Add permanent view widgets
+    viewWidgetTypes.forEach(type => {
+      const w = allWidgetsData.find(x => x.widget_type === type);
+      if (w?.widget_config?.visibility) {
+        const config = getWidgetConfig(type);
+        if (config) {
+          uiWidgets.push(makeWidget({
+            id: `auto-${type}`,
+            daily_widget_id: `auto-${type}`,
+            widget_id: w.id || '',
+            widget_type: type,
+            title: config.title,
+            description: config.description,
+            is_permanent: true,
+            widget_config: w.widget_config
+          }));
+        }
       }
+    });
     
-      setViewWidgetStates(allWidgetsData.filter(w => viewWidgetTypes.includes(w.widget_type)));
+    // Step 2: Process today's widgets
+    const validWidgets = todayWidgetsData.filter(isValidWidget);
     
-      // --- Prepare widget lists ---
-      const uiWidgets: DailyWidget[] = [];
-      const advancedWidgets: DailyWidget[] = [];
-      const regularWidgets: DailyWidget[] = [];
-      const trackerWidgets: DailyWidget[] = [];
-      const webSearchWidgets: DailyWidget[] = [];
+    validWidgets.forEach(widget => {
+      if (viewWidgetTypes.includes(widget.widget_type)) return;
     
-      // Step 1: Add permanent view widgets
-      viewWidgetTypes.forEach(type => {
-        const w = allWidgetsData.find(x => x.widget_type === type);
-        if (w?.widget_config?.visibility) {
-          const config = getWidgetConfig(type);
-          if (config) {
-            uiWidgets.push(makeWidget({
-              id: `auto-${type}`,
-              daily_widget_id: `auto-${type}`,
-              widget_id: w.id || '',
-              widget_type: type,
-              title: config.title,
-              description: config.description,
-              is_permanent: true,
-              widget_config: w.widget_config
-            }));
-          }
-        }
-      });
+      const cfg = widget.widget_config || {};
+      const milestones = Array.isArray(cfg.milestones) ? cfg.milestones : [];
     
-      // Step 2: Process today's widgets
-      const validWidgets = todayWidgetsData.filter(isValidWidget);
+      const advCondition = cfg.include_tracker_details || cfg.include_alarm_details ||
+                            (cfg.include_progress_details && hasUpcomingMilestone(milestones));
     
-      validWidgets.forEach(widget => {
-        if (viewWidgetTypes.includes(widget.widget_type)) return;
-    
-        const cfg = widget.widget_config || {};
-        const milestones = Array.isArray(cfg.milestones) ? cfg.milestones : [];
-    
-        const advCondition = cfg.include_tracker_details || cfg.include_alarm_details ||
-                              (cfg.include_progress_details && hasUpcomingMilestone(milestones));
-    
-        if (advCondition) {
-          advancedWidgets.push(makeWidget(widget, {
-            id: `advanced-${widget.daily_widget_id}`,
-            widget_type: 'advancedsingletask',
-            title: `Advanced: ${widget.title}`,
-            reasoning: 'Advanced single task widget with tracker/alarm/progress'
-          }));
-        } else if (trackerWidgetTypes.includes(widget.widget_type)) {
-          trackerWidgets.push(makeWidget(widget, {
-            id: `tracker-${widget.daily_widget_id}`,
-            title: `Tracker: ${widget.title}`,
-            reasoning: 'Tracker widget'
-          }));
-        } else {
-          regularWidgets.push(widget);
-        }
-    
-        if (cfg.include_websearch_details) {
-          const config = getWidgetConfig('websearch');
-          if (config) {
-            webSearchWidgets.push(makeWidget(widget, {
-              id: `websearch-${widget.daily_widget_id}`,
-              widget_type: 'websearch',
-              title: `Web Search: ${widget.title}`,
-              category: 'information',
-              description: `Web search for ${widget.title}`,
-              reasoning: 'Web search widget for task'
-            }));
-          }
-        }
-      });
-    
-      // Step 3: Assemble final list
-      uiWidgets.push(...advancedWidgets);
-    
-      if (regularWidgets.length) {
-        uiWidgets.push(makeWidget({
-          id: 'task-list-combined',
-          daily_widget_id: 'task-list-combined',
-          widget_id: 'task-list-combined',
-          widget_type: 'todo-task',
-          title: 'Task List',
-          category: 'productivity',
-          description: 'Combined task list',
-          widget_config: {
-            combined_tasks: regularWidgets.map(w => ({
-              id: w.daily_widget_id,
-              widget_id: w.widget_id,
-              title: w.title,
-              description: w.description,
-              importance: w.importance,
-              category: w.category,
-              widget_config: w.widget_config
-            }))
-          }
+      if (advCondition) {
+        advancedWidgets.push(makeWidget(widget, {
+          id: `advanced-${widget.daily_widget_id}`,
+          widget_type: 'advancedsingletask',
+          title: `Advanced: ${widget.title}`,
+          reasoning: 'Advanced single task widget with tracker/alarm/progress'
         }));
+      } else if (trackerWidgetTypes.includes(widget.widget_type)) {
+        trackerWidgets.push(makeWidget(widget, {
+          id: `tracker-${widget.daily_widget_id}`,
+          title: `Tracker: ${widget.title}`,
+          reasoning: 'Tracker widget'
+        }));
+      } else {
+        regularWidgets.push(widget);
       }
     
-      uiWidgets.push(...trackerWidgets, ...webSearchWidgets);
+      if (cfg.include_websearch_details) {
+        const config = getWidgetConfig('websearch');
+        if (config) {
+          webSearchWidgets.push(makeWidget(widget, {
+            id: `websearch-${widget.daily_widget_id}`,
+            widget_type: 'websearch',
+            title: `Web Search: ${widget.title}`,
+            category: 'information',
+            description: `Web search for ${widget.title}`,
+            reasoning: 'Web search widget for task'
+          }));
+        }
+      }
+    });
     
-      setWidgets(uiWidgets);
-    } catch (err) {
-      console.error('Failed to fetch widgets:', err);
-      setDashboardError('Failed to load dashboard configuration');
-    } finally {
-      setDashboardLoading(false);
+    // Step 3: Assemble final list
+    uiWidgets.push(...advancedWidgets);
+    
+    if (regularWidgets.length) {
+      uiWidgets.push(makeWidget({
+        id: 'task-list-combined',
+        daily_widget_id: 'task-list-combined',
+        widget_id: 'task-list-combined',
+        widget_type: 'todo-task',
+        title: 'Task List',
+        category: 'productivity',
+        description: 'Combined task list',
+        widget_config: {
+          combined_tasks: regularWidgets.map(w => ({
+            id: w.daily_widget_id,
+            widget_id: w.widget_id,
+            title: w.title,
+            description: w.description,
+            importance: w.importance,
+            category: w.category,
+            widget_config: w.widget_config
+          }))
+        }
+      }));
     }
     
-  }
+    uiWidgets.push(...trackerWidgets, ...webSearchWidgets);
+    
+    return uiWidgets;
+  }, [allWidgetsData, todayWidgetsData]);
 
-  // Fetch today's widgets on component mount
-  useEffect(() => {
-    fetchTodayWidgets()
-  }, [])
+  // Get view widget states for AddWidgetButton
+  const viewWidgetStates = useMemo(() => {
+    const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
+    return allWidgetsData.filter(w => viewWidgetTypes.includes(w.widget_type));
+  }, []);
 
   // No explicit layouts or handlers; let library manage placement
 
@@ -241,26 +226,23 @@ const Dashboard = () => {
 
     return positions
   }
+  const [computedPositions, setComputedPositions] = useState<Map<string, { x: number; y: number }>>(new Map())
 
-  const computedPositions = useMemo(() => {
-    const layoutItems = widgets.map((w) => {
+  // Memoize the computed positions to prevent recalculation on every render
+  useEffect(() => {
+    const layoutItems = processWidgetsForUI.map((w) => {
       const config = getWidgetConfig(w.widget_type)
       const override = sizeOverrides[w.daily_widget_id] || sizeOverrides[String(w.id)] || {}
       const width = override.w ?? (config?.defaultSize?.w ?? 12)
       const height = override.h ?? (config?.defaultSize?.h ?? 8)
       return { id: String(w.id), w: width, h: height }
     })
-    return computeRowWiseLayout(layoutItems)
-  }, [widgets, sizeOverrides])
+    const positions = computeRowWiseLayout(layoutItems)
+    setComputedPositions(positions)
+  }, [processWidgetsForUI, sizeOverrides])
 
   // Add new widget using addNewWidget API
-  const addWidget = async (widgetId: string) => {
-    // Handle refresh case
-    if (widgetId === 'refresh') {
-      await fetchTodayWidgets();
-      return;
-    }
-
+  const handleAddWidget = useCallback(async (widgetId: string) => {
     const config = getWidgetConfig(widgetId);
 
     if (!config) {
@@ -270,35 +252,32 @@ const Dashboard = () => {
 
     try {
       // Call the API to add a new widget
-      const response = await dashboardService.createWidget({
-        widget_type: config.apiWidgetType as ApiWidgetType,
-        frequency: 'daily' as ApiFrequency, // Default to daily
-        importance: 0.5, // Default importance
-        title: config.title,
-        category: config.category as ApiCategory
-      });
+      const response = await addWidgetToToday(widgetId, currentDate);
 
       console.log('Widget added successfully:', response);
 
-      // Refresh the dashboard to show the new widget
-      await fetchTodayWidgets();
+      // Data will automatically update via the store
 
     } catch (error) {
       console.error('Failed to add widget:', error);
 
     }
-  }
+  }, [addWidgetToToday, currentDate])
 
-  const onHeightChange = (dailyWidgetId: string, newHeight: number) => {
-    console.log('Widget height changed:', dailyWidgetId, newHeight)
-    setSizeOverrides((prev) => ({
-      ...prev,
-      [dailyWidgetId]: { ...(prev[dailyWidgetId] || {}), h: newHeight },
-    }))
-  }
+  const onHeightChange = useCallback((dailyWidgetId: string, newHeight: number) => {
+    // Only update if height actually changed
+    if (lastHeightValues.current[dailyWidgetId] !== newHeight) {
+      console.log('Widget height changed:', dailyWidgetId, newHeight)
+      lastHeightValues.current[dailyWidgetId] = newHeight
+      setSizeOverrides((prev) => ({
+        ...prev,
+        [dailyWidgetId]: { ...(prev[dailyWidgetId] || {}), h: newHeight },
+      }))
+    }
+  }, []);
 
-  const removeWidget = async (dailyWidgetId: string) => {
-    const widget = widgets.find(w => w.daily_widget_id === dailyWidgetId)
+  const handleRemoveWidget = useCallback(async (dailyWidgetId: string) => {
+    const widget = processWidgetsForUI.find(w => w.daily_widget_id === dailyWidgetId)
     const widgetType = widget?.widget_type || 'widget'
 
     // Prevent removal of view widgets - they should be managed through the Views dropdown
@@ -330,21 +309,20 @@ const Dashboard = () => {
       if (confirm(`Are you sure you want to remove this advanced single task widget? This will also remove the associated web search widget if it exists.`)) {
         try {
           // Remove the main widget
-          await apiService.removeWidgetFromToday(dailyWidgetId);
+          await removeWidgetFromToday(dailyWidgetId, currentDate);
 
           // Also remove associated web search widget if it exists
           const webSearchWidgetId = `websearch-${widget.id}`;
-          const webSearchWidget = widgets.find(w => w.daily_widget_id === webSearchWidgetId);
+          const webSearchWidget = processWidgetsForUI.find(w => w.daily_widget_id === webSearchWidgetId);
           if (webSearchWidget) {
             try {
-              await apiService.removeWidgetFromToday(webSearchWidgetId);
+              await removeWidgetFromToday(webSearchWidgetId, currentDate);
             } catch (webSearchError) {
               console.warn('Failed to remove associated web search widget:', webSearchError);
             }
           }
 
-          // Refresh the dashboard to update all widgets
-          await fetchTodayWidgets();
+          // Data will automatically update via the store
         } catch (error) {
           alert('Failed to remove widget from dashboard. Please try again.');
           console.error('Failed to remove advanced single task widget:', error);
@@ -355,24 +333,25 @@ const Dashboard = () => {
     if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
       try {
         // Call API to set is_active = 0
-        await apiService.removeWidgetFromToday(dailyWidgetId);
-        const updatedWidgets = widgets.filter((widget: DailyWidget) => widget.daily_widget_id !== dailyWidgetId);
-        setWidgets(updatedWidgets)
+        await removeWidgetFromToday(dailyWidgetId, currentDate);
+        // Data will automatically update via the store
       } catch (error) {
         alert('Failed to remove widget from dashboard. Please try again.');
         console.error('Failed to update is_active for DailyWidget:', error);
       }
     }
-  }
+  }, [processWidgetsForUI, removeWidgetFromToday, currentDate])
 
   const renderWidget = (widget: DailyWidget) => {
+    // return <div></div>
     switch (widget.widget_type) {
       case 'websearch':
         return (
-          <WebSearchWidget
-            widget={widget}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
-          />
+                  <WebSearchWidget
+          targetDate={currentDate}
+          widget={widget}
+          onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+        />
         );
       case 'todo-task':
         // Check if this is a combined task list widget
@@ -386,7 +365,7 @@ const Dashboard = () => {
                 title: 'Task List',
                 description: `Combined task list with ${widget.widget_config.combined_tasks.length} tasks`
               }}
-              onRemove={() => removeWidget(widget.daily_widget_id)}
+              onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
             />
           );
         }
@@ -395,12 +374,13 @@ const Dashboard = () => {
       case 'advancedsingletask':
         return (
           <AdvancedSingleTaskWidget
+            targetDate={currentDate}
             widget={{
               ...widget,
               title: widget.title.replace('Advanced: ', ''),
               description: 'Advanced single task with tracker, alarm, and progress details'
             }}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
             onHeightChange={onHeightChange}
           />
         );
@@ -409,7 +389,7 @@ const Dashboard = () => {
           <YearCalendarWidget
             targetDate={currentDate}
             widget={widget}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
       case 'calendar':
@@ -417,14 +397,14 @@ const Dashboard = () => {
           <CalendarWidget
             targetDate={currentDate}
             widget={widget}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
       case 'aiChat':
         return (
           <AiChatWidget
             widget={widget}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
       case 'moodTracker':
@@ -432,25 +412,27 @@ const Dashboard = () => {
           <MoodTrackerWidget
             targetDate={currentDate}
             widget={widget}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
       case 'allSchedules':
         return (
-          <AllSchedulesWidget
-            targetDate={currentDate}
-            widget={widget}
-            onHeightChange={onHeightChange}
-            onWidgetAddedToToday={() => fetchTodayWidgets()}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
-          />
+                  <AllSchedulesWidget
+          targetDate={currentDate}
+          widget={widget}
+          onHeightChange={onHeightChange}
+          onWidgetAddedToToday={() => {
+            handleAddWidget(widget.widget_id)
+          }} // Data updates automatically via store
+          onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+        />
         );
       case 'simpleClock':
         return (
           <SimpleClockWidget
             targetDate={currentDate}
             widget={widget}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
       case 'weatherWidget':
@@ -458,7 +440,7 @@ const Dashboard = () => {
           <WeatherWidget
             targetDate={currentDate}
             widget={widget}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
       case 'habitTracker':
@@ -466,7 +448,7 @@ const Dashboard = () => {
           <HabitTrackerWidget
             targetDate={currentDate}
             widget={widget}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
       default:
@@ -477,7 +459,7 @@ const Dashboard = () => {
           <BaseWidget
             title={config?.title || widget.widget_type}
             icon={config?.icon}
-            onRemove={() => removeWidget(widget.daily_widget_id)}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           >
             <div className="flex flex-col items-center justify-center h-full text-center p-4">
               <div className="text-4xl mb-2">{config?.icon || '🚧'}</div>
@@ -494,8 +476,11 @@ const Dashboard = () => {
     }
   }
 
+  // Loading and error states are already available from useDashboardData
+  const hasError = error
+
   // Show loading state while fetching dashboard configuration
-  if (dashboardLoading) {
+  if (isLoading) {
     return (
       <div className="h-full w-full flex flex-col">
         <div className="px-4 py-3 flex justify-between items-center border-b bg-card shrink-0">
@@ -522,7 +507,7 @@ const Dashboard = () => {
   }
 
   // Show error state if dashboard loading failed
-  if (dashboardError) {
+  if (hasError) {
     return (
       <div className="h-full w-full flex flex-col">
         <div className="px-4 py-3 flex justify-between items-center border-b bg-card shrink-0">
@@ -538,7 +523,7 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={fetchTodayWidgets}
+              onClick={() => window.location.reload()}
               className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Retry
@@ -549,9 +534,9 @@ const Dashboard = () => {
           <div className="text-center">
             <div className="text-4xl mb-4">⚠️</div>
             <h2 className="text-lg font-semibold mb-2">Failed to Load Dashboard</h2>
-            <p className="text-muted-foreground mb-4">{dashboardError}</p>
+            <p className="text-muted-foreground mb-4">{error}</p>
             <button
-              onClick={fetchTodayWidgets}
+              onClick={() => window.location.reload()}
               className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
             >
               Try Again
@@ -592,7 +577,7 @@ const Dashboard = () => {
         </div>
         <div className="flex items-center gap-3">
           <AddWidgetButton
-            onAddWidget={addWidget}
+            onAddWidget={handleAddWidget}
             existingViewWidgets={viewWidgetStates}
           />
         </div>
@@ -609,7 +594,7 @@ const Dashboard = () => {
           draggableHandle=".widget-drag-handle"
           compactType="vertical"
         >
-          {widgets.map((widget: DailyWidget) => {
+          {processWidgetsForUI.map((widget: DailyWidget) => {
             const config = getWidgetConfig(widget.widget_type);
             const override = sizeOverrides[widget.daily_widget_id] || sizeOverrides[String(widget.id)] || {};
             const baseW = config?.defaultSize?.w ?? 12;
