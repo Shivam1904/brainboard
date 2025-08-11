@@ -82,18 +82,18 @@ const TaskListWidget = ({  onRemove, widget, onHeightChange, targetDate }: TaskL
 
       // Convert API response to internal Task format
       const allTasksToCount = response.filter((todo: DailyWidget) =>
-        !['calendar', 'allSchedules', 'aiChat', 'moodTracker'].includes(todo.widget_type)
+        !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type)
       ).length;
       // Convert API response to internal Task format
       const allTasksCompleted = response.filter((todo: DailyWidget) =>
-        !['calendar', 'allSchedules', 'aiChat', 'moodTracker'].includes(todo.widget_type) && todo.activity_data?.status === 'completed'
+        !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type) && todo.activity_data?.status === 'completed'
       ).length;
 
       setProgressText(`${allTasksCompleted} / ${allTasksToCount} `);
 
       // Convert API response to internal Task format
       const convertedTasks: Task[] = response.filter((todo: DailyWidget) =>
-        !['calendar', 'allSchedules', 'aiChat', 'moodTracker'].includes(todo.widget_type))
+        !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type))
         .map((todo: DailyWidget) => ({
           id: todo.daily_widget_id,
           title: todo.title,

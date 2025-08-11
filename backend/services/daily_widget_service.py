@@ -288,6 +288,46 @@ class DailyWidgetService:
             print(f"Failed to update activity data for DailyWidget {daily_widget_id}: {e}")
             raise
 
+    async def update_activity_by_widget_id_and_date(self, widget_id: str, target_date: str, activity_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update activity data for a daily widget by widget_id and date."""
+        try:
+            stmt = select(DailyWidget).where(
+                and_(
+                    DailyWidget.widget_id == widget_id,
+                    DailyWidget.date == target_date,
+                    DailyWidget.delete_flag == False
+                )
+            )
+            result = await self.db.execute(stmt)
+            daily_widget = result.scalars().first()
+            
+            if not daily_widget:
+                raise ValueError("DailyWidget not found")
+            
+            act = daily_widget.activity_data
+            
+            for key, value in activity_data.items():
+                print(f"Updating activity data for {key} with value {value}")
+                act[key] = value
+            
+            daily_widget.activity_data = act
+            # Mark the JSON field as modified so SQLAlchemy detects the change
+            flag_modified(daily_widget, 'activity_data')
+            # Update activity data
+            print(f"Updated activity data: {daily_widget}")
+            daily_widget.updated_at = date.today()
+            await self.db.flush()
+            return {
+                "success": True,
+                "message": "Activity data updated successfully",
+                "activity_data": daily_widget.activity_data
+            }
+        except Exception as e:
+            logger.error(f"Failed to update activity data for DailyWidget {widget_id}: {e}")
+            print(f"Failed to update activity data for DailyWidget {widget_id}: {e}")
+            raise
+
+
     async def get_today_widget_by_widget_id(self, widget_id: str, target_date: str) -> Dict[str, Any]:
         """Get activity data for a daily widget by widget_id."""
         try:

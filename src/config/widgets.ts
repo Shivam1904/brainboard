@@ -36,7 +36,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'HabitTrackerWidget',
     minSize: { w: 12, h: 12 },
     maxSize: { w: 30, h: 30 },
-    defaultSize: { w: 11, h: 10 },
+    defaultSize: { w: 12, h: 10 },
     deletable: true,
     resizable: true,
     category: 'productivity',

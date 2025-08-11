@@ -83,7 +83,7 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
     <BaseWidget title={widget.title || 'Simple Clock'} icon={isDay ? '🌞' : '🌙'} onRemove={onRemove}>
       <div className={`h-full w-full p-3 `}>
         <div className="relative items-center justify-between">
-          <div className="flex absolute top-0 right-0 left-0 justify-center pt-12 z-10">
+          <div className="flex absolute top-0 right-0 left-0 justify-center pt-12 z-10 opacity-50">
             <button
               onClick={() => setMode('analog')}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${

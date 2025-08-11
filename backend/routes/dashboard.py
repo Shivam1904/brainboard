@@ -127,6 +127,22 @@ async def update_activity(
         await db.rollback()
         raise raise_database_error(f"Failed to update activity: {str(e)}")
 
+@router.put("/daily-widgets/{widget_id}/updateTodayActivityByWidgetId")
+async def update_activity_by_widget_id_and_date(
+    widget_id: str,
+    target_date: str,
+    activity_data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db_session_dependency)
+):
+    """Update activity data for a daily widget by widget_id and date."""
+    try:
+        service = DailyWidgetService(db)
+        result = await service.update_activity_by_widget_id_and_date(widget_id, target_date, activity_data)
+        return result
+    except Exception as e:
+        raise raise_database_error(f"Failed to update activity by widget_id and date: {str(e)}")
+    
+
 @router.get("/daily-widgets/{daily_widget_id}/getTodayWidget")
 async def get_activity_data(
     daily_widget_id: str,

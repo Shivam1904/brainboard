@@ -28,6 +28,7 @@ export const API_CONFIG = {
     addWidgetToToday: '/api/v1/dashboard/widget/addtotoday/{widget_id}', // POST - Add widget to today
     removeWidgetFromToday: '/api/v1/dashboard/widget/removefromtoday/{daily_widget_id}', // POST - Remove widget from today
     updateActivity: '/api/v1/dashboard/daily-widgets/{daily_widget_id}/updateactivity', // PUT - Update activity data
+    updateTodayActivityByWidgetId: '/api/v1/dashboard/daily-widgets/{widget_id}/updateTodayActivityByWidgetId', // PUT - Update activity data by widget_id and date
     getTodayWidget: '/api/v1/dashboard/daily-widgets/{daily_widget_id}/getTodayWidget', // GET - Get activity data
     getTodayWidgetbyWidgetId: '/api/v1/dashboard/daily-widgets/{widget_id}/getTodayWidgetbyWidgetId', // GET - Get activity data by widget_id
   },

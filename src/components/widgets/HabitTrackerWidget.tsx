@@ -94,7 +94,7 @@ const generateHabitStructure = (year: number, month: number, targetDate: string)
   };
 };
 
-const WIDTH = 20;
+const WIDTH = 30;
 
 const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidgetProps) => {
   const [currentDate, setCurrentDate] = useState(new Date(targetDate));
@@ -171,7 +171,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
     }
   };
   useEffect(() => {
-    setRadius((habitData?.tasks?.filter(t => selectedWidgets?.has(t.widget_id))?.length || 0) * WIDTH/2 || 10);
+    setRadius(((habitData?.tasks?.filter(t => selectedWidgets?.has(t.widget_id))?.length || 0) * WIDTH/2 )+WIDTH/2);
   }, [habitData, selectedWidgets]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -339,12 +339,6 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
               <ChevronRight size={16} />
             </button>
           </div>
-          <button
-            onClick={goToToday}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-          >
-            Today
-          </button>
         </div>
 
         {/* Habit Tracker Grid */}
@@ -352,64 +346,44 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
           {/* SVG Circular Grid */}
           <div className="absolute flex-1 flex">
             <div className={`relative `}>
-              <svg width={`${radius * 2 + 120}`} height={`${radius * 2 + 30}`} >
-                {/* Day numbers around the circle */}
-                {habitData.days.filter(day => day.isCurrentMonth).map((day, index) => {
-                  // Calculate angle based on the actual day of the month (1-31)
-                  // Map day 1 to 0°, day 2 to ~8.7°, etc. (270 degrees total)
-                  const angle = ((day.day - 1) * 270) / 31;
-                  const rad = radius; // Distance from center
-                  const x = rad + 105 + Math.cos((angle - 90) * Math.PI / 180) * rad;
-                  const y = rad + 5 + Math.sin((angle - 90) * Math.PI / 180) * rad;
-
-                  return (
-                    <text
-                      key={day.date}
-                      x={x}
-                      y={y}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      className="text-xs font-medium fill-gray-600"
-                    >
-                      {day.day}
-                    </text>
-                  );
-                })}
+              <svg width={`${radius  + 120}`} height={`${radius  + 30}`} >
 
                 {/* SVG arcs for each task and day */}
                 {uniqueTasks.map((taskTitle, taskIndex) => {
                   const task = habitData.tasks.find(t => t.title === taskTitle);
                   const category = task?.category || 'personal';
                   const color = categoryColors[category as keyof typeof categoryColors]?.color || '#6B7280';
-                  const ringRadius = radius - WIDTH - (taskIndex * WIDTH); // Each habit gets its own ring
+                  const ringRadius = WIDTH + (taskIndex * WIDTH); // Each habit gets its own ring
 
                   return (
                     <g key={taskIndex}>
                       {/* Arcs for each day */}
-                      <text x={radius + 100 -WIDTH/2} y={0+ (radius - (radius - WIDTH*1.5 - (taskIndex * WIDTH)))}
+                      <text x={radius/2 + 100 -WIDTH/2} y={radius/2 - (WIDTH/2 + (taskIndex * WIDTH))}
                         textAnchor="end"
-                        className="text-xs font-medium fill-gray-600">
+                        className="text-xs font-semibold fill-gray-600"
+                        style={{ fill: color }}
+                      >
                         {taskTitle}
                       </text>
                       {habitData.days.filter(day => day.isCurrentMonth).map((day, dayIndex) => {
                         // Calculate angle based on the actual day of the month (1-31)
                         // Map day 1 to 0°, day 2 to ~8.7°, etc. (270 degrees total)
                         const startAngle = ((day.day - 1) * 270) / 31;
-                        const endAngle = (day.day * 270) / 31;
+                        const endAngle = ((day.day * 270) / 31)-1;
 
                         // Convert angles to radians and adjust for SVG coordinate system
                         const startRad = (startAngle - 90) * Math.PI / 180;
                         const endRad = (endAngle - 90) * Math.PI / 180;
 
                         // Calculate start and end points
-                        const startX = radius + 105 + Math.cos(startRad) * ringRadius;
-                        const startY = radius + 5 + Math.sin(startRad) * ringRadius;
-                        const endX = radius + 105 + Math.cos(endRad) * ringRadius;
-                        const endY = radius + 5 + Math.sin(endRad) * ringRadius;
+                        const startX = radius/2 + 100 + Math.cos(startRad) * ringRadius;
+                        const startY = radius/2 + 10 + Math.sin(startRad) * ringRadius;
+                        const endX = radius/2 + 100 + Math.cos(endRad) * ringRadius;
+                        const endY = radius/2 + 10 + Math.sin(endRad) * ringRadius;
 
                         // Determine if this day/task combination is completed
                         const dayTask = day.tasks.find(t => t.title === taskTitle);
-                        const isCompleted = dayTask && day.completedTasks.includes(dayTask);
+                        let isCompleted = dayTask && day.completedTasks.includes(dayTask);
 
                         // Create arc path
                         const largeArcFlag = (endAngle - startAngle) > 180 ? 1 : 0;
@@ -419,13 +393,62 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                           <path
                             key={`${taskIndex}-${dayIndex}`}
                             d={arcPath}
-                            stroke={isCompleted ? getCategoryColor(dayTask.category) : 'rgba(255, 255, 255, 0.39)'} // Green if completed, gray if not
-                            strokeWidth={WIDTH}
+                            stroke={isCompleted ? getCategoryColor(dayTask?.category || 'personal') 
+                              : dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'rgba(223, 209, 120, 0.39)' 
+                              : day.date === currentDate.toISOString().split('T')[0] ? 'rgba(230, 227, 207, 0.39)' 
+                              : dayTask ? 'rgba(143, 121, 121, 0.39)' 
+                              : 'rgba(255, 255, 255, 0.39)'}
+                            strokeWidth={WIDTH-1}
                             fill="none"
-                            className="cursor-pointer hover:stroke-width-10 transition-all duration-200"
-                            onClick={() => {
+                            className={`${dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'cursor-pointer' : 'cursor-default'} hover:stroke-width-10 transition-all duration-200`}
+                            onClick={async () => {
                               // Handle arc click - toggle completion
-                              console.log(`Toggle ${taskTitle} for day ${day.day}`);
+                              console.log(`Toggle ${taskTitle} for day ${day.day}, ${dayTask?.id}`);
+                              if(dayTask?.id && dayTask.date === currentDate.toISOString().split('T')[0]) {
+                                try {
+                                  // Update the API
+                                  await apiService.updateActivity(dayTask.id, { status: isCompleted ? 'not_completed' : 'completed' });
+                                  
+                                  // Update local state immediately for responsive UI
+                                  setHabitData(prevData => {
+                                    if (!prevData) return prevData;
+                                    
+                                    const newData = { ...prevData };
+                                    const dayIndex = newData.days.findIndex(d => d.date === day.date);
+                                    
+                                    if (dayIndex !== -1) {
+                                      const updatedDay = { ...newData.days[dayIndex] };
+                                      const taskIndex = updatedDay.tasks.findIndex(t => t.id === dayTask.id);
+                                      
+                                      if (taskIndex !== -1) {
+                                        // Update the task's activity_data
+                                        const updatedTask = { ...updatedDay.tasks[taskIndex] };
+                                        updatedTask.activity_data = {
+                                          ...updatedTask.activity_data,
+                                          status: isCompleted ? 'not_completed' : 'completed'
+                                        };
+                                        updatedDay.tasks[taskIndex] = updatedTask;
+                                        
+                                        // Update completedTasks array
+                                        if (isCompleted) {
+                                          // Remove from completedTasks
+                                          updatedDay.completedTasks = updatedDay.completedTasks.filter(t => t.id !== dayTask.id);
+                                        } else {
+                                          // Add to completedTasks
+                                          updatedDay.completedTasks.push(updatedTask);
+                                        }
+                                        
+                                        newData.days[dayIndex] = updatedDay;
+                                      }
+                                    }
+                                    
+                                    return newData;
+                                  });
+                                } catch (error) {
+                                  console.error('Failed to update activity:', error);
+                                  // Optionally show an error message to the user
+                                }
+                              }
                             }}
                           />
                         );

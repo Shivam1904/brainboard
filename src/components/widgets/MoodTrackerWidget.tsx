@@ -92,7 +92,7 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
       let currentDailyWidgetId = dailyWidgetId;
       if (!currentDailyWidgetId) {
         // Create today's daily widget on first save
-        const created = await dashboardService.addWidgetToToday(widget.widget_id);
+        const created = await dashboardService.addWidgetToToday(widget.widget_id, targetDate);
         currentDailyWidgetId = created?.daily_widget_id || null;
         setDailyWidgetId(currentDailyWidgetId);
       }

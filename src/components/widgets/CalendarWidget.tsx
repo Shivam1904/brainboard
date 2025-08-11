@@ -91,9 +91,10 @@ interface CircularProgressProps {
   size?: number;
   strokeWidth?: number;
   isToday?: boolean;
+  isCurrentMonth?: boolean;
 }
 
-const CircularProgress = ({ todosCompleted, todosTotal, day, size = 20, strokeWidth = 3, isToday = false }: CircularProgressProps) => {
+const CircularProgress = ({ todosCompleted, todosTotal, day, size = 20, strokeWidth = 3, isToday = false, isCurrentMonth = false }: CircularProgressProps) => {
   
 
   const radius = (size - strokeWidth) / 2;
@@ -111,7 +112,7 @@ const CircularProgress = ({ todosCompleted, todosTotal, day, size = 20, strokeWi
         className="transform -rotate-90"
       >
         {/* Background circle */}
-        {todosTotal.length > 0 || isToday && (<circle
+        {((todosTotal.length > 0) || isToday) && (<circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -148,7 +149,7 @@ const CircularProgress = ({ todosCompleted, todosTotal, day, size = 20, strokeWi
       </svg>
       {/* Center date */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className={`text-xs font-medium ${isToday ? 'text-gray-700' : 'text-gray-500'}`}>{day}</span>
+        <span className={`text-xs font-medium ${isToday ? 'text-gray-700' : isCurrentMonth ? 'text-gray-500' : 'text-gray-300'}`}>{day}</span>
       </div>
     </div>
   );
@@ -832,6 +833,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
                     <div className="">
                       <CircularProgress
                         isToday={day.isToday}
+                        isCurrentMonth={day.isCurrentMonth}
                         todosCompleted={day.todosCompleted}
                         todosTotal={day.todosTotal}
                         day={day.day}
