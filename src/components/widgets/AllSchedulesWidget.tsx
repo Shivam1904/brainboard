@@ -180,7 +180,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
   // Group widgets into Trackers and Missions, excluding specific types
   const groupedWidgets = widgets.reduce((groups: GroupedWidgets, widget) => {
     const type = widget.widget_type;
-    const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar']);
+    const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar', 'habitTracker']);
     const excludedTypes = new Set(['aiChat', 'moodTracker', 'weatherWidget', 'simpleClock', 'allSchedules']);
 
     // Skip excluded types

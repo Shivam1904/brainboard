@@ -25,7 +25,7 @@ const AddWidgetButton = ({ onAddWidget,  existingViewWidgets = [] }: AddWidgetBu
 
   // Tracker widgets (calendar, weekchart) - permanent widgets
   const trackerWidgets = allWidgets.filter(widget => 
-    ['calendar', 'weekchart', 'yearCalendar'].includes(widget.id) && isImplemented(widget.id)
+    ['calendar', 'weekchart', 'yearCalendar', 'habitTracker'].includes(widget.id) && isImplemented(widget.id)
   )
 
   // View widgets (aiChat, allSchedules, moodTracker, weatherWidget, simpleClock)

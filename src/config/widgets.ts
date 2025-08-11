@@ -25,17 +25,18 @@ export interface WidgetConfig {
   icon?: string;
 }
 
+// TODO: Add all widgets here
 export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
-  // TODO HABIT Widget
-  'todo-habit': {
-    id: 'todo-habit',
-    apiWidgetType: 'todo-habit',
+  // HABIT TRACKER Widget
+  habitTracker: {
+    id: 'habitTracker',
+    apiWidgetType: 'habitTracker',
     title: 'Habit Tracker',
-    description: 'Track daily habits and routines',
-    component: 'TaskListWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 30, h: 36 },
-    defaultSize: { w: 12, h: 15 },
+    description: 'Track daily habits and routines with circular grid layout',
+    component: 'HabitTrackerWidget',
+    minSize: { w: 12, h: 12 },
+    maxSize: { w: 30, h: 30 },
+    defaultSize: { w: 11, h: 10 },
     deletable: true,
     resizable: true,
     category: 'productivity',
@@ -56,22 +57,6 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     resizable: true,
     category: 'productivity',
     icon: '📋'
-  },
-
-  // TODO EVENT Widget
-  'todo-event': {
-    id: 'todo-event',
-    apiWidgetType: 'todo-event',
-    title: 'Event Tracker',
-    description: 'Track events and appointments',
-    component: 'TaskListWidget',
-    minSize: { w: 8, h: 8 },
-    maxSize: { w: 30, h: 36 },
-    defaultSize: { w: 10, h: 6 },
-    deletable: true,
-    resizable: true,
-    category: 'productivity',
-    icon: '📅'
   },
 
 
@@ -117,7 +102,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'YearCalendarWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 20, h: 24 },
-    defaultSize: { w: 20, h: 10 },
+    defaultSize: { w: 11, h: 6 },
     deletable: true,
     resizable: true,
     category: 'information',
@@ -250,9 +235,7 @@ export const getAllWidgets = (): WidgetConfig[] => {
 export const getImplementedWidgets = (): WidgetConfig[] => {
   // Currently implemented widgets that match API types
   return [
-    WIDGET_CONFIGS['todo-habit'],
     WIDGET_CONFIGS['todo-task'],
-    WIDGET_CONFIGS['todo-event'],
     WIDGET_CONFIGS.advancedsingletask,
     WIDGET_CONFIGS.websearch,
     WIDGET_CONFIGS.allSchedules, // UI-only widget
@@ -263,6 +246,7 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
     WIDGET_CONFIGS.simpleClock,
     WIDGET_CONFIGS.alarm,
     WIDGET_CONFIGS.yearCalendar,
+    WIDGET_CONFIGS.habitTracker,
   ];
 };
 

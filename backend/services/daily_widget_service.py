@@ -372,10 +372,13 @@ class DailyWidgetService:
         - Both records not deleted
         - DashboardWidgetDetails.widget_config.selected_calendar == calendar_widget_id
         """
+        type = 'selected_calendar'
         if calendar_type == 'monthly':
             type = 'selected_calendar'
         elif calendar_type == 'yearly':
             type = 'selected_yearly_calendar'
+        elif calendar_type == 'habitTracker':
+            type = 'selected_habit_calendar'
         try:
             stmt = select(
                 DailyWidget,

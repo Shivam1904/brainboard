@@ -15,6 +15,7 @@ import AiChatWidget from './widgets/AiChatWidget';
 import MoodTrackerWidget from './widgets/MoodTrackerWidget';
 import SimpleClockWidget from './widgets/SimpleClockWidget';
 import WeatherWidget from './widgets/WeatherWidget';
+import HabitTrackerWidget from './widgets/HabitTrackerWidget';
 import { apiService, DailyWidget } from '../services/api';
 import { ApiCategory, ApiFrequency, ApiWidgetType } from '@/types/widgets';
 import YearCalendarWidget from './widgets/YearCalendarWidget';
@@ -54,7 +55,7 @@ const Dashboard = () => {
       setDashboardError(null);
     
       const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
-      const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar'];
+      const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar', 'habitTracker'];
     
       const makeWidget = (base: Partial<DailyWidget>, overrides: Partial<DailyWidget> = {}): DailyWidget => ({
         id: base.id || '',
@@ -455,6 +456,14 @@ const Dashboard = () => {
       case 'weatherWidget':
         return (
           <WeatherWidget
+            targetDate={currentDate}
+            widget={widget}
+            onRemove={() => removeWidget(widget.daily_widget_id)}
+          />
+        );
+      case 'habitTracker':
+        return (
+          <HabitTrackerWidget
             targetDate={currentDate}
             widget={widget}
             onRemove={() => removeWidget(widget.daily_widget_id)}
