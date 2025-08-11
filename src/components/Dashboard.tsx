@@ -13,8 +13,9 @@ import BaseWidget from './widgets/BaseWidget'
 import CalendarWidget from './widgets/CalendarWidget'
 import AdvancedSingleTaskWidget from './widgets/AdvancedSingleTaskWidget'
 import NotesWidget from './widgets/NotesWidget'
+import PillarGraphsWidget from './widgets/PillarGraphsWidget'
 import AddWidgetButton from './AddWidgetButton'
-import { DailyWidget } from '../services/api';
+import { DailyWidget, DashboardWidget } from '../services/api';
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
 import { useDashboardData } from '../hooks/useDashboardData'
@@ -69,7 +70,7 @@ const Dashboard = () => {
   // Process widgets for UI display
   const processWidgetsForUI = useMemo(() => {
     const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock', 'notes'];
-    const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar', 'habitTracker'];
+    const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar',  'pillarsGraph', 'habitTracker'];
     
     const makeWidget = (base: Partial<DailyWidget>, overrides: Partial<DailyWidget> = {}): DailyWidget => ({
       id: base.id || '',
@@ -253,9 +254,11 @@ const Dashboard = () => {
   }, [processWidgetsForUI, sizeOverrides])
 
   // Add new widget using addNewWidget API
-  const handleAddWidget = useCallback(async (widgetId: string) => {
-    const config = getWidgetConfig(widgetId);
+  const handleAddWidget = useCallback(async (widget: DashboardWidget) => {
+    console.log('Adding widget:', widget)
+    const config = getWidgetConfig(widget.widget_type);
 
+    console.log('Config:', config)
     if (!config) {
       alert('Widget configuration not found.')
       return
@@ -263,7 +266,7 @@ const Dashboard = () => {
 
     try {
       // Call the API to add a new widget
-      const response = await addWidgetToToday(widgetId, currentDate);
+      const response = await addWidgetToToday(widget.id, currentDate);
 
       console.log('Widget added successfully:', response);
 
@@ -432,8 +435,9 @@ const Dashboard = () => {
           targetDate={currentDate}
           widget={widget}
           onHeightChange={onHeightChange}
-          onWidgetAddedToToday={() => {
-            handleAddWidget(widget.widget_id)
+          onWidgetAddedToToday={(widg) => {
+            console.log('Adding widget:', widg)
+            handleAddWidget(widg)
           }} // Data updates automatically via store
           onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
         />
@@ -465,6 +469,14 @@ const Dashboard = () => {
       case 'notes':
         return (
           <NotesWidget
+            targetDate={currentDate}
+            widget={widget}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+          />
+        );
+      case 'pillarsGraph':
+        return (
+          <PillarGraphsWidget
             targetDate={currentDate}
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}

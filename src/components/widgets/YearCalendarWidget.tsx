@@ -116,7 +116,6 @@ const CircularProgress = ({ todosCompleted, todosTotal, day, size = 12, strokeWi
                 fill="none"
                 strokeDasharray={dashArray}
                 strokeDashoffset={dashOffset}
-                strokeLinecap="round"
                 className="transition-all duration-300"
               />
             );
@@ -313,7 +312,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
       // Filter out the current calendar widget and only show task-like widgets
       const taskWidgets = widgets.filter(w =>
         w.id !== widget.widget_id &&
-        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar','yearCalendar', 'moodTracker', 'notes', 'habitTracker'].includes(w.widget_type)
+        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar','yearCalendar', 'pillarsGraph', 'moodTracker', 'notes', 'habitTracker'].includes(w.widget_type)
       );
       setAvailableWidgets(taskWidgets);
 

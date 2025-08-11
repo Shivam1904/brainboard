@@ -102,7 +102,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'YearCalendarWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 20, h: 24 },
-    defaultSize: { w: 11, h: 6 },
+    defaultSize: { w: 12, h: 6 },
     deletable: true,
     resizable: true,
     category: 'information',
@@ -116,7 +116,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     component: 'CalendarWidget',
     minSize: { w: 8, h: 8 },
     maxSize: { w: 20, h: 24 },
-    defaultSize: { w: 12, h: 12 },
+    defaultSize: { w: 12, h: 10 },
     deletable: true,
     resizable: true,
     category: 'information',
@@ -232,6 +232,22 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     resizable: true,
     category: 'productivity',
     icon: '📝'
+  },
+
+  // PILLAR GRAPHS Widget
+  pillarsGraph: {
+    id: 'pillarsGraph',
+    apiWidgetType: 'pillarsGraph',
+    title: 'Pillar Graphs',
+    description: 'Monthly task statistics with category-based bar charts',
+    component: 'PillarGraphsWidget',
+    minSize: { w: 10, h: 8 },
+    maxSize: { w: 24, h: 20 },
+    defaultSize: { w: 12, h: 8 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '📊'
   }
 };
 
@@ -264,6 +280,7 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
     WIDGET_CONFIGS.yearCalendar,
     WIDGET_CONFIGS.habitTracker,
     WIDGET_CONFIGS.notes,
+    WIDGET_CONFIGS.pillarsGraph,
   ];
 };
 

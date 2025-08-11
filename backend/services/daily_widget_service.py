@@ -412,14 +412,32 @@ class DailyWidgetService:
         - Both records not deleted
         - DashboardWidgetDetails.widget_config.selected_calendar == calendar_widget_id
         """
-        type = 'selected_calendar'
-        if calendar_type == 'monthly':
-            type = 'selected_calendar'
-        elif calendar_type == 'yearly':
-            type = 'selected_yearly_calendar'
-        elif calendar_type == 'habitTracker':
-            type = 'selected_habit_calendar'
-        try:
+
+        if calendar_type == 'pillarsGraph':
+            stmt = select(
+                DailyWidget,
+                DashboardWidgetDetails
+            ).join(
+                DashboardWidgetDetails,
+                DailyWidget.widget_id == DashboardWidgetDetails.id
+            ).where(
+                and_(
+                    DailyWidget.date >= start_date,
+                    DailyWidget.date <= end_date,
+                    DailyWidget.is_active == True,
+                    DailyWidget.delete_flag == False,
+                    DashboardWidgetDetails.delete_flag == False,
+                )
+            ).order_by(DailyWidget.date.asc(), DailyWidget.priority.desc())
+        else:
+
+            if calendar_type == 'monthly':
+                type = 'selected_calendar'
+            elif calendar_type == 'yearly':
+                type = 'selected_yearly_calendar'
+            elif calendar_type == 'habitTracker':
+                type = 'selected_habit_calendar'
+
             stmt = select(
                 DailyWidget,
                 DashboardWidgetDetails
@@ -438,6 +456,7 @@ class DailyWidgetService:
                 )
             ).order_by(DailyWidget.date.asc(), DailyWidget.priority.desc())
 
+        try:
             result = await self.db.execute(stmt)
             rows = result.all()
             print(f"rows: {rows}")

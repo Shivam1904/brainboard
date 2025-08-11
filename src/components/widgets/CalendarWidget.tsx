@@ -12,7 +12,10 @@ export const categoryColors = {
   entertainment: { value: 'entertainment', label: 'Entertainment', color: 'pink' },
   utilities: { value: 'utilities', label: 'Utilities', color: 'gray' },
   personal: { value: 'personal', label: 'Personal', color: 'transparent' },
-  notes: { value: 'notes', label: 'Notes', color: 'transparent' }
+  notes: { value: 'notes', label: 'Notes', color: 'transparent' },
+  calendar: { value: 'calendar', label: 'Calendar', color: 'transparent' },
+  yearCalendar: { value: 'yearCalendar', label: 'Year Calendar', color: 'transparent' },
+  pillarsGraph: { value: 'pillarsGraph', label: 'Pillars Graph', color: 'transparent' }
 };
 
 interface CalendarEvent {
@@ -142,7 +145,6 @@ const CircularProgress = ({ todosCompleted, todosTotal, day, size = 20, strokeWi
                 fill="none"
                 strokeDasharray={dashArray}
                 strokeDashoffset={dashOffset}
-                strokeLinecap="round"
                 className="transition-all duration-300"
               />
             );
@@ -222,7 +224,6 @@ const CircularProgressConcentric = ({ todosCompleted, todosTotal, day, size = 20
                     fill="none"
                     strokeDasharray={dashArray}
                     strokeDashoffset={dashOffset}
-                    strokeLinecap="round"
                     className="transition-all duration-300"
                   />
                 );
@@ -627,7 +628,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
       // Filter out the current calendar widget and only show task-like widgets
       const taskWidgets = widgets.filter(w =>
         w.id !== widget.widget_id &&
-        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar', 'yearCalendar', 'moodTracker', 'notes', 'habitTracker'].includes(w.widget_type)
+        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar', 'pillarsGraph', 'yearCalendar', 'moodTracker', 'notes', 'habitTracker'].includes(w.widget_type)
       );
       setAvailableWidgets(taskWidgets);
 
