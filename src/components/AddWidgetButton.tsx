@@ -8,9 +8,10 @@ interface AddWidgetButtonProps {
   onAddWidget: (widgetId: string) => void
   canAddWidget?: boolean
   existingViewWidgets?: Array<any>
+  refreshAllWidgets?: () => void
 }
 
-const AddWidgetButton = ({ onAddWidget,  existingViewWidgets = [] }: AddWidgetButtonProps) => {
+const AddWidgetButton = ({ onAddWidget,  existingViewWidgets = [], refreshAllWidgets }: AddWidgetButtonProps) => {
   const [isTrackerOpen, setIsTrackerOpen] = useState(false)
   const [isViewsOpen, setIsViewsOpen] = useState(false)
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null)
@@ -28,9 +29,9 @@ const AddWidgetButton = ({ onAddWidget,  existingViewWidgets = [] }: AddWidgetBu
     ['calendar', 'weekchart', 'yearCalendar', 'habitTracker'].includes(widget.id) && isImplemented(widget.id)
   )
 
-  // View widgets (aiChat, allSchedules, moodTracker, weatherWidget, simpleClock)
+  // View widgets (aiChat, allSchedules, moodTracker, notes, weatherWidget, simpleClock)
   const viewWidgets = allWidgets.filter(widget => 
-    ['aiChat', 'allSchedules', 'moodTracker', 'weatherWidget', 'simpleClock'].includes(widget.id) && isImplemented(widget.id)
+    ['aiChat', 'allSchedules', 'moodTracker', 'notes', 'weatherWidget', 'simpleClock'].includes(widget.id) && isImplemented(widget.id)
   )
 
   const handleAddMission = () => {
@@ -50,44 +51,35 @@ const AddWidgetButton = ({ onAddWidget,  existingViewWidgets = [] }: AddWidgetBu
         // Find existing widget of this type
         const existingWidget = existingViewWidgets.find(w => w.widget_type === widgetConfig.apiWidgetType)
         
-        if (isEnabled) {
-          if (existingWidget) {
-            // Update existing widget to set visibility: true
-            await dashboardService.updateWidget(existingWidget.id, {
-              widget_config: { visibility: true }
-            })
-          } else {
-            // Create new widget with visibility: true (first time creation)
-            await dashboardService.createWidget({
-              widget_type: widgetConfig.apiWidgetType,
-              title: widgetConfig.title,
-              description: widgetConfig.description,
-              frequency: 'daily',
-              importance: 0.7,
-              category: 'utilities',
-              is_permanent: true,
-              widget_config: { visibility: true }
-            })
-          }
-        } else {
-          if (existingWidget) {
-            // Update existing widget to set visibility: false
-            await dashboardService.updateWidget(existingWidget.id, {
-              title: widgetConfig.title,
-              description: widgetConfig.description,
-              frequency: 'daily',
-              importance: 0.7,
-              category: 'utilities',
-              is_permanent: true,
-              widget_config: { visibility: false }
-            })
-          }
-          // If no existing widget, no need to create one with visibility: false
+        if (existingWidget) {
+          // Update existing widget - only send the necessary fields
+          await dashboardService.updateWidget(existingWidget.id, {
+            widget_config: { 
+              ...existingWidget.widget_config, // Preserve existing config
+              visibility: isEnabled 
+            }
+          })
+        } else if (isEnabled) {
+          // Create new widget with visibility: true (first time creation)
+          await dashboardService.createWidget({
+            widget_type: widgetConfig.apiWidgetType,
+            title: widgetConfig.title,
+            description: widgetConfig.description,
+            frequency: 'daily',
+            importance: 0.7,
+            category: 'utilities',
+            is_permanent: true,
+            widget_config: { visibility: true }
+          })
         }
+        
+        // Force a refresh to get updated data
         onAddWidget('refresh')
       }
     } catch (err) {
       console.error('Failed to toggle view widget:', err)
+      // Revert the checkbox state on error
+      onAddWidget('refresh')
     } finally {
       setLoading(null)
     }
@@ -125,9 +117,9 @@ const AddWidgetButton = ({ onAddWidget,  existingViewWidgets = [] }: AddWidgetBu
 
   const renderViewWidget = (widget: WidgetConfig) => {
     const isLoading = loading === widget.id
-    // Check if widget exists and is visible
+    // Check if widget exists and is visible - ensure proper boolean handling
     const existingWidget = existingViewWidgets.find(w => w.widget_type === widget.apiWidgetType)
-    const isVisible = existingWidget?.widget_config?.visibility 
+    const isVisible = existingWidget?.widget_config?.visibility === true
     
     return (
       <div

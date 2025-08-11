@@ -176,18 +176,18 @@ const TaskListWidget = ({  onRemove, widget,  onHeightChange, targetDate }: Task
       try {
         // Convert API response to internal Task format
         const allTasksToCount = todayWidgets.filter((todo: DailyWidget) =>
-          !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type)
+          !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'notes', 'habitTracker', 'yearCalendar'].includes(todo.widget_type)
         ).length;
         
         const allTasksCompleted = todayWidgets.filter((todo: DailyWidget) =>
-          !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type) && todo.activity_data?.status === 'completed'
+          !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'notes', 'habitTracker', 'yearCalendar'].includes(todo.widget_type) && todo.activity_data?.status === 'completed'
         ).length;
 
         setProgressText(`${allTasksCompleted} / ${allTasksToCount} `);
 
         // Convert API response to internal Task format
         const convertedTasks: Task[] = todayWidgets.filter((todo: DailyWidget) =>
-          !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'habitTracker', 'yearCalendar'].includes(todo.widget_type))
+          !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'notes', 'habitTracker', 'yearCalendar'].includes(todo.widget_type))
           .map((todo: DailyWidget) => ({
             id: todo.daily_widget_id,
             title: todo.title,

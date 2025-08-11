@@ -23,12 +23,13 @@ Available widget types:
 - alarm: Time-based reminders (e.g., "wake up at 6 AM", "take medication at 9 PM")
 - singleitemtracker: Track metrics/goals (e.g., "track weight", "monitor mood", "measure steps")
 - websearch: Research topics (e.g., "research AI companies", "find productivity apps")
+- notes: Daily notes and reflections (e.g., "daily journal", "morning thoughts", "evening reflection")
 
 If the message is NOT about creating a widget (e.g., greetings, weather questions, general chat), return "none".
 
 Respond ONLY with valid JSON:
 {
-  "widget_type": "todo-task" | "todo-habit" | "alarm" | "singleitemtracker" | "websearch" | "none"
+  "widget_type": "todo-task" | "todo-habit" | "alarm" | "singleitemtracker" | "websearch" | "notes" | "none"
 }"""
 
     @classmethod

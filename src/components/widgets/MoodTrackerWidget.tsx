@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import BaseWidget from './BaseWidget';
 import { DailyWidget } from '../../services/api';
 import { dashboardService } from '../../services/dashboard';
+import { useDashboardActions } from '@/stores/dashboardStore';
 
 interface MoodTrackerWidgetProps {
   onRemove: () => void;
@@ -36,7 +37,7 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dailyWidgetId, setDailyWidgetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const { addWidgetToToday, updateWidgetActivity} = useDashboardActions();
   // Hydrate from today's daily widget if it exists; do not create automatically
   useEffect(() => {
     const ensureDailyWidget = async () => {
@@ -92,13 +93,13 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
       let currentDailyWidgetId = dailyWidgetId;
       if (!currentDailyWidgetId) {
         // Create today's daily widget on first save
-        const created = await dashboardService.addWidgetToToday(widget.widget_id, targetDate);
+        const created = await addWidgetToToday(widget.widget_id, targetDate);
         currentDailyWidgetId = created?.daily_widget_id || null;
         setDailyWidgetId(currentDailyWidgetId);
       }
       if (!currentDailyWidgetId) throw new Error('Failed to create daily widget.');
 
-      await dashboardService.updateActivity(currentDailyWidgetId, {
+      await updateWidgetActivity(currentDailyWidgetId, {
         selected_moods: moodsOverride ?? Array.from(selectedMoodIds),
         saved_at: new Date().toISOString(),
       });

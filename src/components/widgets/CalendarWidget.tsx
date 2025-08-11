@@ -11,7 +11,8 @@ export const categoryColors = {
   information: { value: 'information', label: 'Information', color: 'yellow' },
   entertainment: { value: 'entertainment', label: 'Entertainment', color: 'pink' },
   utilities: { value: 'utilities', label: 'Utilities', color: 'gray' },
-  personal: { value: 'personal', label: 'Personal', color: 'transparent' }
+  personal: { value: 'personal', label: 'Personal', color: 'transparent' },
+  notes: { value: 'notes', label: 'Notes', color: 'transparent' }
 };
 
 interface CalendarEvent {
@@ -626,7 +627,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
       // Filter out the current calendar widget and only show task-like widgets
       const taskWidgets = widgets.filter(w =>
         w.id !== widget.widget_id &&
-        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar', 'yearCalendar', 'moodTracker', 'habitTracker'].includes(w.widget_type)
+        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar', 'yearCalendar', 'moodTracker', 'notes', 'habitTracker'].includes(w.widget_type)
       );
       setAvailableWidgets(taskWidgets);
 

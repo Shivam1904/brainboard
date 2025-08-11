@@ -223,7 +223,7 @@ export type TodoStatus = 'pending' | 'in progress' | 'completed' | 'cancelled';
 export type WebSearchStatus = 'pending' | 'completed' | 'failed';
 
 // Widget types supported by the API
-export type ApiWidgetType = 'todo-habit' | 'todo-task' | 'todo-event' | 'alarm' | 'singleitemtracker' | 'websearch';
+export type ApiWidgetType = 'todo-habit' | 'todo-task' | 'todo-event' | 'alarm' | 'singleitemtracker' | 'websearch' | 'notes';
 
 // Frequency types supported by the API
 export type ApiFrequency = 'daily' | 'weekly' | 'monthly';

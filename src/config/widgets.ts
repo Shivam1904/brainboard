@@ -216,6 +216,22 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     resizable: true,
     category: 'utilities',
     icon: '⏰'
+  },
+
+  // NOTES Widget
+  notes: {
+    id: 'notes',
+    apiWidgetType: 'notes',
+    title: 'Notes',
+    description: 'Write and save daily notes',
+    component: 'NotesWidget',
+    minSize: { w: 8, h: 6 },
+    maxSize: { w: 20, h: 24 },
+    defaultSize: { w: 12, h: 8 },
+    deletable: true,
+    resizable: true,
+    category: 'productivity',
+    icon: '📝'
   }
 };
 
@@ -247,6 +263,7 @@ export const getImplementedWidgets = (): WidgetConfig[] => {
     WIDGET_CONFIGS.alarm,
     WIDGET_CONFIGS.yearCalendar,
     WIDGET_CONFIGS.habitTracker,
+    WIDGET_CONFIGS.notes,
   ];
 };
 

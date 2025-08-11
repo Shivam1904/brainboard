@@ -12,12 +12,14 @@ import TaskListWidget from './widgets/TaskListWidget'
 import BaseWidget from './widgets/BaseWidget'
 import CalendarWidget from './widgets/CalendarWidget'
 import AdvancedSingleTaskWidget from './widgets/AdvancedSingleTaskWidget'
+import NotesWidget from './widgets/NotesWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { DailyWidget } from '../services/api';
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
 import { useDashboardData } from '../hooks/useDashboardData'
 import { useDashboardActions } from '../stores/dashboardStore'
+import { useDashboardStore } from '../stores/dashboardStore'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -42,6 +44,15 @@ const Dashboard = () => {
   // Get actions from store
   const { addWidgetToToday, removeWidgetFromToday } = useDashboardActions()
 
+  // Function to refresh all widgets data
+  const refreshAllWidgets = useCallback(() => {
+    // This will trigger a reload of the all widgets data
+    // The useDashboardData hook will automatically reload when the store changes
+    // We can force a reload by calling the store's loadData method
+    const store = useDashboardStore.getState()
+    store.loadData(currentDate)
+  }, [currentDate])
+
   // Apply grid CSS properties on component mount
   useEffect(() => {
     const cssProperties = getGridCSSProperties()
@@ -57,7 +68,7 @@ const Dashboard = () => {
 
   // Process widgets for UI display
   const processWidgetsForUI = useMemo(() => {
-    const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
+    const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock', 'notes'];
     const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar', 'habitTracker'];
     
     const makeWidget = (base: Partial<DailyWidget>, overrides: Partial<DailyWidget> = {}): DailyWidget => ({
@@ -196,7 +207,7 @@ const Dashboard = () => {
 
   // Get view widget states for AddWidgetButton
   const viewWidgetStates = useMemo(() => {
-    const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock'];
+    const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'notes', 'weatherWidget', 'simpleClock'];
     return allWidgetsData.filter(w => viewWidgetTypes.includes(w.widget_type));
   }, []);
 
@@ -281,13 +292,13 @@ const Dashboard = () => {
     const widgetType = widget?.widget_type || 'widget'
 
     // Prevent removal of view widgets - they should be managed through the Views dropdown
-    if (widget?.widget_type === 'allSchedules' || widget?.widget_type === 'aiChat' || widget?.widget_type === 'moodTracker' || widget?.widget_type === 'weatherWidget' || widget?.widget_type === 'simpleClock') {
+          if (widget?.widget_type === 'allSchedules' || widget?.widget_type === 'aiChat' || widget?.widget_type === 'moodTracker' || widget?.widget_type === 'notes' || widget?.widget_type === 'weatherWidget' || widget?.widget_type === 'simpleClock') {
       alert('View widgets cannot be removed directly. Use the Views dropdown to toggle their visibility.');
       return;
     }
 
     // Prevent removal of the automatically included view widgets
-    if (dailyWidgetId === 'auto-all-schedules' || dailyWidgetId === 'auto-moodTracker' || dailyWidgetId === 'auto-aiChat' || dailyWidgetId === 'auto-weatherWidget' || dailyWidgetId === 'auto-simpleClock') {
+          if (dailyWidgetId === 'auto-all-schedules' || dailyWidgetId === 'auto-moodTracker' || dailyWidgetId === 'auto-notes' || dailyWidgetId === 'auto-aiChat' || dailyWidgetId === 'auto-weatherWidget' || dailyWidgetId === 'auto-simpleClock') {
       alert('This view widget is managed via the Views dropdown and cannot be removed directly.');
       return;
     }
@@ -451,6 +462,14 @@ const Dashboard = () => {
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
+      case 'notes':
+        return (
+          <NotesWidget
+            targetDate={currentDate}
+            widget={widget}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+          />
+        );
       default:
         // For unimplemented widgets, show BaseWidget with placeholder content
         const config = getWidgetConfig(widget.widget_type);
@@ -578,7 +597,8 @@ const Dashboard = () => {
         <div className="flex items-center gap-3">
           <AddWidgetButton
             onAddWidget={handleAddWidget}
-            existingViewWidgets={viewWidgetStates}
+            existingViewWidgets={allWidgetsData}
+            refreshAllWidgets={refreshAllWidgets}
           />
         </div>
       </div>

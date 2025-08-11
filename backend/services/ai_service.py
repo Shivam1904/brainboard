@@ -191,6 +191,13 @@ class AIService:
                     'completed_at': None
                 }
             }
+        elif widget_type == 'notes':
+            return {
+                'notes_activity': {
+                    'notes': '',
+                    'saved_at': None
+                }
+            }
         else:
             return {}
     
@@ -742,6 +749,13 @@ SUMMARY:
                 'summary': None,
                 'source_json': None,
                 'completed_at': None
+            }
+            activities_created += 1
+        
+        elif widget_type == "notes":
+            daily_widget.activity_data['notes_activity'] = {
+                'notes': '',
+                'saved_at': None
             }
             activities_created += 1
         

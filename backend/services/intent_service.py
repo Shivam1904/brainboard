@@ -16,7 +16,7 @@ from ai_engine.models.intent_models import IntentResponse, ParameterExtractionRe
 logger = logging.getLogger(__name__)
 
 # Supported widget types
-SUPPORTED_WIDGET_TYPES = ["todo-task", "todo-habit", "alarm", "singleitemtracker", "websearch"]
+SUPPORTED_WIDGET_TYPES = ["todo-task", "todo-habit", "alarm", "singleitemtracker", "websearch", "notes"]
 
 # Required parameters for each widget type
 REQUIRED_PARAMETERS = {
@@ -24,7 +24,8 @@ REQUIRED_PARAMETERS = {
     "todo-habit": ["title"],
     "alarm": ["title", "alarm_time"],
     "singleitemtracker": ["title", "value_unit", "target_value"],
-    "websearch": ["title"]
+    "websearch": ["title"],
+    "notes": ["title"]
 }
 
 # ============================================================================

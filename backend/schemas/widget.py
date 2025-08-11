@@ -24,6 +24,7 @@ class WidgetType(str, Enum):
     AI_SUMMARY = "aiSummary"
     CALENDAR = "calendar"
     WEATHER = "weather"
+    NOTES = "notes"
 
 
 class Frequency(str, Enum):

@@ -4,6 +4,7 @@ Dashboard Widget Service - Consolidated service for all widget types.
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm.attributes import flag_modified
 from models.dashboard_widget_details import DashboardWidgetDetails
 
 DEFAULT_USER_ID = "user_001"
@@ -65,6 +66,9 @@ class DashboardWidgetService:
         for field in updateable_fields:
             if field in update_data:
                 setattr(widget, field, update_data[field])
+                # Mark JSON fields as modified for SQLAlchemy to detect changes
+                if field == 'widget_config':
+                    flag_modified(widget, 'widget_config')
         
         print("updating widget", widget)
         await self.db.flush()

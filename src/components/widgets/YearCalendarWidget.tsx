@@ -313,7 +313,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
       // Filter out the current calendar widget and only show task-like widgets
       const taskWidgets = widgets.filter(w =>
         w.id !== widget.widget_id &&
-        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar','yearCalendar', 'moodTracker', 'habitTracker'].includes(w.widget_type)
+        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar','yearCalendar', 'moodTracker', 'notes', 'habitTracker'].includes(w.widget_type)
       );
       setAvailableWidgets(taskWidgets);
 
@@ -490,7 +490,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
                             todosTotal={day.todosTotal}
                             day={day.day}
                             size={12}
-                            strokeWidth={1.5}
+                            strokeWidth={4}
                             isToday={isToday(day.date)}
                           />
                         </div>
