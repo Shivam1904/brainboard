@@ -291,25 +291,22 @@ class AIOrchestrator:
         """Update the context with data from the AI response."""
         try:
             # Extract intent from AI response
-            intent = ai_response.get("intent", "unknown")
+            intent = ai_response.get("intent", None)
             
             # Update context with intent
-            if hasattr(context, 'current_intent'):
+            if hasattr(context, ''):
                 context.current_intent = intent
-            
-            # Extract fields from AI response
-            fields = ai_response.get("fields", {})
             
             # Process collected variables based on the fields
             collected_variables = []
             missing_variables = []
             
-            if intent != "unknown" and fields:
+            if intent and ai_response:
                 # Get the required and optional variables for this intent from variable config
                 intent_variables = self._get_intent_variables(intent)
                 
                 for var_name, var_config in intent_variables.items():
-                    var_value = fields.get(var_name)
+                    var_value = ai_response.get(var_name)
                     
                     if var_value is not None and var_value != "" and var_value != []:
                         # Variable is collected
@@ -367,7 +364,7 @@ class AIOrchestrator:
             for var_name, var_config in variables.items():
                 if var_config.get('intent_type') == intent:
                     intent_variables[var_name] = var_config
-            
+            print(f"🟢🟢🟢🟢 INTENT VARIABLES: {intent_variables}")
             return intent_variables
             
         except Exception as e:

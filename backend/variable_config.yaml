@@ -1,0 +1,300 @@
+# Variable Configuration for AI Prompt Preprocessing
+# Defines all variables with their properties for different intents
+
+variables:
+  # ADDING Intent Variables
+  title:
+    name: "title"
+    description: "Widget/task title"
+    is_required: true
+    intent_type: "adding"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer from conversation what the title should be based on user's description and context"
+    forEngine_structure: "string"
+    forTool_destination: "title"
+
+  category:
+    name: "category"
+    description: "Widget category (productivity, health, job, information, entertainment)"
+    is_required: true
+    intent_type: "adding"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "recommend"
+    forAI_fallback_suggestion: "AI should recommend appropriate category based on task description and user's existing categories"
+    forEngine_structure: "enum"
+    forTool_destination: "category"
+
+  frequency_text:
+    name: "frequency_text"
+    description: "How often the widget is active (e.g., '4 weekly', '2 daily', 'on 28-06-2025', 'every weekend')"
+    is_required: true
+    intent_type: "adding"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "ask"
+    forAI_fallback_suggestion: "AI should ask user directly for frequency preference as this is highly personal"
+    forEngine_structure: "string"
+    forTool_destination: "frequency"
+
+  milestones:
+    name: "milestones"
+    description: "List of milestones with due dates for tracking progress"
+    is_required: false
+    intent_type: "adding"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "recommend_with_suggestion"
+    forAI_fallback_suggestion: "AI should strongly suggest to the user that milestones are a good metric to have for gymming for example weight or steps or hours achieved"
+    forEngine_validation: "milestone_list"
+    forEngine_structure: "list_of_milestones"
+    forTool_destination: "widget_config.milestones"
+
+  alarm_times:
+    name: "alarm_times"
+    description: "List of alarm times for reminders"
+    is_required: false
+    intent_type: "adding"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "recommend_with_suggestion"
+    forAI_fallback_suggestion: "AI should suggest to the user that reminder at a particular time of the day will help him do this task"
+    forEngine_validation: "time_list"
+    forEngine_structure: "list_of_times"
+    forTool_destination: "widget_config.alarm_times"
+
+  tracking_value_type:
+    name: "tracking_value_type"
+    description: "Type of tracked value (number, text, boolean, etc.)"
+    is_required: false
+    intent_type: "adding"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "recommend"
+    forAI_fallback_suggestion: "AI should recommend appropriate tracking type based on task nature"
+    forEngine_structure: "enum"
+    forTool_destination: "widget_config.tracking_value_type"
+
+  tracking_value_unit:
+    name: "tracking_value_unit"
+    description: "Unit of tracked value (e.g., 'km', 'hours', 'steps', 'pages', 'calories', etc.)"
+    is_required: false
+    intent_type: "adding"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer the unit of tracked value based on the task nature"
+    forEngine_structure: "enum"
+    forTool_destination: "widget_config.tracking_value_unit"
+
+  news_query_detailed:
+    name: "news_query_detailed"
+    description: "Detailed query for news if the user wants to recieve summary of the news about the task regularly"
+    is_required: false
+    intent_type: "adding"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer if the user wants to recieve internet searched news summary about the task regularly"
+    forEngine_structure: "list"
+    forTool_destination: "widget_config.news_query_detailed"
+
+  # EDITING_CONFIG Intent Variables
+  old_title:
+    name: "old_title"
+    description: "Title of widget to update (must match user_tasks)"
+    is_required: true
+    intent_type: "editing_config"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "ask"
+    forAI_fallback_suggestion: "AI should ask user to specify which task they want to update"
+    forDB_fetch_data_key: "all_task_list"
+    forDB_fetch_data_payload: {}
+    forEngine_validation: "exists_in_user_tasks"
+    forEngine_structure: "string"
+
+
+  new_title:
+    name: "new_title"
+    description: "New title for the widget"
+    is_required: false
+    intent_type: "editing_config"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer from conversation what the new title should be"
+    forEngine_validation: "non_empty_string"
+    forEngine_structure: "string"
+    forTool_destination: "title"
+
+  # EDITING_DAY_ACTIVITY Intent Variables
+  picked_title:
+    name: "picked_title"
+    description: "Title of widget to update (must match user_tasks)"
+    is_required: true
+    intent_type: "editing_day_activity"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "ask"
+    forAI_fallback_suggestion: "AI should ask user to specify which task they want to update"
+    forDB_fetch_data_key: "today_list"
+    forDB_fetch_data_payload: {}
+    forAI_intent_expectation_text: "Here is a list of tasks that the user has for today"
+    forEngine_validation: "exists_in_user_tasks"
+    forEngine_structure: "string"
+
+  editing_date:
+    name: "editing_date"
+    description: "Target date for the update; default to today's date"
+    is_required: false
+    intent_type: "editing_day_activity"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer date from conversation or use today as default"
+    forEngine_validation: "valid_date"
+    forEngine_structure: "date"
+
+  status:
+    name: "status"
+    description: "Task state (pending, in_progress, completed, cancelled)"
+    is_required: false
+    intent_type: "editing_day_activity"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer appropriate status based on user's description"
+    forEngine_validation: "valid_status"
+    forEngine_structure: "enum"
+    forTool_destination: "activity_data.status"
+
+  progress:
+    name: "progress"
+    description: "Numeric progress (0–100)"
+    is_required: false
+    intent_type: "editing_day_activity"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer progress percentage based on user's description"
+    forEngine_validation: "integer_0_to_100"
+    forEngine_structure: "integer"
+    forTool_destination: "activity_data.progress"
+
+  tracking_value:
+    name: "tracking_value"
+    description: "Latest tracker entry value"
+    is_required: false
+    intent_type: "editing_day_activity"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "ask"
+    forAI_fallback_suggestion: "AI should ask user for the specific value they want to track"
+    forAI_intent_expectation_text: "Here is some data that the user has tracked for this task"
+    forEngine_validation: "valid_tracking_value"
+    forEngine_structure: "dynamic"
+    forTool_destination: "activity_data.tracking_value"
+
+  notes:
+    name: "notes"
+    description: "Optional note for today"
+    is_required: false
+    intent_type: "editing_day_activity"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer notes from user's conversation"
+    forEngine_validation: "non_empty_string"
+    forEngine_structure: "string"
+    forTool_destination: "activity_data.notes"
+
+  # ANALYZING Intent Variables
+  analyse_category_list:
+    name: "analyse_category_list"
+    description: "List of categories to analyze"
+    is_required: false
+    intent_type: "analyzing"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer categories based on user's activity patterns"
+    forEngine_validation: "list_of_categories"
+    forEngine_structure: "list"
+
+  analyse_title_list:
+    name: "analyse_title_list"
+    description: "Specific tasks to analyze"
+    is_required: false
+    intent_type: "analyzing"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer tasks based on user's recent activity"
+    forDB_fetch_data_key: "all_task_list"
+    forDB_fetch_data_payload: {}
+    forAI_intent_expectation_text: "Here is a list of tasks that the user has"
+    forEngine_validation: "list_of_tasks"
+    forEngine_structure: "list"
+
+  analysis_type:
+    name: "analysis_type"
+    description: "Type of analysis (performance, trends, comparison, insights)"
+    is_required: false
+    intent_type: "analyzing"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer analysis type based on user's goals"
+    forEngine_structure: "enum"
+
+  analyse_time_period:
+    name: "analyse_time_period"
+    description: "Time period for analysis (week, month, quarter, year)"
+    is_required: false
+    intent_type: "analyzing"
+    forEngine_try_harder: "no"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer time period based on analysis type and user's goals"
+    forEngine_structure: "enum"
+
+  # DISCUSSING Intent Variables
+  discussing_topic:
+    name: "discussing_topic"
+    description: "Subject of discussion"
+    is_required: true
+    intent_type: "discussing"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "infer"
+    forAI_fallback_suggestion: "AI should infer topic based on user's goals"
+    forAI_intent_expectation_text: "When discussing, AI should do google searches and try to find gameplan for the user on the topic in mind and make some suggestions to the user"
+    forEngine_structure: "string"
+
+  proposed_description:
+    name: "proposed_description"
+    description: "Description of the topic"
+    is_required: false
+    intent_type: "discussing"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "recommend_with_suggestion"
+    forAI_fallback_suggestion: "Recommend motivating quotes about the topic based on user's goals"
+    forAI_intent_expectation_text: "AI should do web search and suggest motivating quotes about the topic for the user"
+    forEngine_structure: "string"
+
+  proposed_milestones:
+    name: "proposed_milestones"
+    description: "Realistic, time-bound steps with optional due dates"
+    is_required: false
+    intent_type: "discussing"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "recommend_with_suggestion"
+    forAI_fallback_suggestion: "Recommend realistic milestones based on research and user's capabilities"
+    forAI_intent_expectation_text: "AI should do web search and suggest actionable milestone plans that users can follow"
+    forEngine_validation: "milestone_list"
+    forEngine_structure: "list_of_milestones"
+
+  proposed_news_search_query:
+    name: "proposed_news_search_query"
+    description: "News search query"
+    is_required: false
+    intent_type: "discussing"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "recommend_with_suggestion"
+    forAI_fallback_suggestion: "Recommend news search query based on user's goals"
+    forAI_intent_expectation_text: "AI should do web search and suggest news search query for the user"
+    forEngine_structure: "string"
+  
+  proposed_tracking_value_type:
+    name: "proposed_tracking_value_type"
+    description: "Tracking value type"
+    is_required: false
+    intent_type: "discussing"
+    forEngine_try_harder: "yes"
+    forAI_fallback_suggestion_type: "recommend_with_suggestion"
+    forAI_fallback_suggestion: "Recommend tracking value type based on user's goals"
+    forAI_intent_expectation_text: "AI should do web search and suggest tracking value type for the user"
+    forEngine_structure: "enum"
+  
