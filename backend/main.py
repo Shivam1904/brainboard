@@ -9,10 +9,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routes import dashboard_widgets, chat, dashboard
+from routes import dashboard_widgets, dashboard
 from routes import tracker as tracker_routes
 from routes import weather as weather_routes
-# from routes import ai  # Temporarily commented out for testing
+from routes import new_ai as new_ai_routes
+from routes import ai as ai_routes
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,10 +33,8 @@ CORS_HEADERS = ["*"]
 
 # API settings
 API_PREFIX_DASHBOARD_WIDGETS = "/api/v1/dashboard-widgets"
-API_PREFIX_CHAT = "/api/v1/chat"
 API_PREFIX_DASHBOARD = "/api/v1/dashboard"
 API_TAG_DASHBOARD_WIDGETS = "dashboard-widgets"
-API_TAG_CHAT = "chat"
 API_TAG_DASHBOARD = "dashboard"
 
 # Server settings
@@ -66,11 +65,12 @@ app.add_middleware(
 # ROUTERS
 # ============================================================================
 app.include_router(dashboard_widgets.router, prefix=API_PREFIX_DASHBOARD_WIDGETS, tags=[API_TAG_DASHBOARD_WIDGETS])
-app.include_router(chat.router, prefix=API_PREFIX_CHAT, tags=[API_TAG_CHAT])
 app.include_router(dashboard.router, prefix=API_PREFIX_DASHBOARD, tags=[API_TAG_DASHBOARD])
-# app.include_router(ai.router, tags=["AI Operations"])  # Temporarily commented out for testing
+app.include_router(new_ai_routes.router, tags=["AI Service"])
+app.include_router(ai_routes.router, tags=["AI Operations"])
 app.include_router(tracker_routes.router, prefix="/api/v1/tracker", tags=["tracker"]) 
-app.include_router(weather_routes.router, prefix="/api/v1/weather", tags=["weather"]) 
+app.include_router(weather_routes.router, prefix="/api/v1/weather", tags=["weather"])
+
 # ============================================================================
 # ENDPOINTS
 # ============================================================================

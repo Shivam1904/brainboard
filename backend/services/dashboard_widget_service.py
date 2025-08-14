@@ -28,7 +28,8 @@ class DashboardWidgetService:
             description=config_data.get('description'),
             category=config_data.get('category'),
             is_permanent=config_data.get('is_permanent', False),
-            widget_config=config_data.get('widget_config', {})
+            widget_config=config_data.get('widget_config', {}),
+            created_by=config_data.get('created_by', DEFAULT_USER_ID)
         )
         
         self.db.add(widget)

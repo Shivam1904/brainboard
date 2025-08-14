@@ -121,4 +121,22 @@ class AIErrorResponse(BaseModel):
     status: str = Field("error", description="Error status")
     message: str = Field(..., description="Error message")
     error_type: Optional[str] = Field(None, description="Type of error")
-    details: Optional[Dict[str, Any]] = Field(None, description="Error details") 
+    details: Optional[Dict[str, Any]] = Field(None, description="Error details")
+
+# New AI Service Schemas
+class NewAIChatRequest(BaseModel):
+    """Request schema for new AI chat."""
+    user_message: str
+    user_tasks: List[str]
+    todays_date: str
+    conversation_history: Optional[List[Dict[str, str]]] = None
+
+class NewAIChatResponse(BaseModel):
+    """Response schema for new AI chat."""
+    success: bool
+    message: str
+    intent: str
+    should_continue_chat: bool
+    response_type: str
+    widget_data: Optional[Dict[str, Any]] = None
+    missing_fields: Optional[List[str]] = None 

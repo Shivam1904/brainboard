@@ -1,19 +1,21 @@
 """
-Intent service for intent recognition and parameter extraction.
+Intent recognition service for AI chat functionality.
 """
 
-# ============================================================================
-# IMPORTS
-# ============================================================================
 import logging
-from typing import Dict, Any, List, Optional
-from .ai_service import AIService
-from ai_engine.models.intent_models import IntentResponse, ParameterExtractionResponse
+from typing import Dict, Any, Optional, List
+from datetime import datetime, timedelta
+
+# Remove the circular import
+# from .new_ai_service import NewAIService
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # CONSTANTS
 # ============================================================================
-logger = logging.getLogger(__name__)
+MAX_FALLBACK_ATTEMPTS = 3
+SESSION_TIMEOUT_MINUTES = 30
 
 # Supported widget types
 SUPPORTED_WIDGET_TYPES = ["todo-task", "todo-habit", "alarm", "singleitemtracker", "websearch", "notes"]
@@ -32,15 +34,22 @@ REQUIRED_PARAMETERS = {
 # INTENT SERVICE CLASS
 # ============================================================================
 class IntentService:
-    """Service for intent recognition and parameter extraction."""
+    """Service for recognizing and managing user intents in conversations."""
     
-    def __init__(self):
+    def __init__(self, ai_service=None):
         """Initialize the intent service."""
-        self.ai_service = AIService()
+        # Accept ai_service as parameter instead of importing it
+        self.ai_service = ai_service
+        self.fallback_attempts = {}
     
     async def recognize_intent(self, user_message: str, fallback_attempt: int = 0, conversation_history: List[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
         """Recognize user intent with fallback mechanism."""
         try:
+            # Check if ai_service is available
+            if not self.ai_service:
+                logger.warning("AI service not available, using fallback")
+                return self._create_fallback_response(fallback_attempt)
+            
             # Try AI-based intent recognition with conversation history
             intent_response = await self.ai_service.recognize_intent(user_message, fallback_attempt, conversation_history)
             
@@ -79,9 +88,14 @@ class IntentService:
         current_intent: str, 
         existing_parameters: Dict[str, Any],
         missing_parameters: List[str]
-    ) -> Optional[ParameterExtractionResponse]:
+    ) -> Optional[Dict[str, Any]]: # Changed return type to Dict[str, Any]
         """Extract parameters from follow-up message."""
         try:
+            # Check if ai_service is available
+            if not self.ai_service:
+                logger.warning("AI service not available for parameter extraction")
+                return None
+            
             # Extract widget type from intent (e.g., "create_todo-task" -> "todo-task")
             widget_type = current_intent.replace("create_", "") if current_intent.startswith("create_") else None
             
