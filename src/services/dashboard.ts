@@ -111,6 +111,29 @@ export class DashboardService {
   // CONVENIENCE METHODS FOR WIDGET-SPECIFIC OPERATIONS
   // ============================================================================
 
+  // Helper method for creating widgets with common fields
+  private async _createBaseWidget(
+    widgetType: string,
+    data: {
+      title: string;
+      importance: number;
+      category: string;
+      description?: string;
+      frequency?: string;
+    },
+    config: Record<string, any>
+  ): Promise<DashboardWidget> {
+    return this.createWidget({
+      widget_type: widgetType,
+      title: data.title,
+      frequency: data.frequency || 'daily',
+      importance: data.importance,
+      category: data.category,
+      description: data.description,
+      widget_config: config
+    });
+  }
+
   // Create an alarm widget
   async createAlarmWidget(data: {
     title: string;
@@ -120,19 +143,14 @@ export class DashboardService {
     alarm_times: string[];
     is_snoozable?: boolean;
   }): Promise<DashboardWidget> {
-    return this.createWidget({
-      widget_type: 'alarm',
-      title: data.title,
-      frequency: 'daily',
-      importance: data.importance,
-      category: data.category,
-      description: data.description,
-      widget_config: {
-          alarm_times: data.alarm_times,
-          is_snoozable: data.is_snoozable ?? true
-        }
-      
-    });
+    return this._createBaseWidget(
+      'alarm',
+      data,
+      {
+        alarm_times: data.alarm_times,
+        is_snoozable: data.is_snoozable ?? true
+      }
+    );
   }
 
   // Create a todo widget
@@ -144,19 +162,14 @@ export class DashboardService {
     todo_type: 'habit' | 'task' | 'event';
     due_date?: string;
   }): Promise<DashboardWidget> {
-    return this.createWidget({
-      widget_type: 'todo',
-      title: data.title,
-      frequency: 'daily',
-      importance: data.importance,
-      category: data.category,
-      description: data.description,
-      widget_config: {
-          todo_type: data.todo_type,
-          due_date: data.due_date
-        
+    return this._createBaseWidget(
+      'todo',
+      data,
+      {
+        todo_type: data.todo_type,
+        due_date: data.due_date
       }
-    });
+    );
   }
 
   // Create a single item tracker widget
@@ -169,20 +182,15 @@ export class DashboardService {
     value_unit: string;
     target_value: string;
   }): Promise<DashboardWidget> {
-    return this.createWidget({
-      widget_type: 'single_item_tracker',
-      title: data.title,
-      frequency: 'daily',
-      importance: data.importance,
-      category: data.category,
-      description: data.description,
-      widget_config: {
-          value_type: data.value_type,
-          value_unit: data.value_unit,
-          target_value: data.target_value
-        
+    return this._createBaseWidget(
+      'single_item_tracker',
+      data,
+      {
+        value_type: data.value_type,
+        value_unit: data.value_unit,
+        target_value: data.target_value
       }
-    });
+    );
   }
 
   // Create a web search widget
@@ -194,18 +202,13 @@ export class DashboardService {
     frequency?: string;
     search_query_detailed: string;
   }): Promise<DashboardWidget> {
-    return this.createWidget({
-      widget_type: 'websearch',
-      title: data.title,
-      frequency: data.frequency || 'daily',
-      importance: data.importance,
-      category: data.category,
-      description: data.description,
-      widget_config: {
+    return this._createBaseWidget(
+      'websearch',
+      data,
+      {
         search_query_detailed: data.search_query_detailed
-        }
-      
-    });
+      }
+    );
   }
 
   // Update alarm activity

@@ -2,6 +2,9 @@
 
 An AI-powered modular productivity dashboard with smart widgets for managing tasks, summaries, and automation.
 
+> [!TIP]
+> For detailed architectural documentation, API specifications, and implementation guides, please see [PROJECT_DOCS.md](PROJECT_DOCS.md).
+
 ## 🚀 Features
 
 ### ✅ **Implemented Widgets**
@@ -50,23 +53,11 @@ npm run build
 ## 🏗️ Project Structure
 
 ```
-src/
-├── components/
-│   ├── widgets/
-│   │   ├── WebSearchWidget.tsx      # Web search functionality
-│   │   ├── AllSchedulesWidget.tsx   # Schedule management
-│   │   └── BaseWidget.tsx           # Base widget component
-│   ├── Dashboard.tsx                # Main dashboard
-│   └── AddWidgetButton.tsx          # Widget addition UI
-├── config/
-│   ├── api.ts                       # API configuration
-│   ├── widgets.ts                   # Widget definitions
-│   └── grid.ts                      # Grid layout configuration
-├── types/
-│   └── dashboard.ts                 # TypeScript interfaces
-├── data/
-│   └── dashboardDummyData.ts        # Dummy data for development
-└── App.tsx                          # Main application
+brainboard/
+├── backend/           # FastAPI backend
+├── src/               # React + Vite frontend
+├── infra/             # AWS CDK infrastructure (for deployment)
+└── ideas/             # Project documentation
 ```
 
 ## 🛠️ Development
@@ -84,7 +75,7 @@ This project uses specific versions for consistency:
 
 ### Important Notes
 - **Always activate your conda environment** before installing backend dependencies or running the backend
-- **Use the correct Node.js version** for frontend development  
+- **Use the correct Node.js version** for frontend development
 - **Keep environments isolated** to avoid dependency conflicts
 - **AWS Credentials are optional** for local development - the app runs in local mode without DynamoDB
 - **Root npm install required** for the `concurrently` package that runs both servers
@@ -93,16 +84,6 @@ This project uses specific versions for consistency:
 To enable full functionality, you'll need:
 - **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/)
 - **Serper.dev API Key**: Get from [Serper.dev](https://serper.dev/)
-
-### Project Structure
-```
-brainboard/
-├── apps/
-│   ├── frontend/          # React + Vite frontend
-│   └── backend/           # FastAPI backend
-├── infra/                 # AWS CDK infrastructure (for deployment)
-└── ideas/                 # Project documentation
-```
 
 ## 🧩 Widget System
 
@@ -120,12 +101,12 @@ Widgets are self-contained modules that can be added to the dashboard:
 - `npm run test` - Run all tests
 - `npm run lint` - Lint all code
 
-### Frontend (`apps/frontend/`)
+### Frontend (Root)
 - `npm run dev` - Start Vite development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 
-### Backend (`apps/backend/`)
+### Backend (`backend/`)
 - `npm run dev` - Start FastAPI development server
 - `npm run test` - Run Python tests
 - `npm run lint` - Lint Python code
@@ -174,7 +155,7 @@ The app is designed to deploy on AWS using CDK (located in `infra/`):
 **PostCSS Error**: If you see "module is not defined in ES module scope"
 - The `postcss.config.cjs` file should have `.cjs` extension (not `.js`)
 
-**Backend Port Already in Use**: 
+**Backend Port Already in Use**:
 ```bash
 lsof -ti:8000 | xargs kill -9
 ```
@@ -186,10 +167,10 @@ source /opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh
 conda activate brainboard
 ```
 
-**AWS Credentials Error**: 
+**AWS Credentials Error**:
 - For local development, ignore AWS credential errors - the app runs in local mode
 
-**Frontend Port Changes**: 
+**Frontend Port Changes**:
 - Vite automatically finds available ports, so check terminal output for the correct URL
 
 ### Database Management
@@ -197,8 +178,9 @@ conda activate brainboard
 **View Database Visually**:
 1. Install: `brew install --cask db-browser-for-sqlite`
 2. Open "DB Browser for SQLite" app
-3. Click "Open Database" → Navigate to `apps/backend/brainboard.db`
+3. Click "Open Database" → Navigate to `backend/brainboard.db`
 4. Use "Browse Data" tab to view/edit your widgets and summaries
+
 ### **Calendar Widget**
 - **Purpose**: Monthly calendar with events and milestones
 - **Features**: Month navigation, event display, upcoming events, event details
