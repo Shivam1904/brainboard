@@ -12,7 +12,7 @@ interface EnvironmentConfig {
 
 const environments: Record<Environment, EnvironmentConfig> = {
   development: {
-    apiBaseUrl: 'http://localhost:8000',
+    apiBaseUrl: 'http://localhost:8989',
     enableLogging: true,
     enableCache: false,
     retryAttempts: 3,

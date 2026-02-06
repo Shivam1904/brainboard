@@ -1,6 +1,6 @@
 // API Configuration for Brainboard Backend
 export const API_CONFIG = {
-  baseUrl: 'http://localhost:8000', // Backend server URL
+  baseUrl: 'http://localhost:8989', // Backend server URL
   
   // Dashboard Widgets endpoints (/api/v1/dashboard-widgets/)
   dashboardWidgets: {
@@ -12,14 +12,14 @@ export const API_CONFIG = {
     getWidgetsByType: '/api/v1/dashboard-widgets/alloftype/{widget_type}', // GET - Get widgets by type
   },
   
-  // Chat endpoints (/api/v1/chat/)
-  chat: {
-    health: '/api/v1/chat/health', // GET - Chat health check
-    message: '/api/v1/chat/message', // POST - Send chat message
-    sessions: '/api/v1/chat/sessions', // GET - List all sessions
-    getSession: '/api/v1/chat/sessions/{session_id}', // GET - Get specific session
-    clearSession: '/api/v1/chat/sessions/{session_id}', // DELETE - Clear session
-    cleanup: '/api/v1/chat/cleanup', // POST - Cleanup sessions
+  // AI Service endpoints (/api/v1/ai/)
+  ai: {
+    health: '/api/v1/ai/health', // GET - AI service health check
+  },
+  
+  // AI WebSocket endpoint
+  aiWebSocket: {
+    aiService: '/api/v1/ai/ws', // WebSocket - Real-time AI processing updates
   },
   
   // Dashboard endpoints (/api/v1/dashboard/)
@@ -102,5 +102,98 @@ export const apiCall = async <T>(
   } catch (error) {
     console.error('API call error:', error);
     throw error;
+  }
+};
+
+// Simple AI service helper
+export const aiService = {
+  // Get AI service health
+  getHealth: async () => {
+    return apiCall(API_CONFIG.ai.health);
+  }
+};
+
+// WebSocket helper for AI service
+export const aiWebSocket = {
+  // Create WebSocket connection for AI service
+  connect: (onMessage?: (data: any) => void, onError?: (error: any) => void, onClose?: () => void) => {
+    const wsUrl = `${API_CONFIG.baseUrl.replace('http', 'ws')}${API_CONFIG.aiWebSocket.aiService}`;
+    console.log('🟢 API: Creating WebSocket connection to:', wsUrl);
+    
+    const ws = new WebSocket(wsUrl);
+    
+    if (onMessage) {
+      ws.onmessage = (event) => {
+        try {
+          console.log('🟢 API: Raw WebSocket message received:', event.data);
+          const data = JSON.parse(event.data);
+          console.log('🟢 API: Parsed WebSocket message:', data);
+          onMessage(data);
+        } catch (error) {
+          console.error('🔴 API: Error parsing WebSocket message:', error);
+          // Send error message to frontend for better user experience
+          onMessage({
+            type: 'error',
+            content: {
+              message: 'Failed to parse server response. Please try again.'
+            },
+            details: 'JSON parsing error',
+            timestamp: new Date().toISOString()
+          });
+        }
+      };
+    }
+    
+    if (onError) {
+      ws.onerror = (error) => {
+        console.error('🔴 API: WebSocket error event:', error);
+        onError(error);
+      };
+    }
+    
+    if (onClose) {
+      ws.onclose = (event) => {
+        console.log('🟡 API: WebSocket connection closed:', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        });
+        onClose();
+      };
+    }
+    
+    ws.onopen = () => {
+      console.log('🟢 API: WebSocket connection opened successfully');
+    };
+    
+    console.log('🟢 API: WebSocket connection object created with event handlers');
+    return ws;
+  },
+
+  // Send message through WebSocket
+  sendMessage: (ws: WebSocket, message: string, userTasks: string[], todaysDate: string, conversationHistory?: any[]) => {
+    console.log('🟢 API: Attempting to send message via WebSocket:', {
+      message,
+      userTasks,
+      todaysDate,
+      conversationHistory,
+      readyState: ws.readyState
+    });
+    
+    if (ws.readyState === WebSocket.OPEN) {
+      const messageData = {
+        message,
+        user_tasks: userTasks,
+        todays_date: todaysDate,
+        conversation_history: conversationHistory || []
+      };
+      
+      console.log('🟢 API: Sending message data:', messageData);
+      ws.send(JSON.stringify(messageData));
+      console.log('🟢 API: Message sent successfully');
+    } else {
+      console.error('🔴 API: WebSocket is not open. ReadyState:', ws.readyState);
+      throw new Error('WebSocket is not open');
+    }
   }
 }; 

@@ -16,6 +16,7 @@ import NotesWidget from './widgets/NotesWidget'
 import PillarGraphsWidget from './widgets/PillarGraphsWidget'
 import AddWidgetButton from './AddWidgetButton'
 import { DailyWidget, DashboardWidget } from '../services/api';
+import type { Layout } from 'react-grid-layout';
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
 import { useDashboardData } from '../hooks/useDashboardData'
@@ -43,7 +44,7 @@ const Dashboard = () => {
   } = useDashboardData(currentDate)
 
   // Get actions from store
-  const { addWidgetToToday, removeWidgetFromToday } = useDashboardActions()
+  const { addWidgetToToday, removeWidgetFromToday, updateDashboardWidgetLayout } = useDashboardActions()
 
   // Function to refresh all widgets data
   const refreshAllWidgets = useCallback(() => {
@@ -66,6 +67,16 @@ const Dashboard = () => {
 
   // Helper to build a minimal placeholder layout to satisfy type; actual layout is centralized
   const buildPlaceholderLayout = (id: string) => ({ i: id, x: 0, y: 0, w: 1, h: 1 })
+
+  // Get saved w/h from dashboard widget's widget_config.layout (persisted from size overrides)
+  const getSavedLayout = useCallback(
+    (widget: DailyWidget): { w?: number; h?: number } | undefined => {
+      if (!widget.widget_id || widget.widget_id === 'task-list-combined') return undefined
+      const dashboardWidget = allWidgetsData.find((w) => w.id === widget.widget_id)
+      return dashboardWidget?.widget_config?.layout as { w?: number; h?: number } | undefined
+    },
+    [allWidgetsData]
+  )
 
   // Process widgets for UI display
   const processWidgetsForUI = useMemo(() => {
@@ -245,38 +256,32 @@ const Dashboard = () => {
     const layoutItems = processWidgetsForUI.map((w) => {
       const config = getWidgetConfig(w.widget_type)
       const override = sizeOverrides[w.daily_widget_id] || sizeOverrides[String(w.id)] || {}
-      const width = override.w ?? (config?.defaultSize?.w ?? 12)
-      const height = override.h ?? (config?.defaultSize?.h ?? 8)
+      const savedLayout = getSavedLayout(w)
+      const width = override.w ?? savedLayout?.w ?? (config?.defaultSize?.w ?? 12)
+      const height = override.h ?? savedLayout?.h ?? (config?.defaultSize?.h ?? 8)
       return { id: String(w.id), w: width, h: height }
     })
     const positions = computeRowWiseLayout(layoutItems)
     setComputedPositions(positions)
-  }, [processWidgetsForUI, sizeOverrides])
+  }, [processWidgetsForUI, sizeOverrides, getSavedLayout])
 
-  // Add new widget using addNewWidget API
-  const handleAddWidget = useCallback(async (widget: DashboardWidget) => {
-    console.log('Adding widget:', widget)
+  // Add new widget using addNewWidget API. Also accepts 'refresh' from AddWidgetButton to refresh data.
+  const handleAddWidget = useCallback(async (widget: DashboardWidget | 'refresh') => {
+    if (widget === 'refresh') {
+      refreshAllWidgets()
+      return
+    }
     const config = getWidgetConfig(widget.widget_type);
-
-    console.log('Config:', config)
     if (!config) {
       alert('Widget configuration not found.')
       return
     }
-
     try {
-      // Call the API to add a new widget
-      const response = await addWidgetToToday(widget.id, currentDate);
-
-      console.log('Widget added successfully:', response);
-
-      // Data will automatically update via the store
-
+      await addWidgetToToday(widget.id, currentDate);
     } catch (error) {
       console.error('Failed to add widget:', error);
-
     }
-  }, [addWidgetToToday, currentDate])
+  }, [addWidgetToToday, currentDate, refreshAllWidgets])
 
   const onHeightChange = useCallback((dailyWidgetId: string, newHeight: number) => {
     // Only update if height actually changed
@@ -288,7 +293,31 @@ const Dashboard = () => {
         [dailyWidgetId]: { ...(prev[dailyWidgetId] || {}), h: newHeight },
       }))
     }
-  }, []);
+  }, [])
+
+  // When user resizes a widget, persist w/h to dashboard widget_config.layout and keep local override
+  const handleLayoutChange = useCallback(
+    (newLayout: Layout[]) => {
+      processWidgetsForUI.forEach((widget) => {
+        const item = newLayout.find((l) => l.i === String(widget.id))
+        if (!item || !widget.widget_id || widget.widget_id === 'task-list-combined') return
+        const config = getWidgetConfig(widget.widget_type)
+        const override = sizeOverrides[widget.daily_widget_id] || sizeOverrides[String(widget.id)] || {}
+        const savedLayout = getSavedLayout(widget)
+        const displayedW = override.w ?? savedLayout?.w ?? config?.defaultSize?.w ?? 12
+        const displayedH = override.h ?? savedLayout?.h ?? config?.defaultSize?.h ?? 8
+        if (item.w !== displayedW || item.h !== displayedH) {
+          setSizeOverrides((prev) => ({
+            ...prev,
+            [widget.daily_widget_id]: { w: item.w, h: item.h },
+            [String(widget.id)]: { w: item.w, h: item.h },
+          }))
+          updateDashboardWidgetLayout(widget.widget_id, { w: item.w, h: item.h })
+        }
+      })
+    },
+    [processWidgetsForUI, sizeOverrides, getSavedLayout, updateDashboardWidgetLayout]
+  )
 
   const handleRemoveWidget = useCallback(async (dailyWidgetId: string) => {
     const widget = processWidgetsForUI.find(w => w.daily_widget_id === dailyWidgetId)
@@ -625,14 +654,16 @@ const Dashboard = () => {
           containerPadding={GRID_CONFIG.containerPadding}
           draggableHandle=".widget-drag-handle"
           compactType="vertical"
+          onLayoutChange={(layout) => handleLayoutChange(layout)}
         >
           {processWidgetsForUI.map((widget: DailyWidget) => {
             const config = getWidgetConfig(widget.widget_type);
             const override = sizeOverrides[widget.daily_widget_id] || sizeOverrides[String(widget.id)] || {};
+            const savedLayout = getSavedLayout(widget);
             const baseW = config?.defaultSize?.w ?? 12;
             const baseH = config?.defaultSize?.h ?? 8;
-            const w = override.w ?? baseW;
-            const h = override.h ?? baseH;
+            const w = override.w ?? savedLayout?.w ?? baseW;
+            const h = override.h ?? savedLayout?.h ?? baseH;
             const pos = computedPositions.get(String(widget.id));
             const x = pos?.x ?? 0;
             const y = pos?.y ?? (Infinity as number);

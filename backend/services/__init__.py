@@ -1,14 +1,14 @@
+# Services package
 """
-Services package initialization.
+Services package for business logic.
 """
-from .dashboard_widget_service import DashboardWidgetService
+
 from .daily_widget_service import DailyWidgetService
-from .ai_service import AIService
+from .dashboard_widget_service import DashboardWidgetService
 from .weather_service import WeatherService
 
 __all__ = [
-    "DashboardWidgetService",
     "DailyWidgetService",
-    "AIService",
-    "WeatherService"
+    "DashboardWidgetService", 
+    "WeatherService",
 ] 

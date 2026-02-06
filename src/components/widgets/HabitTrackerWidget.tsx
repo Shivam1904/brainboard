@@ -96,6 +96,8 @@ const generateHabitStructure = (year: number, month: number, targetDate: string)
 };
 
 const WIDTH = 30;
+/** Y-offset for the circle center (positive = down in SVG). Increase to move rings and labels lower. */
+const CENTER_Y = 15;
 
 const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidgetProps) => {
   const [currentDate, setCurrentDate] = useState(new Date(targetDate));
@@ -347,10 +349,11 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
           {/* SVG Circular Grid */}
           <div className="absolute flex-1 flex">
             <div className={`relative `}>
-              <svg width={`${radius  + 120}`} height={`${radius  + 30}`} >
+              <svg width={`${radius  + (120*2)}`} height={`${radius + (2*120)}`} >
 
                 {/* SVG arcs for each task and day */}
                 {uniqueTasks.map((taskTitle, taskIndex) => {
+                  const CENTER_Y_OFFSET = CENTER_Y *(uniqueTasks.length +1)
                   const task = habitData.tasks.find(t => t.title === taskTitle);
                   const category = task?.category || 'personal';
                   const color = categoryColors[category as keyof typeof categoryColors]?.color || '#6B7280';
@@ -359,7 +362,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                   return (
                     <g key={taskIndex}>
                       {/* Arcs for each day */}
-                      <text x={radius/2 + 100 -WIDTH/2} y={radius/2 - (WIDTH/2 + (taskIndex * WIDTH))}
+                      <text x={radius/2 + 110 -WIDTH/2} y={radius/2 + CENTER_Y_OFFSET - 10 - (WIDTH/2 + (taskIndex * WIDTH))}
                         textAnchor="end"
                         className="text-xs font-semibold fill-gray-600"
                         style={{ fill: color }}
@@ -378,9 +381,9 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
 
                         // Calculate start and end points
                         const startX = radius/2 + 100 + Math.cos(startRad) * ringRadius;
-                        const startY = radius/2 + 10 + Math.sin(startRad) * ringRadius;
+                        const startY = radius/2 + CENTER_Y_OFFSET + Math.sin(startRad) * ringRadius;
                         const endX = radius/2 + 100 + Math.cos(endRad) * ringRadius;
-                        const endY = radius/2 + 10 + Math.sin(endRad) * ringRadius;
+                        const endY = radius/2 + CENTER_Y_OFFSET + Math.sin(endRad) * ringRadius;
 
                         // Determine if this day/task combination is completed
                         const dayTask = day.tasks.find(t => t.title === taskTitle);

@@ -1,17 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { DailyWidget } from '../../services/api';
-import { socketService } from '../../services/socket';
-import { renderAiChatComponent, AiChatComponent } from './ai-chat/AiChatComponents';
+import { aiWebSocket } from '../../config/api';
 
 interface Message {
   id: string;
-  type: 'user' | 'ai' | 'thinking' | 'component';
-  content: string;
+  type: string;
+  content?: string;
+  details?: string;
   timestamp: Date;
-  thinkingSteps?: string[];
-  isComplete?: boolean;
-  component?: AiChatComponent;
 }
 
 interface AiChatWidgetProps {
@@ -19,116 +16,102 @@ interface AiChatWidgetProps {
   onRemove: () => void;
 }
 
+// Track if we've already shown the welcome message this page load (avoids duplicate when React Strict Mode double-mounts)
+let hasShownWelcomeThisSession = false;
+
 const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'ai',
-      content: 'Hello! I\'m your AI assistant. I can help you with various tasks. What would you like to do?',
-      timestamp: new Date(),
-      isComplete: true
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [websocket, setWebsocket] = useState<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Connect to socket service on mount
+  // Connect to WebSocket on mount
   useEffect(() => {
-    const handleConnection = (data: any) => {
-      console.log('Connection status:', data);
-      setIsConnected(data.status === 'connected');
-    };
-
-    const handleThinking = (data: any) => {
-      console.log('Thinking step:', data);
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.type === 'thinking' 
-            ? { ...msg, thinkingSteps: [...(msg.thinkingSteps || []), data.step] }
-            : msg
-        )
+    const connectWebSocket = () => {
+      console.log('Connecting to WebSocket...');
+      const ws = aiWebSocket.connect(
+        // onMessage handler
+        (data: any) => {
+          console.log('WebSocket message received:', data);
+          
+          // Handle connection status - don't add connection message to chat
+          if (data.type === 'connection') {
+            setIsConnected(true);
+            // Show welcome message only once per page load (avoids duplicate on Strict Mode remount)
+            if (!hasShownWelcomeThisSession) {
+              hasShownWelcomeThisSession = true;
+              const welcomeMessage: Message = {
+                id: 'welcome-' + Date.now(),
+                type: 'thinking',
+                details: 'AI service ready! Send me a message to get started.',
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, welcomeMessage]);
+            }
+            return;
+          }
+          
+          // Don't add the initial "thinking" welcome step - we already show one above
+          if (data.type === 'thinking' && data.step === 'welcome') {
+            return;
+          }
+          
+          // Stop processing indicator for response or error
+          if (data.type === 'response' || data.type === 'error') {
+            setIsProcessing(false);
+          }
+          
+          // For any socket ping that comes in, we will show it
+          let messageContent = data.content?.message || data.content?.ai_response?.ai_response;
+          let messageType = data.type || 'unknown';
+          
+          // Handle malformed responses gracefully
+          if (data.type === 'error' && messageContent?.includes('Failed to parse AI response')) {
+            messageType = 'error';
+            messageContent = 'The AI response could not be processed. Please try rephrasing your request.';
+          }
+          
+          const message: Message = {
+            id: Date.now().toString()+'-'+messageType+'-'+Math.random().toString(36).substring(2, 15),
+            type: messageType,
+            content: messageContent,
+            details: data.details,
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, message]);
+        },
+        // onError handler
+        (error: any) => {
+          console.error('WebSocket error:', error);
+          setIsConnected(false);
+        },
+        // onClose handler
+        () => {
+          console.log('WebSocket connection closed');
+          setIsConnected(false);
+        }
       );
-    };
-
-    const handleResponse = (data: any) => {
-      console.log('AI Response:', data);
       
-      // Handle component messages
-      if (data.type === 'component') {
-        const componentMessage: Message = {
-          id: Date.now().toString(),
-          type: 'component',
-          content: data.content || '',
-          timestamp: new Date(),
-          isComplete: true,
-          component: data.component
-        };
-
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.type === 'thinking' 
-              ? { ...msg, isComplete: true }
-              : msg
-          ).concat(componentMessage)
-        );
-      } else {
-        // Handle regular AI response
-        const aiResponse: Message = {
-          id: Date.now().toString(),
-          type: 'ai',
-          content: data.content,
-          timestamp: new Date(),
-          isComplete: data.is_complete
-        };
-
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.type === 'thinking' 
-              ? { ...msg, isComplete: true }
-              : msg
-          ).concat(aiResponse)
-        );
-      }
-      
-      setCurrentSessionId(data.session_id);
-      setIsTyping(false);
-    };
-
-    const handleError = (data: any) => {
-      console.error('Socket error:', data);
-      setIsTyping(false);
-      
-      // Add error message
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        type: 'ai',
-        content: `Error: ${data.error || 'Something went wrong'}`,
-        timestamp: new Date(),
-        isComplete: true
+      // Set connection status when WebSocket opens
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        setIsConnected(true);
       };
       
-      setMessages(prev => [...prev, errorMessage]);
+      setWebsocket(ws);
     };
 
-    // Subscribe to socket events
-    socketService.on('connection', handleConnection);
-    socketService.on('thinking', handleThinking);
-    socketService.on('response', handleResponse);
-    socketService.on('error', handleError);
-
-    // Connect to socket
-    socketService.connect().catch(console.error);
+    connectWebSocket();
 
     // Cleanup on unmount
     return () => {
-      socketService.off('connection', handleConnection);
-      socketService.off('thinking', handleThinking);
-      socketService.off('response', handleResponse);
-      socketService.off('error', handleError);
+      if (websocket) {
+        websocket.close();
+      }
     };
   }, []);
 
@@ -143,55 +126,48 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
   }, []);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isTyping) return;
+    if (!inputValue.trim() || isProcessing || !isConnected) {
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
       content: inputValue.trim(),
-      timestamp: new Date(),
-      isComplete: true
+      timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
-    setIsTyping(true);
+    setIsProcessing(true);
 
-    // Add thinking message
-    const thinkingMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      type: 'thinking',
-      content: 'Processing your request...',
-      timestamp: new Date(),
-      thinkingSteps: [],
-      isComplete: false
-    };
-
-    setMessages(prev => [...prev, thinkingMessage]);
-
-    // Send message via socket if connected, otherwise show fallback
-    if (isConnected) {
-      socketService.sendChatMessage(inputValue.trim(), currentSessionId || undefined);
-    } else {
-      // Simple fallback when socket is not connected
-      setTimeout(() => {
-        const fallbackResponse: Message = {
-          id: (Date.now() + 2).toString(),
-          type: 'ai',
-          content: 'Sorry, I\'m not connected to the server right now. Please try again later.',
-          timestamp: new Date(),
-          isComplete: true
-        };
-
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === thinkingMessage.id 
-              ? { ...msg, isComplete: true }
-              : msg
-          ).concat(fallbackResponse)
+    try {
+      if (websocket && websocket.readyState === WebSocket.OPEN) {
+        // Just send the current message - backend will maintain conversation history
+        console.log('🟢 Sending current message:', inputValue.trim());
+        
+        aiWebSocket.sendMessage(
+          websocket,
+          inputValue.trim(),
+          [], // user_tasks
+          new Date().toISOString().split('T')[0], // todays_date
+          [] // No conversation history needed - backend maintains state
         );
-        setIsTyping(false);
-      }, 1000);
+      } else {
+        throw new Error('WebSocket not connected');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setIsProcessing(false);
+      
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'error',
+        content: 'Failed to send message. Please try again.',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
     }
   };
 
@@ -202,116 +178,121 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     }
   };
 
-  const handleComponentAction = (componentId: string, action: string, data: any) => {
-    console.log('Component action:', { componentId, action, data });
-    
-    // Send component action to backend
-    if (isConnected) {
-      socketService.sendInteractiveAction(componentId, action, data);
+  const handleReconnect = () => {
+    if (websocket) {
+      websocket.close();
     }
+    setIsConnected(false);
+    setWebsocket(null);
+    // The useEffect will handle reconnection
   };
 
-  const renderMessage = (message: Message, index: number) => {
-    switch (message.type) {
-      case 'user':
-        return (
-          <div key={`${message.id}-user`} className="flex justify-end mb-4">
-            <div className="max-w-[80%] bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2 shadow-sm">
-              <p className="text-sm">{message.content}</p>
-              <span className="text-xs opacity-70 mt-1 block">
-                {message.timestamp.toLocaleTimeString()}
+
+
+  const renderMessage = (message: Message) => {
+    const getMessageStyle = () => {
+      switch (message.type) {
+        case 'user':
+          return 'bg-blue-50 border-blue-200 p-2 ml-8';
+        case 'response':
+          return 'bg-green-50 border-green-200 p-2 mr-8';
+        case 'thinking':
+          return 'mr-8 max-w-xs';
+        case 'error':
+          return 'bg-red-50 border-red-200';
+        default:
+          return '';
+      }
+    };
+
+    const getMessageIcon = () => {
+      switch (message.type) {
+        case 'user':
+          return '👤';
+        case 'response':
+          return '🤖';
+        case 'thinking':
+          return '💭';
+        case 'error':
+          return '⚠️';
+        default:
+          return '💬';
+      }
+    };
+
+    const getMessageTitle = () => {
+      switch (message.type) {
+        case 'user':
+          return 'You';
+        case 'response':
+          return 'AI Assistant';
+        case 'thinking':
+          return 'AI Thinking';
+        case 'error':
+          return 'Error';
+        default:
+          return message.type.charAt(0).toUpperCase() + message.type.slice(1);
+      }
+    };
+
+    return (
+      <div key={message.id} className={`${getMessageStyle()} rounded-lg shadow-sm`}>
+        {/* Message Header */}
+        {(message.type === 'response'||message.type === 'user') && (<div className={`flex items-center gap-3 border-b border-gray-100`}>
+          <span className={`text-lg`}>{getMessageIcon()}</span>
+          <div className="flex-1">
+            <span className={`font-semibold text-gray-700 text-xs`}>
+              {getMessageTitle()}
+            </span>
+            <span className={`text-gray-500 ml-2 text-xs`}>
+              {message.timestamp.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
+            </span>
+          </div>
+        </div>)}
+        
+        {/* Message Content */}
+        <div>
+          {/* Show content->message field for response type */}
+          {(message.type === 'response'||message.type === 'user') &&  message.content && (
+            <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+              {message.content+''}
+            </div>
+          )}
+          
+          {/* Show details field for thinking type */}
+          {message.type === 'thinking' && message.details && (
+            <div className="text-xs text-yellow-800 italic leading-tight">
+              {message.details+''}
+            </div>
+          )}
+          
+          {/* Show content for other types */}
+          {message.type !== 'response' && message.type !== 'thinking' && message.type !== 'user' && (
+            <div className={`flex items-center `}>
+            <div className="flex flex-row flex-1 justify-between">
+              <span className={`font-semibold text-gray-700 text-xs`}>
+                {getMessageTitle()}
+              </span>
+              <span className={`text-gray-500 text-xs`}>
+                {message.timestamp.toLocaleTimeString([], { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
               </span>
             </div>
           </div>
-        );
-
-      case 'ai':
-        return (
-          <div key={`${message.id}-ai`} className="flex justify-start mb-4">
-            <div className="max-w-[80%] bg-card border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-              <div className="flex items-start gap-2 mb-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  AI
-                </div>
-                <p className="text-sm">{message.content}</p>
-              </div>
-              <span className="text-xs text-muted-foreground mt-2 block">
-                {message.timestamp.toLocaleTimeString()}
-              </span>
-            </div>
-          </div>
-        );
-
-      case 'thinking':
-        return (
-          <div key={`${message.id}-thinking`} className="flex justify-start mb-4">
-            <div className="max-w-[80%] bg-card border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-              <div className="flex items-start gap-2 mb-3">
-                <div className="w-6 h-6 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse">
-                  🤔
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground mb-2">
-                    AI is thinking...
-                  </p>
-                  
-                                        {message.thinkingSteps && message.thinkingSteps.length > 0 && (
-                    <div className="space-y-1">
-                      {message.thinkingSteps.map((step, index) => (
-                        <div key={`${message.id}-step-${index}`} className="flex items-center gap-2 animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${index * 100}ms` }}>
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-xs text-muted-foreground">{step}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {!message.isComplete && (
-                    <div className="flex items-center gap-1 mt-2">
-                      <div className="flex space-x-1">
-                        <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
-                        <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      </div>
-                      <span className="text-xs text-muted-foreground ml-2">Processing...</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'component':
-        return (
-          <div key={`${message.id}-component`} className="flex justify-start mb-4">
-            <div className="max-w-[80%] bg-card border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-              <div className="flex items-start gap-2 mb-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  ⚙️
-                </div>
-                <div className="flex-1">
-                  {message.content && (
-                    <p className="text-sm mb-3">{message.content}</p>
-                  )}
-                  {message.component && renderAiChatComponent(message.component, handleComponentAction)}
-                </div>
-              </div>
-              <span className="text-xs text-muted-foreground mt-2 block">
-                {message.timestamp.toLocaleTimeString()}
-              </span>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
     <BaseWidget
-      title="AI Chat Assistant"
+      title="AI Chat"
       icon="🤖"
       onRemove={onRemove}
       className="flex flex-col"
@@ -322,27 +303,24 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
               isConnected ? 'bg-green-500' : 'bg-red-500'
-            } ${!isConnected && 'animate-pulse'}`}></div>
+            }`}></div>
             <span className="text-xs text-muted-foreground">
               {isConnected ? 'Connected' : 'Disconnected'}
             </span>
             {!isConnected && (
               <button
-                onClick={() => socketService.connect()}
+                onClick={handleReconnect}
                 className="text-xs text-primary hover:text-primary/80 underline"
               >
                 Reconnect
               </button>
             )}
           </div>
-          <div className="text-xs text-muted-foreground">
-            Real-time AI
-          </div>
         </div>
 
         {/* Messages container */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {messages.map((message, index) => renderMessage(message, index))}
+        <div className="flex-1 overflow-y-auto p-4">
+          {messages.map((message) => renderMessage(message))}
           <div ref={messagesEndRef} />
         </div>
 
@@ -359,14 +337,15 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
                 className="w-full resize-none border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 rows={1}
                 style={{ minHeight: '40px', maxHeight: '120px' }}
+                disabled={!isConnected}
               />
             </div>
             <button
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isTyping}
+              disabled={!inputValue.trim() || isProcessing || !isConnected}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isTyping ? (
+              {isProcessing ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 'Send'
@@ -374,10 +353,17 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
             </button>
           </div>
           
-          {/* Typing indicator */}
-          {isTyping && (
+          {/* Processing indicator */}
+          {isProcessing && (
             <div className="mt-2 text-xs text-muted-foreground">
-              AI is responding...
+              AI is processing...
+            </div>
+          )}
+          
+          {/* Connection status */}
+          {!isConnected && (
+            <div className="mt-2 text-xs text-red-500">
+              Not connected to AI service. Please reconnect.
             </div>
           )}
         </div>
