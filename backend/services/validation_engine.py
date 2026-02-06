@@ -10,37 +10,9 @@ from .config_loader import AIConfigLoader
 class ValidationEngine:
     """Validates data according to configuration rules."""
     
-    def __init__(self, config_loader: AIConfigLoader):
+    def __init__(self):
         """Initialize validation engine with configuration."""
-        self.config = config_loader
-    
-    def validate_field(self, field_name: str, value: Any, rule_name: str) -> Tuple[bool, Optional[str]]:
-        """Validate a single field against a validation rule."""
-        rule = self.config.get_validation_rule(rule_name)
-        if not rule:
-            return False, f"Unknown validation rule: {rule_name}"
-        
-        rule_type = rule.get('type')
-        
-        try:
-            if rule_type == 'string':
-                return self._validate_string(value, rule)
-            elif rule_type == 'enum':
-                return self._validate_enum(value, rule)
-            elif rule_type == 'integer':
-                return self._validate_integer(value, rule)
-            elif rule_type == 'float':
-                return self._validate_float(value, rule)
-            elif rule_type == 'boolean':
-                return self._validate_boolean(value, rule)
-            elif rule_type == 'array':
-                return self._validate_array(value, rule)
-            elif rule_type == 'validation_function':
-                return self._validate_custom_function(value, rule)
-            else:
-                return False, f"Unknown rule type: {rule_type}"
-        except Exception as e:
-            return False, f"Validation error: {str(e)}"
+        self.config = AIConfigLoader("variable_config.yaml")
     
     def _validate_string(self, value: Any, rule: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate string values."""
@@ -150,100 +122,83 @@ class ValidationEngine:
         
         return False, f"Unknown custom validation function: {function_name}"
     
-    def validate_intent_data(self, intent: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate all fields for an intent according to configuration."""
-        validation_results = {
-            'valid': True,
-            'errors': [],
-            'missing_required': [],
-            'invalid_fields': []
-        }
+    async def validate_ai_response(self, ai_response: Any) -> Dict[str, Any]:
+        """Validate AI response using the validation engine."""
+        # If already a dict, validate it directly
+        if isinstance(ai_response, dict):
+            return self._validate_dict_response(ai_response)
         
-        # Get required and optional fields from config
-        required_fields = self.config.get_required_fields(intent)
-        optional_fields = self.config.get_optional_fields(intent)
-        
-        # Check required fields
-        for field in required_fields:
-            if field not in data or data[field] is None or data[field] == "":
-                validation_results['missing_required'].append(field)
-                validation_results['valid'] = False
-        
-        # Validate present fields using tool arguments configuration
-        tool_args = self.config.get_tool_arguments(intent)
-        
-        # Validate required fields
-        required_tool_args = tool_args.get('required', [])
-        for field_config in required_tool_args:
-            field_name = field_config.get('name')
-            if field_name and field_name in data and data[field_name] is not None:
-                validation_rule = field_config.get('validation')
-                if validation_rule:
-                    is_valid, error_msg = self.validate_field(field_name, data[field_name], validation_rule)
-                    if not is_valid:
-                        validation_results['invalid_fields'].append({
-                            'field': field_name,
-                            'value': data[field_name],
-                            'error': error_msg
-                        })
-                        validation_results['valid'] = False
-        
-        # Validate optional fields
-        optional_tool_args = tool_args.get('optional', [])
-        for field_config in optional_tool_args:
-            field_name = field_config.get('name')
-            if field_name and field_name in data and data[field_name] is not None:
-                validation_rule = field_config.get('validation')
-                if validation_rule:
-                    is_valid, error_msg = self.validate_field(field_name, data[field_name], validation_rule)
-                    if not is_valid:
-                        validation_results['invalid_fields'].append({
-                            'field': field_name,
-                            'value': data[field_name],
-                            'error': error_msg
-                        })
-                        validation_results['valid'] = False
-        
-        # Compile error messages
-        if validation_results['missing_required']:
-            validation_results['errors'].append(
-                f"Missing required fields: {', '.join(validation_results['missing_required'])}"
-            )
-        
-        for invalid_field in validation_results['invalid_fields']:
-            validation_results['errors'].append(
-                f"Field '{invalid_field['field']}' invalid: {invalid_field['error']}"
-            )
-        
-        return validation_results
+        # If string, clean and parse
+        if isinstance(ai_response, str):
+            return self._validate_string_response(ai_response)
+        return {}
     
-    def get_missing_field_strategy(self, intent: str, field: str) -> Optional[Dict[str, Any]]:
-        """Get the strategy for handling a missing field."""
-        return self.config.get_missing_field_strategy(intent, field)
+    def _validate_dict_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate dictionary response."""
+        if not isinstance(response, dict):
+            return {}
+        
+        # Basic validation - ensure required fields exist
+        validated = {}
+        
+        # Copy all fields
+        for key, value in response.items():
+            if value is not None and value != "" and value != []:
+                validated[key] = value
+        
+        return validated
     
-    def should_apply_default(self, intent: str, field: str) -> bool:
-        """Check if a field should use default values."""
-        strategy = self.get_missing_field_strategy(intent, field)
-        return strategy and strategy.get('strategy') == 'use_defaults'
+    def _validate_string_response(self, response: str) -> Dict[str, Any]:
+        """Validate and clean string response."""
+        if not response or not response.strip():
+            return {}
+        
+        # Clean the response string
+        cleaned_response = self._clean_response_string(response)
+        
+        # Try to parse as JSON
+        try:
+            import json
+            parsed = json.loads(cleaned_response)
+            if isinstance(parsed, dict):
+                return self._validate_dict_response(parsed)
+            else:
+                return {}
+        except json.JSONDecodeError as e:
+            return {}
     
-    def get_default_value(self, intent: str, field: str) -> Any:
-        """Get the default value for a field."""
-        strategy = self.get_missing_field_strategy(intent, field)
-        if strategy and strategy.get('strategy') == 'use_defaults':
-            return strategy.get('default')
-        return None
-    
-    def should_ignore_field(self, intent: str, field: str) -> bool:
-        """Check if a field should be ignored when missing."""
-        strategy = self.get_missing_field_strategy(intent, field)
-        return strategy and strategy.get('strategy') == 'ignore_argument'
-    
-    def should_try_harder(self, intent: str, field: str) -> bool:
-        """Check if a field should trigger try harder logic."""
-        strategy = self.get_missing_field_strategy(intent, field)
-        return strategy and strategy.get('strategy') == 'try_harder'
-    
-    def should_ask_user(self, intent: str, field: str) -> bool:
-        """Check if a field should trigger asking the user."""
-        strategy = self.get_missing_field_strategy(intent, field)
-        return strategy and strategy.get('strategy') == 'ask_user' 
+    def _clean_response_string(self, response: str) -> str:
+        """Clean response string to handle common formatting issues."""
+        import re
+        
+        response = response.strip()
+        
+        # Remove markdown code blocks
+        if response.startswith("```json"):
+            response = response[7:]
+        elif response.startswith("```"):
+            response = response[3:]
+        
+        if response.endswith("```"):
+            response = response[:-3]
+        
+        # Find JSON object boundaries
+        start_idx = response.find("{")
+        end_idx = response.rfind("}")
+        
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            response = response[start_idx:end_idx + 1]
+        
+        # Clean common JSON issues
+        response = response.strip()
+        
+        # Remove trailing commas before closing braces/brackets
+        response = re.sub(r',(\s*[}\]])', r'\1', response)
+        
+        # Remove trailing commas at the end of lines
+        response = re.sub(r',(\s*\n\s*[}\]])', r'\1', response)
+        
+        # Remove trailing commas at the end
+        response = re.sub(r',\s*$', '', response)
+        
+        return response 

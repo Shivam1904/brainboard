@@ -72,8 +72,8 @@ class StrategyHandler:
         """Handle ask_user strategy - end flow and ask user for missing information."""
         missing_fields_str = ', '.join(missing_fields)
         
-        # Use partial_success_response from AI if available, otherwise fall back to default message
-        message = data.get('partial_success_response')
+        # Use  from AI if available, otherwise fall back to default message
+        message = data.get('ai_response')
         if not message:
             message = f"Please provide the following information: {missing_fields_str}"
         

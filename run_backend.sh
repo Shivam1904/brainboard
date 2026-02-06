@@ -29,8 +29,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "🔪 Killing any process on port 8000..."
-lsof -ti:8000 | xargs kill -9 2>/dev/null || echo "No process found on port 8000"
+echo "🔪 Killing any process on port 8989..."
+lsof -ti:8989 | xargs kill -9 2>/dev/null || echo "No process found on port 8989"
 
 # Initialize conda for this shell session
 eval "$(conda shell.bash hook)"

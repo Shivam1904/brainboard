@@ -16,6 +16,9 @@ interface AiChatWidgetProps {
   onRemove: () => void;
 }
 
+// Track if we've already shown the welcome message this page load (avoids duplicate when React Strict Mode double-mounts)
+let hasShownWelcomeThisSession = false;
+
 const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -34,9 +37,26 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
         (data: any) => {
           console.log('WebSocket message received:', data);
           
-          // Handle connection status
+          // Handle connection status - don't add connection message to chat
           if (data.type === 'connection') {
             setIsConnected(true);
+            // Show welcome message only once per page load (avoids duplicate on Strict Mode remount)
+            if (!hasShownWelcomeThisSession) {
+              hasShownWelcomeThisSession = true;
+              const welcomeMessage: Message = {
+                id: 'welcome-' + Date.now(),
+                type: 'thinking',
+                details: 'AI service ready! Send me a message to get started.',
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, welcomeMessage]);
+            }
+            return;
+          }
+          
+          // Don't add the initial "thinking" welcome step - we already show one above
+          if (data.type === 'thinking' && data.step === 'welcome') {
+            return;
           }
           
           // Stop processing indicator for response or error
@@ -45,17 +65,17 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
           }
           
           // For any socket ping that comes in, we will show it
-          let messageContent = data.content?.message || data.content;
+          let messageContent = data.content?.message || data.content?.ai_response?.ai_response;
           let messageType = data.type || 'unknown';
           
           // Handle malformed responses gracefully
-          if (data.type === 'error' && data.content?.includes('Failed to parse AI response')) {
+          if (data.type === 'error' && messageContent?.includes('Failed to parse AI response')) {
             messageType = 'error';
             messageContent = 'The AI response could not be processed. Please try rephrasing your request.';
           }
           
           const message: Message = {
-            id: Date.now().toString(),
+            id: Date.now().toString()+'-'+messageType+'-'+Math.random().toString(36).substring(2, 15),
             type: messageType,
             content: messageContent,
             details: data.details,
@@ -238,14 +258,14 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
           {/* Show content->message field for response type */}
           {(message.type === 'response'||message.type === 'user') &&  message.content && (
             <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-              {message.content}
+              {message.content+''}
             </div>
           )}
           
           {/* Show details field for thinking type */}
           {message.type === 'thinking' && message.details && (
             <div className="text-xs text-yellow-800 italic leading-tight">
-              {message.details}
+              {message.details+''}
             </div>
           )}
           

@@ -21,6 +21,7 @@ interface DashboardState {
   }>
   removeWidgetFromToday: (dailyWidgetId: string, targetDate: string) => Promise<void>
   updateWidgetActivity: (dailyWidgetId: string, activityData: Record<string, any>) => Promise<void>
+  updateDashboardWidgetLayout: (widgetId: string, layout: { w: number; h: number }) => Promise<void>
 }
 
 export const useDashboardStore = create<DashboardState>((set, get) => ({
@@ -98,6 +99,23 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     } catch (error) {
       throw error
     }
+  },
+
+  // Persist widget size (w, h) to dashboard widget's widget_config.layout
+  updateDashboardWidgetLayout: async (widgetId: string, layout: { w: number; h: number }) => {
+    const widget = get().allWidgets.find((w) => w.id === widgetId)
+    if (!widget) return
+    const widgetConfig = { ...(widget.widget_config || {}), layout }
+    try {
+      await dashboardService.updateWidget(widgetId, { widget_config: widgetConfig })
+      set({
+        allWidgets: get().allWidgets.map((w) =>
+          w.id === widgetId ? { ...w, widget_config: widgetConfig } : w
+        )
+      })
+    } catch (error) {
+      console.error('Failed to save widget layout:', error)
+    }
   }
 }))
 
@@ -112,6 +130,7 @@ export const useLoadData = () => useDashboardStore(state => state.loadData)
 export const useAddWidgetToToday = () => useDashboardStore(state => state.addWidgetToToday)
 export const useRemoveWidgetFromToday = () => useDashboardStore(state => state.removeWidgetFromToday)
 export const useUpdateWidgetActivity = () => useDashboardStore(state => state.updateWidgetActivity)
+export const useUpdateDashboardWidgetLayout = () => useDashboardStore(state => state.updateDashboardWidgetLayout)
 
 // Legacy hook for backward compatibility (but this will cause re-renders)
 export const useDashboardActions = () => {
@@ -120,6 +139,7 @@ export const useDashboardActions = () => {
     loadData: store.loadData,
     addWidgetToToday: store.addWidgetToToday,
     removeWidgetFromToday: store.removeWidgetFromToday,
-    updateWidgetActivity: store.updateWidgetActivity
+    updateWidgetActivity: store.updateWidgetActivity,
+    updateDashboardWidgetLayout: store.updateDashboardWidgetLayout
   }
 } 

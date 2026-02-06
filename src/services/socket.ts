@@ -282,7 +282,7 @@ class SocketService {
   private getWebSocketUrl(): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = process.env.NODE_ENV === 'development' 
-      ? 'localhost:8000' 
+      ? 'localhost:8989' 
       : window.location.host;
     
     return `${protocol}//${host}/api/v1/chat/ws/chat`;

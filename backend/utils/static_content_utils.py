@@ -7,22 +7,24 @@ import logging
 import yaml
 from typing import Dict, Any, Optional
 from pathlib import Path
+from services.ai_db_service import AIDatabaseService
 
 logger = logging.getLogger(__name__)
 
 class StaticContentUtils:
     """Utility class for handling static content."""
     
-    def __init__(self, config_path: str = "ai_preprocessing_config.yaml"):
+    def __init__(self, config_path: str = "variable_config.yaml"):
         self.config_path = config_path
         self.config = self._load_config()
         self.system_prompt = self._load_system_prompt()
         self.examples_prompt = self._load_examples_prompt()
+        self.ai_db_service = AIDatabaseService()
     
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from YAML file."""
         try:
-            config_file = Path(__file__).parent.parent.parent / self.config_path
+            config_file = Path(__file__).parent.parent / self.config_path
             with open(config_file, 'r') as f:
                 return yaml.safe_load(f)
         except Exception as e:
@@ -32,7 +34,7 @@ class StaticContentUtils:
     def _load_examples_prompt(self) -> str:
         """Load examples prompt from file."""
         try:
-            prompt_file = Path(__file__).parent.parent.parent / "examples_prompt.txt"
+            prompt_file = Path(__file__).parent.parent / "examples_prompt.txt"
             with open(prompt_file, 'r') as f:
                 return f.read().strip()
         except Exception as e:
@@ -42,7 +44,7 @@ class StaticContentUtils:
     def _load_system_prompt(self) -> str:
         """Load system prompt from file."""
         try:
-            prompt_file = Path(__file__).parent.parent.parent / "system_prompt.txt"
+            prompt_file = Path(__file__).parent.parent / "system_prompt.txt"
             with open(prompt_file, 'r') as f:
                 return f.read().strip()
         except Exception as e:
@@ -57,22 +59,18 @@ class StaticContentUtils:
         """Get examples prompt content."""
         return self.examples_prompt
     
-    async def get_reference_data(self, ai_db_service, context: Any) -> Dict[str, Any]:
+    async def get_reference_data(self, context: Any) -> Dict[str, Any]:
         """Get general reference data from database and static config."""
         try:
-            user_id = getattr(context, 'user_id', None)
-            if not user_id:
-                return {}
-            
             # Get static categories and formats from config
             static_data = {
-                "categories": self.config.get('validation_rules', {}).get('valid_category', {}).get('values', []),
-                "date_format": self.config.get('global', {}).get('date_format_in', 'DD-MM-YYYY'),
-                "time_format": self.config.get('global', {}).get('time_format_in', 'HH:MM')
+                "categories": ['health', 'productivity', 'job', 'information', 'entertainment', 'utilities'],
+                "date_format": 'DD-MM-YYYY',
+                "time_format": 'HH:MM'
             }
             
             # Get user-specific data from database
-            db_data = await ai_db_service.fetch_user_reference_data(user_id)
+            db_data = await self.ai_db_service.fetch_user_reference_data('user_001')
             
             # Add today's date
             from datetime import datetime
@@ -94,16 +92,14 @@ class StaticContentUtils:
         if not data:
             return None
         
-        formatted = ["=== Reference Data ==="]
+        formatted = ["CTX:"]
         for key, value in data.items():
             if isinstance(value, list):
+                x = map(lambda item: "\"" + item + "\"", value)
+                ss = ', '.join(x)
                 if value:
-                    formatted.append(f"{key}: {', '.join(map(str, value))}")
-                else:
-                    formatted.append(f"{key}: (empty list)")
+                    formatted.append(f"{key}: [{ss}]")
             elif value is not None and value != "":
-                formatted.append(f"{key}: {value}")
-            else:
-                formatted.append(f"{key}: (not set)")
+                formatted.append(f"{key}: \"{value}\"")
         
         return "\n".join(formatted) 

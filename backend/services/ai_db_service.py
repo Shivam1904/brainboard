@@ -13,12 +13,19 @@ from models.dashboard_widget_details import DashboardWidgetDetails
 from models.daily_widget import DailyWidget
 
 logger = logging.getLogger(__name__)
+DEFAULT_USER_ID = "user_001"
 
 class AIDatabaseService:
     """Service for handling database operations for AI prompt preprocessing."""
     
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
+        #only one instance of the database session is needed for all the services
+        self.db_session = None
+        from db.session import AsyncSessionLocal
+        if self.db_session is None: 
+            self.db_session = AsyncSessionLocal()
+        else:
+            self.db_session = self.db_session
         self._current_user_id: Optional[str] = None
     
     def set_user_id(self, user_id: str) -> None:
@@ -213,15 +220,22 @@ class AIDatabaseService:
             logger.error(f"Failed to fetch task activity: {e}")
             return []
     
-    async def fetch_user_reference_data(self, user_id: str) -> Dict[str, Any]:
+    async def fetch_user_reference_data(self, user_id: str = None) -> Dict[str, Any]:
         """Fetch user-specific reference data from database."""
         try:
+            # Use provided user_id or fall back to current user ID
+            target_user_id = user_id or self._current_user_id or DEFAULT_USER_ID
+            
+            if not target_user_id:
+                logger.warning("No user ID available for database operation")
+                return {}
+            
             # Get all user task names
             stmt = select(DashboardWidgetDetails.title).where(
                 and_(
-                    DashboardWidgetDetails.user_id == user_id,
+                    DashboardWidgetDetails.user_id == target_user_id,
                     DashboardWidgetDetails.delete_flag == False,
-                    DashboardWidgetDetails.widget_type.notin_(['weatherWidget', 'calendarWidget', 'yearCalendar', 'allSchedules', 'simpleClock', 'notes', 'pillarsGraph', 'aiChat', 'habitTracker'])
+                    DashboardWidgetDetails.widget_type.notin_(['weatherWidget', 'calendar', 'yearCalendar', 'allSchedules', 'simpleClock', 'notes', 'pillarsGraph', 'aiChat', 'habitTracker'])
                 )
             )
             result = await self.db_session.execute(stmt)
@@ -230,7 +244,7 @@ class AIDatabaseService:
             # Get user categories
             stmt = select(DashboardWidgetDetails.category).where(
                 and_(
-                    DashboardWidgetDetails.user_id == user_id,
+                    DashboardWidgetDetails.user_id == target_user_id,
                     DashboardWidgetDetails.delete_flag == False
                 )
             )
@@ -238,9 +252,7 @@ class AIDatabaseService:
             user_categories = list(set([row[0] for row in result.fetchall() if row[0]]))
             
             return {
-                "user_task_names": task_names,
-                "user_categories": user_categories,
-                "total_tasks": len(task_names)
+                "user_tasks": task_names
             }
             
         except Exception as e:
@@ -265,4 +277,8 @@ class AIDatabaseService:
                 return None
         except Exception as e:
             logger.error(f"Failed to fetch data by key {fetch_key}: {e}")
-            return None 
+            return None
+    
+    async def get_session(self) -> AsyncSession:
+        """Get the current database session."""
+        return self.db_session 

@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 from routes import dashboard_widgets, dashboard
 from routes import tracker as tracker_routes
 from routes import weather as weather_routes
-from routes import new_ai as new_ai_routes
 from routes import ai as ai_routes
 
 # Load environment variables from .env file
@@ -39,7 +38,7 @@ API_TAG_DASHBOARD = "dashboard"
 
 # Server settings
 HOST = "0.0.0.0"
-PORT = 8000
+PORT = 8989
 
 # ============================================================================
 # FASTAPI APP
@@ -66,7 +65,6 @@ app.add_middleware(
 # ============================================================================
 app.include_router(dashboard_widgets.router, prefix=API_PREFIX_DASHBOARD_WIDGETS, tags=[API_TAG_DASHBOARD_WIDGETS])
 app.include_router(dashboard.router, prefix=API_PREFIX_DASHBOARD, tags=[API_TAG_DASHBOARD])
-app.include_router(new_ai_routes.router, tags=["AI Service"])
 app.include_router(ai_routes.router, tags=["AI Operations"])
 app.include_router(tracker_routes.router, prefix="/api/v1/tracker", tags=["tracker"]) 
 app.include_router(weather_routes.router, prefix="/api/v1/weather", tags=["weather"])
