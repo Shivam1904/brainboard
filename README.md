@@ -91,7 +91,6 @@ brainboard/
 │   ├── services/      # Business logic
 │   └── requirements.txt # Python dependencies
 ├── src/               # React + Vite frontend
-├── infra/             # AWS CDK infrastructure (for deployment)
 └── ideas/             # Project documentation
 ```
 
@@ -127,7 +126,6 @@ VITE_API_BASE_URL=http://localhost:8989
 ### Important Notes
 - **Always activate your virtual environment** (`source .venv/bin/activate`) before running the backend.
 - **Keep environments isolated** to avoid dependency conflicts.
-- **AWS Credentials are optional** for local development.
 
 ## 📋 Available Scripts
 
