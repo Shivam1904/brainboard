@@ -91,4 +91,69 @@ class AIWebSocketManager:
     
     def update_context(self, connection_id: str, context: Any) -> None:
         """Update the context for a specific connection."""
-        self.connection_contexts[connection_id] = context 
+        self.connection_contexts[connection_id] = context
+
+    async def handle_session(self, websocket: WebSocket, connection_id: str, orchestrator: Any):
+        """
+        Handle a complete WebSocket session for AI chat.
+        Includes message loop, error handling, and orchestrator interaction.
+        """
+        try:
+            await self.connect(websocket, connection_id)
+            
+            await self.send_message(connection_id, {
+                "type": "connection",
+                "connection_id": connection_id,
+                "message": "Connected to Brainboard AI Service",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            
+            await self.send_thinking_step(connection_id, "welcome", "AI service ready! Send me a message to get started.")
+
+            # Use websocket.iter_text() for cleaner WebSocket handling
+            async for message in websocket.iter_text():
+                try:
+                    message_data = json.loads(message)
+
+                    user_message = message_data.get("message", "")
+                    conversation_history = message_data.get("conversation_history", [])
+                    
+                    if not user_message:
+                        await self.send_error(connection_id, "No message provided")
+                        continue
+
+                    # Define callback here to capture connection_id
+                    async def websocket_callback(step: str, details: str):
+                        try:
+                            await self.send_thinking_step(connection_id, step, details)
+                        except Exception as e:
+                            logger.error(f"Error in websocket callback: {e}")
+
+                    existing_context = self.get_context(connection_id)
+                    
+                    if not existing_context:
+                        await self.send_error(connection_id, "Connection context not found")
+                        continue
+
+                    # Use orchestrator
+                    response = await orchestrator.process_user_message(
+                        user_message=user_message,
+                        conversation_history=conversation_history,
+                        websocket_callback=websocket_callback,
+                        connection_id=connection_id,
+                        existing_context=existing_context
+                    )
+                    await self.send_response(connection_id, response)
+
+                except json.JSONDecodeError:
+                    await self.send_error(connection_id, "Invalid JSON format")
+                except Exception as e:
+                    logger.error(f"Error handling AI message: {e}")
+                    try:
+                        await self.send_error(connection_id, f"Internal server error: {str(e)}")
+                    except:
+                        break
+        except Exception as e:
+            logger.error(f"Error in WebSocket session: {e}")
+            raise  # Re-raise to let caller handle disconnect logic if needed (e.g. logging)
+ 

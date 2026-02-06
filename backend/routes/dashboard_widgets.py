@@ -30,7 +30,7 @@ async def create_widget(
         
         widget = await service.create_widget(
             widget_type=widget_data.widget_type,
-            config_data=widget_data.dict()
+            widget_data=widget_data
         )
         
         # Commit the transaction at the route level
@@ -102,7 +102,7 @@ async def update_widget(
         service_factory = ServiceFactory(db)
         service = service_factory.dashboard_widget_service
         
-        widget = await service.update_widget(widget_id, update_data.dict(exclude_unset=True))
+        widget = await service.update_widget(widget_id, update_data)
         if not widget:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

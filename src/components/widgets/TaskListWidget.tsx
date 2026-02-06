@@ -32,8 +32,7 @@ interface MissionFormData {
 
 
 const getCategoryColor = (category: string) => {
-  //add null check
-  if (!category) {
+  if (!category || !categoryColors[category as keyof typeof categoryColors]) {
     return 'gray';
   }
   return categoryColors[category as keyof typeof categoryColors].color;
@@ -55,7 +54,7 @@ interface TaskListWidgetProps {
   targetDate: string;
 }
 
-const TaskListWidget = ({  onRemove, widget,  onHeightChange, targetDate }: TaskListWidgetProps) => {
+const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskListWidgetProps) => {
   const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
   const updateWidgetActivity = useUpdateWidgetActivity();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -182,7 +181,7 @@ const TaskListWidget = ({  onRemove, widget,  onHeightChange, targetDate }: Task
         const allTasksToCount = todayWidgets.filter((todo: DailyWidget) =>
           !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'notes', 'habitTracker', 'yearCalendar', 'pillarsGraph'].includes(todo.widget_type)
         ).length;
-        
+
         const allTasksCompleted = todayWidgets.filter((todo: DailyWidget) =>
           !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'notes', 'habitTracker', 'yearCalendar', 'pillarsGraph'].includes(todo.widget_type) && todo.activity_data?.status === 'completed'
         ).length;
@@ -232,7 +231,7 @@ const TaskListWidget = ({  onRemove, widget,  onHeightChange, targetDate }: Task
         <div className="flex flex-col items-center justify-center h-32 text-center">
           <p className="text-orange-600 mb-2">{error}</p>
           <button
-                            onClick={() => {/* Tasks are automatically updated from the store */}}
+            onClick={() => {/* Tasks are automatically updated from the store */ }}
             className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
           >
             Retry
@@ -280,8 +279,8 @@ const TaskListWidget = ({  onRemove, widget,  onHeightChange, targetDate }: Task
               <div
                 key={task.id}
                 className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${task.completed
-                    ? `bg-${getCategoryColor(task.category)}-100 border border-${getCategoryColor(task.category)}-200 rounded-lg border-gray-200`
-                    : `bg-${getCategoryColor(task.category)}-100 border border-${getCategoryColor(task.category)}-200 rounded-lg hover:border-${getCategoryColor(task.category)}-300`
+                  ? `bg-${getCategoryColor(task.category)}-100 border border-${getCategoryColor(task.category)}-200 rounded-lg border-gray-200`
+                  : `bg-${getCategoryColor(task.category)}-100 border border-${getCategoryColor(task.category)}-200 rounded-lg hover:border-${getCategoryColor(task.category)}-300`
                   }`}
               >
                 <button
@@ -392,8 +391,8 @@ const TaskListWidget = ({  onRemove, widget,  onHeightChange, targetDate }: Task
                           type="button"
                           onClick={() => setFormData({ ...formData, priority: priority as 'High' | 'Medium' | 'Low' })}
                           className={`px-4 py-3 rounded-lg font-medium transition-all ${formData.priority === priority
-                              ? 'bg-orange-500 text-white shadow-lg transform scale-105'
-                              : 'bg-white/70 text-gray-700 hover:bg-orange-100 hover:scale-102'
+                            ? 'bg-orange-500 text-white shadow-lg transform scale-105'
+                            : 'bg-white/70 text-gray-700 hover:bg-orange-100 hover:scale-102'
                             }`}
                         >
                           {priority}
@@ -419,8 +418,8 @@ const TaskListWidget = ({  onRemove, widget,  onHeightChange, targetDate }: Task
                           type="button"
                           onClick={() => setFormData({ ...formData, category: category.value })}
                           className={`px-4 py-3 rounded-lg font-medium transition-all ${formData.category === category.value
-                              ? `bg-gradient-to-r ${category.color} text-white shadow-lg transform scale-105`
-                              : 'bg-white/70 text-gray-700 hover:bg-gray-100 hover:scale-102'
+                            ? `bg-gradient-to-r ${category.color} text-white shadow-lg transform scale-105`
+                            : 'bg-white/70 text-gray-700 hover:bg-gray-100 hover:scale-102'
                             }`}
                         >
                           {category.label}

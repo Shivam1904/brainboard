@@ -3,50 +3,35 @@ Main FastAPI application entry point.
 """
 
 # ============================================================================
+# ============================================================================
 # IMPORTS
 # ============================================================================
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 
+from config import settings
 from routes import dashboard_widgets, dashboard
 from routes import tracker as tracker_routes
 from routes import weather as weather_routes
 from routes import ai as ai_routes
 
-# Load environment variables from .env file
-load_dotenv()
-
 # ============================================================================
-# CONSTANTS
+# CONSTANTS & SETTINGS
 # ============================================================================
-APP_TITLE = "Brainboard Backend"
-APP_DESCRIPTION = "Modular backend for Brainboard application"
-APP_VERSION = "1.0.0"
-
-# CORS settings
-CORS_ORIGINS = ["*"]  # Configure this properly for production
-CORS_CREDENTIALS = True
-CORS_METHODS = ["*"]
-CORS_HEADERS = ["*"]
-
 # API settings
-API_PREFIX_DASHBOARD_WIDGETS = "/api/v1/dashboard-widgets"
-API_PREFIX_DASHBOARD = "/api/v1/dashboard"
+API_PREFIX_DASHBOARD_WIDGETS = f"{settings.API_PREFIX}/dashboard-widgets"
+API_PREFIX_DASHBOARD = f"{settings.API_PREFIX}/dashboard"
 API_TAG_DASHBOARD_WIDGETS = "dashboard-widgets"
 API_TAG_DASHBOARD = "dashboard"
-
-# Server settings
-HOST = "0.0.0.0"
-PORT = 8989
 
 # ============================================================================
 # FASTAPI APP
 # ============================================================================
 app = FastAPI(
-    title=APP_TITLE,
-    description=APP_DESCRIPTION,
-    version=APP_VERSION
+    title=settings.APP_TITLE,
+    description=settings.APP_DESCRIPTION,
+    version=settings.APP_VERSION
 )
 
 # ============================================================================
@@ -54,11 +39,21 @@ app = FastAPI(
 # ============================================================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_credentials=CORS_CREDENTIALS,
-    allow_methods=CORS_METHODS,
-    allow_headers=CORS_HEADERS,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=settings.CORS_CREDENTIALS,
+    allow_methods=settings.CORS_METHODS,
+    allow_headers=settings.CORS_HEADERS,
 )
+
+# ============================================================================
+# EXCEPTION HANDLERS
+# ============================================================================
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error": str(exc)},
+    )
 
 # ============================================================================
 # ROUTERS
@@ -75,14 +70,14 @@ app.include_router(weather_routes.router, prefix="/api/v1/weather", tags=["weath
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "message": f"{APP_TITLE} is running"}
+    return {"status": "healthy", "message": f"{settings.APP_TITLE} is running"}
 
 @app.get("/")
 async def root():
     """Root endpoint with API information."""
     return {
-        "message": f"{APP_TITLE} API",
-        "version": APP_VERSION,
+        "message": f"{settings.APP_TITLE} API",
+        "version": settings.APP_VERSION,
         "docs": "/docs",
         "health": "/health"
     }
@@ -92,4 +87,4 @@ async def root():
 # ============================================================================
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=HOST, port=PORT) 
+    uvicorn.run(app, host=settings.HOST, port=settings.PORT)

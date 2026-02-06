@@ -158,7 +158,7 @@ class AIPromptPreprocessing:
 
             res = "\n\n".join(prompt_parts)
 
-            print(f"🟢🟢🟢🟢 FINAL INPUT: {res}")
+            logger.debug(f"🟢🟢🟢🟢 FINAL INPUT: {res}")
 
             return res
             
