@@ -2,16 +2,9 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, X, Pencil, Check } from 'lucide-react';
 import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
+import { categoryColors } from './CalendarWidget';
 
-export const categoryColors = {
-  productivity: { value: 'productivity', label: 'Productivity', color: 'blue' },
-  health: { value: 'health', label: 'Health', color: 'red' },
-  job: { value: 'job', label: 'Job', color: 'purple' },
-  information: { value: 'information', label: 'Information', color: 'yellow' },
-  entertainment: { value: 'entertainment', label: 'Entertainment', color: 'pink' },
-  utilities: { value: 'utilities', label: 'Utilities', color: 'gray' },
-  personal: { value: 'personal', label: 'Personal', color: 'transparent' }
-};
+
 
 interface CalendarEvent {
   id: string;
@@ -51,7 +44,9 @@ interface CalendarDay {
 
 // Enhanced color utilities
 const getCategoryColor = (category: string): string => {
-  return categoryColors[category as keyof typeof categoryColors]?.color || 'gray';
+  if (!category) return 'gray';
+  const lowerCategory = category.toLowerCase();
+  return categoryColors[lowerCategory as keyof typeof categoryColors]?.color || 'gray';
 };
 
 // Circular progress component for the heatmap
@@ -141,22 +136,22 @@ interface YearCalendarWidgetProps {
 // Helper function to generate 6-month calendar structure (5 months before + 1 month after today)
 const generateSixMonthCalendarStructure = (centerDate: string): CalendarDay[] => {
   const days: CalendarDay[] = [];
-  
+
   // Calculate the 6-month period
   const today = new Date(centerDate);
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
-  
+
   // Start date: 5 months before today
   const startDate = new Date(currentYear, currentMonth - 5, 1);
   // End date: 1 month after today
   const endDate = new Date(currentYear, currentMonth + 1, 0);
-  
+
   // Generate days for the 6-month period
   for (let i = 0; i <= (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24); i++) {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
-    
+
     const isToday = date.toISOString().split('T')[0] === centerDate;
 
     days.push({
@@ -182,7 +177,7 @@ const generateSixMonthCalendarStructure = (centerDate: string): CalendarDay[] =>
 const groupDaysByWeeks = (days: CalendarDay[]) => {
   const weeks: (CalendarDay | null)[][] = [];
   let currentWeek: (CalendarDay | null)[] = [];
-  
+
   days.forEach((day, index) => {
     // Add empty cells for days before the first day of the year
     if (index === 0 && new Date(day.date).getDay() > 0) {
@@ -190,16 +185,16 @@ const groupDaysByWeeks = (days: CalendarDay[]) => {
         currentWeek.push(null);
       }
     }
-    
+
     currentWeek.push(day);
-    
+
     // Start new week on Sunday
     if (new Date(day.date).getDay() === 6 || index === days.length - 1) {
       weeks.push([...currentWeek]);
       currentWeek = [];
     }
   });
-  
+
   return weeks;
 };
 
@@ -227,7 +222,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
       const today = new Date(centerDate);
       const currentMonth = today.getMonth();
       const currentYear = today.getFullYear();
-      
+
       // Start date: 5 months before today
       const startDate = new Date(currentYear, currentMonth - 5, 1);
       // End date: 1 month after today
@@ -267,7 +262,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
 
       // Place events into days
       const dayByKey = new Map(base.map(d => [d.date, d] as const));
-      
+
       for (const ev of events) {
         const key = ev.date;
         const day = dayByKey.get(key);
@@ -312,7 +307,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
       // Filter out the current calendar widget and only show task-like widgets
       const taskWidgets = widgets.filter(w =>
         w.id !== widget.widget_id &&
-        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar','yearCalendar', 'pillarsGraph', 'moodTracker', 'notes', 'habitTracker'].includes(w.widget_type)
+        !['allSchedules', 'aiChat', 'simpleClock', 'weatherWidget', 'calendar', 'yearCalendar', 'pillarsGraph', 'moodTracker', 'notes', 'habitTracker'].includes(w.widget_type)
       );
       setAvailableWidgets(taskWidgets);
 
@@ -437,13 +432,13 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
                   const today = new Date(currentDate);
                   const currentMonth = today.getMonth();
                   const currentYear = today.getFullYear();
-                  
+
                   // Get 6 months: 5 before + current + 1 after
                   const startMonth = monthNames[((currentMonth - 5 + 12) % 12)];
                   const endMonth = monthNames[((currentMonth + 1) % 12)];
                   const startYear = currentMonth - 5 < 0 ? currentYear - 1 : currentYear;
                   const endYear = currentMonth + 1 > 11 ? currentYear + 1 : currentYear;
-                  
+
                   if (startYear === endYear) {
                     return `${startMonth} - ${endMonth} ${startYear}`;
                   } else {
@@ -465,7 +460,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
         <div className="w-full">
           {/* Heatmap grid */}
           <div className="flex">
-            
+
             {/* Heatmap squares */}
             <div className="flex-1">
               <div className="flex">
@@ -475,13 +470,12 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
                       if (!day) {
                         return <div key={dayIndex} className="w-3 h-3" />;
                       }
-                      
+
                       return (
                         <div
                           key={dayIndex}
-                          className={`w-3 h-3 rounded-sm transition-all ${
-                            isToday(day.date) ? 'bg-gray-100 border border-blue-500' : 'bg-white/50'
-                          }`}
+                          className={`w-3 h-3 rounded-sm transition-all ${isToday(day.date) ? 'bg-gray-100 border border-blue-500' : 'bg-white/50'
+                            }`}
                           title={`${day.date}: ${day.todosTotal.length} tasks, ${day.todosCompleted.length} completed`}
                         >
                           <CircularProgress
@@ -500,14 +494,14 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
               </div>
             </div>
           </div>
-          
+
           {/* Month labels */}
           <div className="w-[22rem] flex mt-2">
             {(() => {
               const today = new Date(currentDate);
               const currentMonth = today.getMonth();
               const currentYear = today.getFullYear();
-              
+
               // Get 6 months: 5 before + current + 1 after
               const visibleMonths = [];
               for (let i = -5; i <= 1; i++) {
@@ -519,7 +513,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
                   year: year
                 });
               }
-              
+
               return visibleMonths.map((monthData, index) => (
                 <div key={index} className="text-xs text-gray-500" style={{ width: `${100 / 6}%` }}>
                   {monthData.month.substring(0, 3)}
@@ -527,7 +521,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
               ));
             })()}
           </div>
-          
+
         </div>
       </div>
 
@@ -536,14 +530,14 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
         {editingWidgets && (
           <div className="px-2">
             {availableWidgets.map((event, index) => (
-              <span key={event.id} 
+              <span key={event.id}
                 onClick={() => handleWidgetSelection(event.id, !selectedWidgets.has(event.id))}
                 className={`text-gray-800 text-sm
                       ${selectedWidgets.has(event.id)
-                  ? 'font-bold'
-                  : ''
-                } text-${getCategoryColor(event.category)}-600`}>
-                  {event.title + (index < availableWidgets.length - 1 ? ', ' : '')}
+                    ? 'font-bold'
+                    : ''
+                  } text-${getCategoryColor(event.category)}-600`}>
+                {event.title + (index < availableWidgets.length - 1 ? ', ' : '')}
               </span>
             ))}
             <button
@@ -557,14 +551,14 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
         {!editingWidgets && (
           <div className="px-2">
             {availableWidgets.filter(event => selectedWidgets.has(event.id)).map((event, index) => (
-              <span key={event.id} 
+              <span key={event.id}
                 onClick={() => handleWidgetSelection(event.id, !selectedWidgets.has(event.id))}
                 className={`text-gray-500 text-sm
                       ${selectedWidgets.has(event.id)
-                  ? 'font-bold'
-                  : ''
-                } text-${getCategoryColor(event.category)}-600`}>
-                  {event.title + (index < availableWidgets.filter(event => selectedWidgets.has(event.id)).length - 1 ? ', ' : '')}
+                    ? 'font-bold'
+                    : ''
+                  } text-${getCategoryColor(event.category)}-600`}>
+                {event.title + (index < availableWidgets.filter(event => selectedWidgets.has(event.id)).length - 1 ? ', ' : '')}
               </span>
             ))}
             <button
@@ -584,7 +578,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>
-                <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 text-${getCategoryColor(selectedEvent.category || 'gray')}`}>
+                <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 text-${getCategoryColor(selectedEvent.category || 'green')}-600`}>
                   {selectedEvent.category}
                 </div>
               </div>

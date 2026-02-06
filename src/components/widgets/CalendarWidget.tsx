@@ -5,17 +5,19 @@ import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
 
 
 export const categoryColors = {
-  productivity: { value: 'productivity', label: 'Productivity', color: 'blue' },
-  health: { value: 'health', label: 'Health', color: 'red' },
-  job: { value: 'job', label: 'Job', color: 'purple' },
-  information: { value: 'information', label: 'Information', color: 'yellow' },
-  entertainment: { value: 'entertainment', label: 'Entertainment', color: 'pink' },
-  utilities: { value: 'utilities', label: 'Utilities', color: 'gray' },
-  personal: { value: 'personal', label: 'Personal', color: 'transparent' },
-  notes: { value: 'notes', label: 'Notes', color: 'transparent' },
-  calendar: { value: 'calendar', label: 'Calendar', color: 'transparent' },
-  yearCalendar: { value: 'yearCalendar', label: 'Year Calendar', color: 'transparent' },
-  pillarsGraph: { value: 'pillarsGraph', label: 'Pillars Graph', color: 'transparent' }
+  productivity: { value: 'productivity', label: 'Productivity', color: 'blue', hex: '#3b82f6' },
+  health: { value: 'health', label: 'Health', color: 'red', hex: '#ef4444' },
+  job: { value: 'job', label: 'Job', color: 'purple', hex: '#a855f7' },
+  work: { value: 'work', label: 'Work', color: 'purple', hex: '#a855f7' },
+  research: { value: 'research', label: 'Research', color: 'orange', hex: '#f97316' },
+  information: { value: 'information', label: 'Information', color: 'yellow', hex: '#eab308' },
+  entertainment: { value: 'entertainment', label: 'Entertainment', color: 'pink', hex: '#ec4899' },
+  utilities: { value: 'utilities', label: 'Utilities', color: 'gray', hex: '#6b7280' },
+  personal: { value: 'personal', label: 'Personal', color: 'transparent', hex: 'transparent' },
+  notes: { value: 'notes', label: 'Notes', color: 'transparent', hex: 'transparent' },
+  calendar: { value: 'calendar', label: 'Calendar', color: 'transparent', hex: 'transparent' },
+  yearCalendar: { value: 'yearCalendar', label: 'Year Calendar', color: 'transparent', hex: 'transparent' },
+  pillarsGraph: { value: 'pillarsGraph', label: 'Pillars Graph', color: 'transparent', hex: 'transparent' }
 };
 
 interface CalendarEvent {
@@ -80,7 +82,9 @@ interface CalendarData {
 
 // Enhanced color utilities
 const getCategoryColor = (category: string): string => {
-  return categoryColors[category as keyof typeof categoryColors].color;
+  if (!category) return 'gray';
+  const lowerCategory = category.toLowerCase();
+  return categoryColors[lowerCategory as keyof typeof categoryColors]?.color || 'gray';
 };
 const getStreakSize = (day: number, totalStreakDays: number): number => {
   const position = totalStreakDays - day + 1;
@@ -99,7 +103,7 @@ interface CircularProgressProps {
 }
 
 const CircularProgress = ({ todosCompleted, todosTotal, day, size = 20, strokeWidth = 3, isToday = false, isCurrentMonth = false }: CircularProgressProps) => {
-  
+
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -256,7 +260,7 @@ const StreakIndicator = ({ streaksByCategory, size = 12 }: StreakIndicatorProps)
             title={`${category} streak: ${totalStreakDays} days`}
           >
             <span
-              className="text-orange-500"
+              className=""
               style={{
                 fontSize: `${getStreakSize(totalStreakDays, totalStreakDays)}px`,
                 color: getCategoryColor(category),
@@ -896,14 +900,14 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
         {editingWidgets && (
           <div className="px-2">
             {availableWidgets.map((event, index) => (
-              <span key={event.id} 
+              <span key={event.id}
                 onClick={() => handleWidgetSelection(event.id, !selectedWidgets.has(event.id))}
-                className={`text-gray-800 text-sm
+                className={` text-sm
                       ${selectedWidgets.has(event.id)
-                  ? 'font-bold'
-                  : ''
-                } text-${getCategoryColor(event.category)}-600`}>
-                  {event.title + (index < availableWidgets.length - 1 ? ', ' : '')}
+                    ? 'font-bold'
+                    : ''
+                  } text-${getCategoryColor(event.category)}-600`}>
+                {event.title + (index < availableWidgets.length - 1 ? ', ' : '')}
               </span>
             ))}
             <button
@@ -917,14 +921,14 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
         {!editingWidgets && (
           <div className="px-2">
             {availableWidgets.filter(event => selectedWidgets.has(event.id)).map((event, index) => (
-              <span key={event.id} 
+              <span key={event.id}
                 onClick={() => handleWidgetSelection(event.id, !selectedWidgets.has(event.id))}
                 className={`text-gray-500 text-sm
                       ${selectedWidgets.has(event.id)
-                  ? 'font-bold'
-                  : ''
-                } text-${getCategoryColor(event.category)}-600`}>
-                  {event.title + (index < availableWidgets.filter(event => selectedWidgets.has(event.id)).length - 1 ? ', ' : '')}
+                    ? 'font-bold'
+                    : ''
+                  } text-${getCategoryColor(event.category)}-600`}>
+                {event.title + (index < availableWidgets.filter(event => selectedWidgets.has(event.id)).length - 1 ? ', ' : '')}
               </span>
             ))}
             <button

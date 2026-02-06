@@ -1,6 +1,7 @@
 """
 Dashboard Widget Service - Consolidated service for all widget types.
 """
+import logging
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,6 +9,8 @@ from sqlalchemy.orm.attributes import flag_modified
 from models.dashboard_widget_details import DashboardWidgetDetails
 from schemas.dashboard_widget import DashboardWidgetCreate, DashboardWidgetUpdate
 from config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardWidgetService:

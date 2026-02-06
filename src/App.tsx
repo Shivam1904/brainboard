@@ -1,13 +1,11 @@
-import { useState } from 'react'
-import Dashboard from './components/Dashboard'
-import WidgetDataTest from './components/WidgetDataTest'
+import NewDashboard from './components/NewDashboard'
 
 function App() {
 
   return (
     <div className="h-auto w-screen bg-background flex flex-col">
-      <main className="flex-1">
-        <Dashboard />
+      <main className="flex-1 overflow-hidden h-screen">
+        <NewDashboard />
       </main>
     </div>
   )

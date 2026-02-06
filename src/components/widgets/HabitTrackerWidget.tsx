@@ -3,16 +3,8 @@ import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Check, Pencil } from 'lucide-react';
 import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
 import { useUpdateWidgetActivity } from '@/stores/dashboardStore';
+import { categoryColors } from './CalendarWidget';
 
-export const categoryColors = {
-  productivity: { value: 'productivity', label: 'Productivity', color: '#3B82F6' }, // blue
-  health: { value: 'health', label: 'Health', color: '#EF4444' }, // red
-  job: { value: 'job', label: 'Job', color: '#8B5CF6' }, // purple
-  information: { value: 'information', label: 'Information', color: '#EAB308' }, // yellow
-  entertainment: { value: 'entertainment', label: 'Entertainment', color: '#EC4899' }, // pink
-  utilities: { value: 'utilities', label: 'Utilities', color: '#6B7280' }, // gray
-  personal: { value: 'personal', label: 'Personal', color: '#10B981' } // green
-};
 
 interface HabitTask {
   id: string;
@@ -56,9 +48,18 @@ interface HabitTrackerWidgetProps {
   targetDate: string;
 }
 
-// Enhanced color utilities
 const getCategoryColor = (category: string): string => {
-  return categoryColors[category as keyof typeof categoryColors].color;
+  if (!category) return 'gray';
+  const lowerCategory = category.toLowerCase();
+  return categoryColors[lowerCategory as keyof typeof categoryColors]?.color || 'green';
+};
+
+
+// Enhanced color utilities
+const getCategoryColorHex = (category: string): string => {
+  if (!category) return 'gray';
+  const lowerCategory = category.toLowerCase();
+  return categoryColors[lowerCategory as keyof typeof categoryColors]?.hex || '#6B7280';
 };
 // Helper function to generate calendar structure
 const generateHabitStructure = (year: number, month: number, targetDate: string): HabitData => {
@@ -174,7 +175,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
     }
   };
   useEffect(() => {
-    setRadius(((habitData?.tasks?.filter(t => selectedWidgets?.has(t.widget_id))?.length || 0) * WIDTH/2 )+WIDTH/2);
+    setRadius(((habitData?.tasks?.filter(t => selectedWidgets?.has(t.widget_id))?.length || 0) * WIDTH / 2) + WIDTH / 2);
   }, [habitData, selectedWidgets]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -349,23 +350,22 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
           {/* SVG Circular Grid */}
           <div className="absolute flex-1 flex">
             <div className={`relative `}>
-              <svg width={`${radius  + (120*2)}`} height={`${radius + (2*120)}`} >
+              <svg width={`${radius + (120 * 2)}`} height={`${radius + (2 * 120)}`} >
 
                 {/* SVG arcs for each task and day */}
                 {uniqueTasks.map((taskTitle, taskIndex) => {
-                  const CENTER_Y_OFFSET = CENTER_Y *(uniqueTasks.length +1)
+                  const CENTER_Y_OFFSET = CENTER_Y * (uniqueTasks.length + 1)
                   const task = habitData.tasks.find(t => t.title === taskTitle);
                   const category = task?.category || 'personal';
-                  const color = categoryColors[category as keyof typeof categoryColors]?.color || '#6B7280';
                   const ringRadius = WIDTH + (taskIndex * WIDTH); // Each habit gets its own ring
 
                   return (
                     <g key={taskIndex}>
                       {/* Arcs for each day */}
-                      <text x={radius/2 + 110 -WIDTH/2} y={radius/2 + CENTER_Y_OFFSET - 10 - (WIDTH/2 + (taskIndex * WIDTH))}
+                      <text x={radius / 2 + 110 - WIDTH / 2} y={radius / 2 + CENTER_Y_OFFSET - 10 - (WIDTH / 2 + (taskIndex * WIDTH))}
                         textAnchor="end"
-                        className="text-xs font-semibold fill-gray-600"
-                        style={{ fill: color }}
+                        className={`text-xs font-semibold`}
+                        style={{ fill: getCategoryColor(category) }}
                       >
                         {taskTitle}
                       </text>
@@ -373,17 +373,17 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                         // Calculate angle based on the actual day of the month (1-31)
                         // Map day 1 to 0°, day 2 to ~8.7°, etc. (270 degrees total)
                         const startAngle = ((day.day - 1) * 270) / 31;
-                        const endAngle = ((day.day * 270) / 31)-1;
+                        const endAngle = ((day.day * 270) / 31) - 1;
 
                         // Convert angles to radians and adjust for SVG coordinate system
                         const startRad = (startAngle - 90) * Math.PI / 180;
                         const endRad = (endAngle - 90) * Math.PI / 180;
 
                         // Calculate start and end points
-                        const startX = radius/2 + 100 + Math.cos(startRad) * ringRadius;
-                        const startY = radius/2 + CENTER_Y_OFFSET + Math.sin(startRad) * ringRadius;
-                        const endX = radius/2 + 100 + Math.cos(endRad) * ringRadius;
-                        const endY = radius/2 + CENTER_Y_OFFSET + Math.sin(endRad) * ringRadius;
+                        const startX = radius / 2 + 100 + Math.cos(startRad) * ringRadius;
+                        const startY = radius / 2 + CENTER_Y_OFFSET + Math.sin(startRad) * ringRadius;
+                        const endX = radius / 2 + 100 + Math.cos(endRad) * ringRadius;
+                        const endY = radius / 2 + CENTER_Y_OFFSET + Math.sin(endRad) * ringRadius;
 
                         // Determine if this day/task combination is completed
                         const dayTask = day.tasks.find(t => t.title === taskTitle);
@@ -397,33 +397,33 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                           <path
                             key={`${taskIndex}-${dayIndex}`}
                             d={arcPath}
-                            stroke={isCompleted ? getCategoryColor(dayTask?.category || 'personal') 
-                              : dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'rgba(223, 209, 120, 0.39)' 
-                              : day.date === currentDate.toISOString().split('T')[0] ? 'rgba(230, 227, 207, 0.39)' 
-                              : dayTask ? 'rgba(143, 121, 121, 0.39)' 
-                              : 'rgba(255, 255, 255, 0.39)'}
-                            strokeWidth={WIDTH-1}
+                            stroke={isCompleted ? getCategoryColorHex(dayTask?.category || 'personal')
+                              : dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'rgba(223, 209, 120, 0.39)'
+                                : day.date === currentDate.toISOString().split('T')[0] ? 'rgba(230, 227, 207, 0.39)'
+                                  : dayTask ? 'rgba(143, 121, 121, 0.39)'
+                                    : 'rgba(255, 255, 255, 0.39)'}
+                            strokeWidth={WIDTH - 1}
                             fill="none"
                             className={`${dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'cursor-pointer' : 'cursor-default'} hover:stroke-width-10 transition-all duration-200`}
                             onClick={async () => {
                               // Handle arc click - toggle completion
                               console.log(`Toggle ${taskTitle} for day ${day.day}, ${dayTask?.id}`);
-                              if(dayTask?.id && dayTask.date === currentDate.toISOString().split('T')[0]) {
+                              if (dayTask?.id && dayTask.date === currentDate.toISOString().split('T')[0]) {
                                 try {
                                   // Update the API
                                   await updateWidgetActivity(dayTask.id, { status: isCompleted ? 'not_completed' : 'completed' });
-                                  
+
                                   // Update local state immediately for responsive UI
                                   setHabitData(prevData => {
                                     if (!prevData) return prevData;
-                                    
+
                                     const newData = { ...prevData };
                                     const dayIndex = newData.days.findIndex(d => d.date === day.date);
-                                    
+
                                     if (dayIndex !== -1) {
                                       const updatedDay = { ...newData.days[dayIndex] };
                                       const taskIndex = updatedDay.tasks.findIndex(t => t.id === dayTask.id);
-                                      
+
                                       if (taskIndex !== -1) {
                                         // Update the task's activity_data
                                         const updatedTask = { ...updatedDay.tasks[taskIndex] };
@@ -432,7 +432,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                                           status: isCompleted ? 'not_completed' : 'completed'
                                         };
                                         updatedDay.tasks[taskIndex] = updatedTask;
-                                        
+
                                         // Update completedTasks array
                                         if (isCompleted) {
                                           // Remove from completedTasks
@@ -441,11 +441,11 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                                           // Add to completedTasks
                                           updatedDay.completedTasks.push(updatedTask);
                                         }
-                                        
+
                                         newData.days[dayIndex] = updatedDay;
                                       }
                                     }
-                                    
+
                                     return newData;
                                   });
                                 } catch (error) {
@@ -477,7 +477,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                       ? 'font-bold'
                       : ''
                     }`}
-                  style={{ color: categoryColors[event.category as keyof typeof categoryColors]?.color || '#6B7280' }}>
+                  style={{ color: getCategoryColorHex(event.category) }}>
                   {event.title + (index < availableWidgets.length - 1 ? ', ' : '')}
                 </span>
               ))}
@@ -499,7 +499,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                       ? 'font-bold'
                       : ''
                     }`}
-                  style={{ color: categoryColors[event.category as keyof typeof categoryColors]?.color || '#6B7280' }}>
+                  style={{ color: getCategoryColorHex(event.category) }}>
                   {event.title + (index < availableWidgets.filter(event => selectedWidgets.has(event.id)).length - 1 ? ', ' : '')}
                 </span>
               ))}

@@ -51,13 +51,13 @@ const getStatusColor = (status: string) => {
 const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate }: AdvancedSingleTaskWidgetProps) => {
   const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
   const { updateWidgetActivity } = useDashboardActions();
-  
+
   const [updating, setUpdating] = useState(false);
 
   // Use the passed widget prop directly - it already contains the widget data
   // const widgetData = todayWidgets.find(w => w.id === widget.daily_widget_id);
   const widgetData = widget; // Use the passed widget directly
-  
+
   // Alarm states
   const [isAlerting, setIsAlerting] = useState(false);
   const [snoozeTimeLeft, setSnoozeTimeLeft] = useState<number | null>(null);
@@ -72,12 +72,12 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
   useEffect(() => {
     var height = 2;
     if (widgetData?.activity_data?.activity_history) {
-      height += (widgetData.activity_data.activity_history.length*0.75) +1;
+      height += (widgetData.activity_data.activity_history.length * 0.75) + 1;
     }
-    if(widgetData?.description) {
+    if (widgetData?.description) {
       height += 1;
     }
-    if(widgetData?.widget_config?.target_value) {
+    if (widgetData?.widget_config?.target_value) {
       height += 1;
     }
     if (isAlerting || (snoozeTimeLeft !== null && snoozeTimeLeft > 0)) {
@@ -119,13 +119,13 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
     setIsAlerting(false);
     setSnoozeTimeLeft(snoozeTime * 60); // snoozeTime minutes in seconds
 
-          // Then update on server
-      try {
-        await updateWidgetActivity(widget.daily_widget_id, {
-          snooze_count: newSnoozeCount,
-          activity_history: [...existingActivity, newActivity]
-        });
-      } catch (err) {
+    // Then update on server
+    try {
+      await updateWidgetActivity(widget.daily_widget_id, {
+        snooze_count: newSnoozeCount,
+        activity_history: [...existingActivity, newActivity]
+      });
+    } catch (err) {
       console.error('Error snoozing alarm:', err);
       // Revert local changes on error
       // await fetchWidgetData(); // This line is removed as per the new_code
@@ -247,7 +247,13 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
   };
 
   const getCategoryColor = (category: string) => {
-    return categoryColors[category as keyof typeof categoryColors].color;
+    // Default to gray if category is missing or not found in map
+    const defaultColor = 'text-gray-600 bg-gray-50';
+    // Check if category exists in map
+    if (category && category in categoryColors) {
+      return categoryColors[category as keyof typeof categoryColors].color;
+    }
+    return defaultColor;
   };
   // Check for triggered alarms
   useEffect(() => {
@@ -436,7 +442,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
       alarmDate.setHours(hours, minutes, 0, 0);
       return alarmDate > now;
     });
-    return nextAlarmTime || '-';
+    return nextAlarmTime || '';
   };
 
   return (
@@ -478,11 +484,11 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
                 }`}>
                 {widgetData.title}
               </h4>
-                    {widgetData.category && (
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-${getCategoryColor(widgetData.category)}-800  `}>
-                        {widgetData.category}
-                      </span>
-                    )}
+              {widgetData.category && (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium text-${getCategoryColor(widgetData.category)}-800  `}>
+                  {widgetData.category}
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col">
@@ -493,7 +499,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
                   {widgetData.description}
                 </p>
               )}
-              {widgetConfig.value_type && (
+              {widgetConfig.value_type && widgetConfig.target_value && (
                 <div className={`  rounded-xl text-center flex flex-row items-center justify-end gap-2`}>
                   <div className={`text-lg font-extrabold ${isAlerting ? 'text-white' : 'text-green-900'}`}>
                     {trackerActivity.value || '0'}
@@ -521,12 +527,12 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
 
         </div>
 
-            {/* Snooze countdown */}
-            {snoozeTimeLeft !== null && snoozeTimeLeft > 0 && (
-              <div className={`mt-3 px-3 py-1 mb-1 rounded ${isAlerting ? 'bg-white/10 text-white' : 'bg-yellow-100 text-yellow-800 border border-yellow-300'}`}>
-                <span className="text-xs">⏰ Snoozed for {formatSnoozeTime(snoozeTimeLeft)}</span>
-              </div>
-            )}
+        {/* Snooze countdown */}
+        {snoozeTimeLeft !== null && snoozeTimeLeft > 0 && (
+          <div className={`mt-3 px-3 py-1 mb-1 rounded ${isAlerting ? 'bg-white/10 text-white' : 'bg-yellow-100 text-yellow-800 border border-yellow-300'}`}>
+            <span className="text-xs">⏰ Snoozed for {formatSnoozeTime(snoozeTimeLeft)}</span>
+          </div>
+        )}
         {false && todoActivity.progress !== undefined && (
           <div className="px-2 ">
             <div className="w-full bg-blue-200 rounded-full h-1">
@@ -541,21 +547,18 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
         {/* Top bar: Next alarm + completed badge */}
         <div className="flex items-center justify-between gap-2">
 
-          <span className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(todoActivity.status || 'pending')}`}>
-            {todoActivity.status || 'pending'}
-          </span>
-          <div className={`text-xs ${isAlerting ? 'text-white/80' : 'text-green-700'} 
+          {widgetConfig.target_value && (<div className={`text-xs ${isAlerting ? 'text-white/80' : 'text-green-700'} 
                            flex items-center justify-center gap-2`}>
-            <Target className="h-4 w-4" /> Target {widgetConfig.target_value}
+            <Target className="h-4 w-4" /> {widgetConfig.target_value}
             {widgetConfig.value_unit}
-          </div>
+          </div>)}
           {widgetConfig.alarm_times && widgetConfig.alarm_times.length > 0 && (
             <div className="flex items-center gap-2">
               <Clock className={`h-4 w-4 ${isAlerting ? 'text-white' : 'text-yellow-600'}`} />
               <span className={`text-xs ${isAlerting ? 'text-white' : 'text-yellow-800'}`}>
-                Reminders {getNextAlarmTime(widgetConfig.alarm_times)}
+                <span className="text-xs truncate max-w-[40px]">{getNextAlarmTime(widgetConfig.alarm_times)}</span>
               </span>
-              <span className={`text-[10px] ${isAlerting ? 'text-white/80' : 'text-yellow-700'}`}>
+              <span className={`text-[10px] truncate max-w-[40px] ${isAlerting ? 'text-white/80' : 'text-yellow-700'}`}>
                 {widgetConfig.alarm_times.join(', ')}
               </span>
             </div>

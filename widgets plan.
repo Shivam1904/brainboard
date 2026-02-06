@@ -1,0 +1,33 @@
+widgets plan. 
+the main screen of the brain board 
+- displays a list of widgets with a size. 
+
+lets create a new file to distribute the widgets from a new plan. 
+'NewDashboard' - in place of ResponsiveGridLayout. 
+
+there will be a left side bar, a right sidebar and a main component in the center. 
+
+right sidebar will have the following in order:
+    weather widget.
+    simple clock.
+    brainy AI chat widget. 
+    
+left will have the following:
+    all schedules widget.
+    mood tracker
+    notes.
+
+the above 6 widgets are view widgets and can be added and removed from a checkbox in AddWidgetButton component. 
+
+for each widget to be added in the sidebars - we should have a container. 
+the container will have a button in the top right corner to expand or collapse the widget 
+    - using the same logic as used in the checkbox in views to hide and show the view widgets 
+    - expanded will show the widget and collapsed will only show the name of the widget .
+
+
+main component - 
+leave blank for now.
+
+
+
+

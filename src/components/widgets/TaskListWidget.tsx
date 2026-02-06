@@ -32,6 +32,7 @@ interface MissionFormData {
 
 
 const getCategoryColor = (category: string) => {
+  category = category.toLowerCase();
   if (!category || !categoryColors[category as keyof typeof categoryColors]) {
     return 'gray';
   }
@@ -203,7 +204,7 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskLi
           }));
 
         setTasks(convertedTasks);
-        onHeightChange(widget.daily_widget_id, convertedTasks.length * 2 + 2);
+        onHeightChange(widget.daily_widget_id, convertedTasks.length * 2 + 3);
       } catch (err) {
         console.error('Failed to process tasks:', err);
         setTasks([]);
@@ -254,10 +255,9 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskLi
 
 
         {/* Progress Bar */}
-        {false && (<div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-700">Progress</span>
-            <span className="text-sm text-gray-500">{progressText} completed</span>
+        {(<div className="mb-4">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-700">Progress</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div

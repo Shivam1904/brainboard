@@ -2,23 +2,23 @@
 export const GRID_CONFIG = {
   // Grid layout settings
   cols: {
-    lg: 55, // Number of columns for large screens
+    lg: 40, // Number of columns for large screens
   },
   rowHeight: 32, // Height of each grid row in pixels
   margin: [5, 5] as [number, number], // Margin between grid items [vertical, horizontal]
   containerPadding: [5, 5] as [number, number], // Padding around the grid container
-  
+
   // Breakpoints (for responsive design)
   breakpoints: {
     lg: 0, // Large screens and up
   },
-  
+
   // Grid lines configuration
   gridLines: {
     opacity: 0.4, // Opacity of grid lines when shown
     color: 'hsl(var(--border))', // Color of grid lines
   },
-  
+
   // Widget positioning
   maxSearchDepth: 20, // Maximum rows to search when finding empty space for new widgets
 } as const
@@ -45,23 +45,23 @@ export const gridUtils = {
   getItemWidth: (cols: number, containerWidth: number, margin: number = GRID_CONFIG.margin[1]) => {
     return (containerWidth - (GRID_CONFIG.cols.lg + 1) * margin) / GRID_CONFIG.cols.lg * cols + (cols - 1) * margin
   },
-  
+
   // Calculate the height of a grid item in pixels
   getItemHeight: (rows: number, margin: number = GRID_CONFIG.margin[0]) => {
     return rows * GRID_CONFIG.rowHeight + (rows - 1) * margin
   },
-  
+
   // Check if a position is valid for a widget
   isValidPosition: (x: number, y: number, w: number, _h: number, maxCols: number = GRID_CONFIG.cols.lg) => {
     return x >= 0 && y >= 0 && x + w <= maxCols
   },
-  
+
   // Calculate maximum available rows based on container height
   getMaxRows: (containerHeight: number, headerHeight: number = 80) => {
     const availableHeight = containerHeight - headerHeight - (GRID_CONFIG.containerPadding[0] * 2)
     return Math.floor(availableHeight / GRID_CONFIG.rowHeight)
   },
-  
+
   // Constrain layout to grid boundaries
   constrainLayout: (layout: any, maxCols: number = GRID_CONFIG.cols.lg, maxRows?: number) => {
     if (!maxRows) {
@@ -70,14 +70,14 @@ export const gridUtils = {
       const availableHeight = window.innerHeight - headerHeight - (GRID_CONFIG.containerPadding[0] * 2)
       maxRows = Math.floor(availableHeight / GRID_CONFIG.rowHeight)
     }
-    
+
     const constrainedX = Math.max(0, Math.min(layout.x, maxCols - layout.w))
     const constrainedY = Math.max(0, Math.min(layout.y, maxRows - layout.h))
     const maxWidth = maxCols - constrainedX
     const constrainedW = Math.max(1, Math.min(layout.w, maxWidth))
     const maxHeight = maxRows - constrainedY
     const constrainedH = Math.max(1, Math.min(layout.h, maxHeight))
-    
+
     return {
       ...layout,
       x: constrainedX,
@@ -86,7 +86,7 @@ export const gridUtils = {
       h: constrainedH
     }
   }
-} 
+}
 
 // Find empty space for a new widget given the current widgets and grid constraints
 export function findEmptyPosition({

@@ -1,10 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
-import AllSchedulesWidget from './widgets/AllSchedulesWidget'
-import AiChatWidget from './widgets/AiChatWidget';
-import MoodTrackerWidget from './widgets/MoodTrackerWidget';
-import SimpleClockWidget from './widgets/SimpleClockWidget';
-import WeatherWidget from './widgets/WeatherWidget';
 import HabitTrackerWidget from './widgets/HabitTrackerWidget';
 import YearCalendarWidget from './widgets/YearCalendarWidget';
 import WebSearchWidget from './widgets/WebSearchWidget';
@@ -12,48 +7,31 @@ import TaskListWidget from './widgets/TaskListWidget'
 import BaseWidget from './widgets/BaseWidget'
 import CalendarWidget from './widgets/CalendarWidget'
 import AdvancedSingleTaskWidget from './widgets/AdvancedSingleTaskWidget'
-import NotesWidget from './widgets/NotesWidget'
 import PillarGraphsWidget from './widgets/PillarGraphsWidget'
-import AddWidgetButton from './AddWidgetButton'
-import { DailyWidget, DashboardWidget } from '../services/api';
+import { DailyWidget } from '../services/api';
 import type { Layout } from 'react-grid-layout';
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
-import { useDashboardData } from '../hooks/useDashboardData'
 import { useDashboardActions } from '../stores/dashboardStore'
-import { useDashboardStore } from '../stores/dashboardStore'
+import { handleRemoveWidgetUtil } from '../utils/widgetUtils'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
+interface DashboardProps {
+  date: string;
+  allWidgets: any[]; // Using any[] to match the structure or Import Types
+  todayWidgets: DailyWidget[];
+}
 
-const Dashboard = () => {
-  const [showGridLines, setShowGridLines] = useState(false)
-  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0])
+const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidgetsData }: DashboardProps) => {
   // Centralized layout: track per-widget size overrides (e.g., dynamic height changes)
   const [sizeOverrides, setSizeOverrides] = useState<Record<string, { w?: number; h?: number }>>({})
-  
+
   // Track last height values to prevent unnecessary updates
   const lastHeightValues = useRef<Record<string, number>>({})
-  
-  // Use the simplified centralized state management
-  const {
-    allWidgets: allWidgetsData,
-    todayWidgets: todayWidgetsData,
-    isLoading,
-    error
-  } = useDashboardData(currentDate)
 
   // Get actions from store
-  const { addWidgetToToday, removeWidgetFromToday, updateDashboardWidgetLayout } = useDashboardActions()
-
-  // Function to refresh all widgets data
-  const refreshAllWidgets = useCallback(() => {
-    // This will trigger a reload of the all widgets data
-    // The useDashboardData hook will automatically reload when the store changes
-    // We can force a reload by calling the store's loadData method
-    const store = useDashboardStore.getState()
-    store.loadData(currentDate)
-  }, [currentDate])
+  const { removeWidgetFromToday, updateDashboardWidgetLayout } = useDashboardActions()
 
   // Apply grid CSS properties on component mount
   useEffect(() => {
@@ -62,8 +40,6 @@ const Dashboard = () => {
       document.documentElement.style.setProperty(property, value)
     })
   }, [])
-
-  // Data automatically loads when date changes via the hook
 
   // Helper to build a minimal placeholder layout to satisfy type; actual layout is centralized
   const buildPlaceholderLayout = (id: string) => ({ i: id, x: 0, y: 0, w: 1, h: 1 })
@@ -80,9 +56,9 @@ const Dashboard = () => {
 
   // Process widgets for UI display
   const processWidgetsForUI = useMemo(() => {
+    const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar', 'pillarsGraph', 'habitTracker'];
     const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'weatherWidget', 'simpleClock', 'notes'];
-    const trackerWidgetTypes = ['calendar', 'weekchart', 'yearCalendar',  'pillarsGraph', 'habitTracker'];
-    
+
     const makeWidget = (base: Partial<DailyWidget>, overrides: Partial<DailyWidget> = {}): DailyWidget => ({
       id: base.id || '',
       daily_widget_id: base.daily_widget_id || '',
@@ -101,10 +77,10 @@ const Dashboard = () => {
       ...base,
       ...overrides
     });
-    
+
     const isValidWidget = (w: DailyWidget) =>
       w && w.daily_widget_id && w.widget_id && w.widget_type;
-    
+
     const hasUpcomingMilestone = (milestones: any[]) => {
       const today = new Date();
       const weekAhead = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -114,63 +90,48 @@ const Dashboard = () => {
         return date >= today && date <= weekAhead;
       });
     };
-    
+
     // --- Prepare widget lists ---
     const uiWidgets: DailyWidget[] = [];
     const advancedWidgets: DailyWidget[] = [];
     const regularWidgets: DailyWidget[] = [];
     const trackerWidgets: DailyWidget[] = [];
     const webSearchWidgets: DailyWidget[] = [];
-    
-    // Step 1: Add permanent view widgets
-    viewWidgetTypes.forEach(type => {
-      const w = allWidgetsData.find(x => x.widget_type === type);
-      if (w?.widget_config?.visibility) {
-        const config = getWidgetConfig(type);
-        if (config) {
-          uiWidgets.push(makeWidget({
-            id: `auto-${type}`,
-            daily_widget_id: `auto-${type}`,
-            widget_id: w.id || '',
-            widget_type: type,
-            title: config.title,
-            description: config.description,
-            is_permanent: true,
-            widget_config: w.widget_config
-          }));
-        }
-      }
-    });
-    
-    // Step 2: Process today's widgets
+
+    // Process today's widgets
     const validWidgets = todayWidgetsData.filter(isValidWidget);
-    
+
     validWidgets.forEach(widget => {
       if (viewWidgetTypes.includes(widget.widget_type)) return;
-    
+
       const cfg = widget.widget_config || {};
-      const milestones = Array.isArray(cfg.milestones) ? cfg.milestones : [];
-    
-      const advCondition = cfg.include_tracker_details || cfg.include_alarm_details ||
-                            (cfg.include_progress_details && hasUpcomingMilestone(milestones));
-    
-      if (advCondition) {
+      const milestones = Array.isArray(cfg.milestones) ? cfg.milestones : (Array.isArray(cfg.milestone_list) ? cfg.milestone_list : []);
+
+      // Check for presence of data to determine if it's an advanced widget
+      // The boolean flags might be missing/undefined in some API responses
+      const hasTracker = !!cfg.include_tracker_details || !!cfg.value_type;
+      const hasAlarm = !!cfg.include_alarm_details || (Array.isArray(cfg.alarm_times) && cfg.alarm_times.length > 0);
+      const hasProgress = !!cfg.include_progress_details || (milestones.length > 0 && hasUpcomingMilestone(milestones));
+
+      const advCondition = hasTracker || hasAlarm || hasProgress;
+
+      if (trackerWidgetTypes.includes(widget.widget_type)) {
+        trackerWidgets.push(makeWidget(widget, {
+          id: `tracker-${widget.daily_widget_id}`,
+          title: `Tracker: ${widget.title}`,
+          reasoning: 'Tracker widget'
+        }));
+      } else if (advCondition) {
         advancedWidgets.push(makeWidget(widget, {
           id: `advanced-${widget.daily_widget_id}`,
           widget_type: 'advancedsingletask',
           title: `Advanced: ${widget.title}`,
           reasoning: 'Advanced single task widget with tracker/alarm/progress'
         }));
-      } else if (trackerWidgetTypes.includes(widget.widget_type)) {
-        trackerWidgets.push(makeWidget(widget, {
-          id: `tracker-${widget.daily_widget_id}`,
-          title: `Tracker: ${widget.title}`,
-          reasoning: 'Tracker widget'
-        }));
       } else {
         regularWidgets.push(widget);
       }
-    
+
       if (cfg.include_websearch_details) {
         const config = getWidgetConfig('websearch');
         if (config) {
@@ -185,10 +146,10 @@ const Dashboard = () => {
         }
       }
     });
-    
-    // Step 3: Assemble final list
+
+    // Assemble final list
     uiWidgets.push(...advancedWidgets);
-    
+
     if (regularWidgets.length) {
       uiWidgets.push(makeWidget({
         id: 'task-list-combined',
@@ -211,19 +172,11 @@ const Dashboard = () => {
         }
       }));
     }
-    
+
     uiWidgets.push(...trackerWidgets, ...webSearchWidgets);
-    
+
     return uiWidgets;
   }, [allWidgetsData, todayWidgetsData]);
-
-  // Get view widget states for AddWidgetButton
-  const viewWidgetStates = useMemo(() => {
-    const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'notes', 'weatherWidget', 'simpleClock'];
-    return allWidgetsData.filter(w => viewWidgetTypes.includes(w.widget_type));
-  }, []);
-
-  // No explicit layouts or handlers; let library manage placement
 
   // Compute initial row-wise positions so items are spread across the row before wrapping
   const computeRowWiseLayout = (
@@ -251,7 +204,7 @@ const Dashboard = () => {
   }
   const [computedPositions, setComputedPositions] = useState<Map<string, { x: number; y: number }>>(new Map())
 
-  // Memoize the computed positions to prevent recalculation on every render
+  // Memoize the computed positions
   useEffect(() => {
     const layoutItems = processWidgetsForUI.map((w) => {
       const config = getWidgetConfig(w.widget_type)
@@ -265,28 +218,8 @@ const Dashboard = () => {
     setComputedPositions(positions)
   }, [processWidgetsForUI, sizeOverrides, getSavedLayout])
 
-  // Add new widget using addNewWidget API. Also accepts 'refresh' from AddWidgetButton to refresh data.
-  const handleAddWidget = useCallback(async (widget: DashboardWidget | 'refresh') => {
-    if (widget === 'refresh') {
-      refreshAllWidgets()
-      return
-    }
-    const config = getWidgetConfig(widget.widget_type);
-    if (!config) {
-      alert('Widget configuration not found.')
-      return
-    }
-    try {
-      await addWidgetToToday(widget.id, currentDate);
-    } catch (error) {
-      console.error('Failed to add widget:', error);
-    }
-  }, [addWidgetToToday, currentDate, refreshAllWidgets])
-
   const onHeightChange = useCallback((dailyWidgetId: string, newHeight: number) => {
-    // Only update if height actually changed
     if (lastHeightValues.current[dailyWidgetId] !== newHeight) {
-      console.log('Widget height changed:', dailyWidgetId, newHeight)
       lastHeightValues.current[dailyWidgetId] = newHeight
       setSizeOverrides((prev) => ({
         ...prev,
@@ -295,7 +228,7 @@ const Dashboard = () => {
     }
   }, [])
 
-  // When user resizes a widget, persist w/h to dashboard widget_config.layout and keep local override
+  // When user resizes a widget, persist w/h
   const handleLayoutChange = useCallback(
     (newLayout: Layout[]) => {
       processWidgetsForUI.forEach((widget) => {
@@ -322,86 +255,89 @@ const Dashboard = () => {
   const handleRemoveWidget = useCallback(async (dailyWidgetId: string) => {
     const widget = processWidgetsForUI.find(w => w.daily_widget_id === dailyWidgetId)
     const widgetType = widget?.widget_type || 'widget'
+    const widgetTitle = widget?.title || ''
 
-    // Prevent removal of view widgets - they should be managed through the Views dropdown
-          if (widget?.widget_type === 'allSchedules' || widget?.widget_type === 'aiChat' || widget?.widget_type === 'moodTracker' || widget?.widget_type === 'notes' || widget?.widget_type === 'weatherWidget' || widget?.widget_type === 'simpleClock') {
-      alert('View widgets cannot be removed directly. Use the Views dropdown to toggle their visibility.');
-      return;
-    }
-
-    // Prevent removal of the automatically included view widgets
-          if (dailyWidgetId === 'auto-all-schedules' || dailyWidgetId === 'auto-moodTracker' || dailyWidgetId === 'auto-notes' || dailyWidgetId === 'auto-aiChat' || dailyWidgetId === 'auto-weatherWidget' || dailyWidgetId === 'auto-simpleClock') {
-      alert('This view widget is managed via the Views dropdown and cannot be removed directly.');
-      return;
-    }
-
-    // Handle combined task list widget removal
-    if (dailyWidgetId === 'task-list-combined') {
-      alert('The combined task list widget cannot be removed directly. Individual tasks are managed through the task creation process.');
-      return;
-    }
-
-    // Handle web search widgets (they are automatically generated)
-    if (dailyWidgetId.startsWith('websearch-')) {
-      alert('Web search widgets are automatically generated and cannot be removed directly.');
-      return;
-    }
-
-    // Handle advanced single task widgets
     if (widget?.title?.startsWith('Advanced: ')) {
+      // Advanced specific logic kept partly here to access local processWidgetsForUI state for associated websearch removal if needed
+      // Or we can move it all if we pass the list.
+      // Let's use the util for the simpler parts and specialized logic.
+
+      // Actually, the util handles the core logic. 
+      // For the associated websearch removal, it requires finding the websearch widget ID.
+
       if (confirm(`Are you sure you want to remove this advanced single task widget? This will also remove the associated web search widget if it exists.`)) {
         try {
-          // Remove the main widget
-          await removeWidgetFromToday(dailyWidgetId, currentDate);
+          await removeWidgetFromToday(dailyWidgetId, date);
 
-          // Also remove associated web search widget if it exists
-          const webSearchWidgetId = `websearch-${widget.id}`;
-          const webSearchWidget = processWidgetsForUI.find(w => w.daily_widget_id === webSearchWidgetId);
-          if (webSearchWidget) {
-            try {
-              await removeWidgetFromToday(webSearchWidgetId, currentDate);
-            } catch (webSearchError) {
-              console.warn('Failed to remove associated web search widget:', webSearchError);
-            }
-          }
+          // Logic for removing associated web search
+          // In original code: const webSearchWidgetId = `websearch-${widget.id}`;
+          // But widget.id in processed UI was `advanced-${real_id}`.
+          // dailyWidgetId passed here is real `daily_widget_id`.
+          // The websearch widget in UI list would have id `websearch-${dailyWidgetId}` approx?
+          // Original: const webSearchWidgetId = `websearch-${widget.id}`; 
+          // Wait, widget found via find(daily_widget_id) has `id` overridden to `advanced-...` (line 125).
+          // So websearch ID constructed is `websearch-advanced-...` ??
+          // Line 138: id: `websearch-${widget.daily_widget_id}`.
+          // Original code line 272: `websearch-${widget.id}`. If widget.id is `advanced-...`, this is `websearch-advanced-...`.
+          // BUT checks `processWidgetsForUI.find(w => w.daily_widget_id === webSearchWidgetId)`.
+          // `daily_widget_id` for websearch widget (line 138) is `websearch-${widget.daily_widget_id}`.
+          // So it seems it constructs an ID to find the UI element?
 
-          // Data will automatically update via the store
+          // Let's simplify. If we just blindly try to remove the websearch widget that matches the task...
+          // The `removeWidgetFromToday` needs a DB ID.
+          // The websearch widget "Activity" in DB has its own daily_widget_id.
+          // The UI construction fakes a daily_widget_id for websearch: `websearch-${widget.daily_widget_id}` (line 138).
+          // This fake ID is NOT in the DB. `removeWidgetFromToday` with a fake ID will fail or do nothing on backend?
+          // Line 138: `id: websearch-${widget.daily_widget_id}, daily_widget_id: websearch-${widget.daily_widget_id}`...
+          // If these are not real DB items, how did `handleRemoveWidget` work before?
+          // It calls `removeWidgetFromToday(webSearchWidgetId, date)`.
+          // Does the backend handle 'websearch-...' IDs? Or is `removeWidgetFromToday` handling it?
+          // `removeWidgetFromToday` calls API.
+
+          // If the websearch widget is purely client-side generated (implied by "makeWidget" in "processWidgetsForUI"),
+          // then we don't need to call API to remove it? It disappears when the main task is removed (re-render).
+          // Yes, line 134 loops validWidgets. If task is removed from DB, validWidgets won't have it, so no websearch generated.
+          // So the API call `removeWidgetFromToday(webSearchWidgetId)` in original code might have been redundant or failing silently?
+          // UNLESS the websearch widget IS persisted.
+          // Line 134: `if (cfg.include_websearch_details)`. This is config on the TASK widget.
+          // So removing the task widget removes the config source.
+          // So we just need to remove the task widget.
+
+          // I will proceed with just removing the main widget using the util.
+
         } catch (error) {
-          alert('Failed to remove widget from dashboard. Please try again.');
-          console.error('Failed to remove advanced single task widget:', error);
+          console.error('Failed to remove widget:', error);
+          alert('Failed to remove widget.');
         }
       }
       return;
     }
-    if (confirm(`Are you sure you want to remove this ${widgetType} widget?`)) {
-      try {
-        // Call API to set is_active = 0
-        await removeWidgetFromToday(dailyWidgetId, currentDate);
-        // Data will automatically update via the store
-      } catch (error) {
-        alert('Failed to remove widget from dashboard. Please try again.');
-        console.error('Failed to update is_active for DailyWidget:', error);
-      }
-    }
-  }, [processWidgetsForUI, removeWidgetFromToday, currentDate])
+
+    await handleRemoveWidgetUtil({
+      dailyWidgetId,
+      widgetType,
+      widgetTitle,
+      date,
+      removeWidgetFromToday
+    })
+
+  }, [processWidgetsForUI, removeWidgetFromToday, date])
 
   const renderWidget = (widget: DailyWidget) => {
-    // return <div></div>
     switch (widget.widget_type) {
       case 'websearch':
         return (
-                  <WebSearchWidget
-          targetDate={currentDate}
-          widget={widget}
-          onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
-        />
+          <WebSearchWidget
+            targetDate={date}
+            widget={widget}
+            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+          />
         );
       case 'todo-task':
-        // Check if this is a combined task list widget
         if (widget.widget_config?.combined_tasks) {
           return (
             <TaskListWidget
-              targetDate={currentDate}
+              targetDate={date}
               onHeightChange={onHeightChange}
               widget={{
                 ...widget,
@@ -412,16 +348,15 @@ const Dashboard = () => {
             />
           );
         }
-        // Fall through to default case for regular todo-task widgets
         break;
       case 'advancedsingletask':
         return (
           <AdvancedSingleTaskWidget
-            targetDate={currentDate}
+            targetDate={date}
             widget={{
               ...widget,
               title: widget.title.replace('Advanced: ', ''),
-              description: 'Advanced single task with tracker, alarm, and progress details'
+              description: widget.description
             }}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
             onHeightChange={onHeightChange}
@@ -430,7 +365,7 @@ const Dashboard = () => {
       case 'yearCalendar':
         return (
           <YearCalendarWidget
-            targetDate={currentDate}
+            targetDate={date}
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
@@ -438,51 +373,7 @@ const Dashboard = () => {
       case 'calendar':
         return (
           <CalendarWidget
-            targetDate={currentDate}
-            widget={widget}
-            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
-          />
-        );
-      case 'aiChat':
-        return (
-          <AiChatWidget
-            widget={widget}
-            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
-          />
-        );
-      case 'moodTracker':
-        return (
-          <MoodTrackerWidget
-            targetDate={currentDate}
-            widget={widget}
-            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
-          />
-        );
-      case 'allSchedules':
-        return (
-                  <AllSchedulesWidget
-          targetDate={currentDate}
-          widget={widget}
-          onHeightChange={onHeightChange}
-          onWidgetAddedToToday={(widg) => {
-            console.log('Adding widget:', widg)
-            handleAddWidget(widg)
-          }} // Data updates automatically via store
-          onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
-        />
-        );
-      case 'simpleClock':
-        return (
-          <SimpleClockWidget
-            targetDate={currentDate}
-            widget={widget}
-            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
-          />
-        );
-      case 'weatherWidget':
-        return (
-          <WeatherWidget
-            targetDate={currentDate}
+            targetDate={date}
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
@@ -490,31 +381,22 @@ const Dashboard = () => {
       case 'habitTracker':
         return (
           <HabitTrackerWidget
-            targetDate={currentDate}
+            targetDate={date}
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
-      case 'notes':
-        return (
-          <NotesWidget
-            targetDate={currentDate}
-            widget={widget}
-            onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
-          />
-        );
+      case 'pillarGraphs': // Check if this is the correct type, mostly likely 'pillarGraphs' based on component map but previously was 'pillarsGraph' in old file
       case 'pillarsGraph':
         return (
           <PillarGraphsWidget
-            targetDate={currentDate}
+            targetDate={date}
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
       default:
-        // For unimplemented widgets, show BaseWidget with placeholder content
         const config = getWidgetConfig(widget.widget_type);
-
         return (
           <BaseWidget
             title={config?.title || widget.widget_type}
@@ -536,117 +418,16 @@ const Dashboard = () => {
     }
   }
 
-  // Loading and error states are already available from useDashboardData
-  const hasError = error
-
-  // Show loading state while fetching dashboard configuration
-  if (isLoading) {
-    return (
-      <div className="h-full w-full flex flex-col">
-        <div className="px-4 py-3 flex justify-between items-center border-b bg-card shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-foreground">
-                🧠 Brainboard
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                AI-Powered Dashboard with Smart Widgets
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <h2 className="text-lg font-semibold mb-2">Loading Dashboard</h2>
-            <p className="text-muted-foreground">Fetching today's widget configuration...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error state if dashboard loading failed
-  if (hasError) {
-    return (
-      <div className="h-full w-full flex flex-col">
-        <div className="px-4 py-3 flex justify-between items-center border-b bg-card shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-foreground">
-                🧠 Brainboard
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                AI-Powered Dashboard with Smart Widgets
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => window.location.reload()}
-              className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-4xl mb-4">⚠️</div>
-            <h2 className="text-lg font-semibold mb-2">Failed to Load Dashboard</h2>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Check for loading/error passed from parent via props if needed, or simply render
+  // Since parent handles loading, we just render what we have. 
+  // If data is empty but not error, it might be loading, but we don't have that state here anymore.
+  // We can treat empty arrays as just empty dashboard.
 
   return (
-    <div className={`flex flex-col h-full w-full  bg-gradient-to-br from-yellow-100 via-sky-100 to-white text-gray-800 dark:from-indigo-900 dark:via-slate-900 dark:to-black dark:text-slate-100`}>
-      <div className="px-4 py-3 flex justify-between items-center border-b  shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold text-foreground">
-              🧠 Brainboard
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              AI-Powered Dashboard with Smart Widgets
-            </p>
-          </div>
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex flex-row">
-                <button className="text-sm text-muted-foreground" onClick={() => setCurrentDate(new Date(new Date(currentDate).setDate(new Date(currentDate).getDate() - 1)).toISOString().split('T')[0])}>
-                {'<<<'}
-                </button>
-                <span className="text-sm text-muted-foreground">
-                  {currentDate}
-                </span>
-                <button className="text-sm text-muted-foreground" onClick={() => setCurrentDate(new Date(new Date(currentDate).setDate(new Date(currentDate).getDate() + 1)).toISOString().split('T')[0])}>
-                  {'>>>'}
-                </button>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <AddWidgetButton
-            onAddWidget={handleAddWidget}
-            existingViewWidgets={allWidgetsData}
-            refreshAllWidgets={refreshAllWidgets}
-          />
-        </div>
-      </div>
-
+    <div className={`flex flex-col h-full w-full bg-transparent overflow-hidden`}>
       <div className="flex-1 overflow-auto">
         <ResponsiveGridLayout
-          className={`layout min-h-full ${true ? 'show-grid-lines' : ''}`}
+          className={`layout min-h-full`}
           breakpoints={GRID_CONFIG.breakpoints}
           cols={GRID_CONFIG.cols}
           rowHeight={GRID_CONFIG.rowHeight}
@@ -654,7 +435,7 @@ const Dashboard = () => {
           containerPadding={GRID_CONFIG.containerPadding}
           draggableHandle=".widget-drag-handle"
           compactType="vertical"
-          onLayoutChange={(layout) => handleLayoutChange(layout)}
+          onLayoutChange={handleLayoutChange}
         >
           {processWidgetsForUI.map((widget: DailyWidget) => {
             const config = getWidgetConfig(widget.widget_type);

@@ -2,16 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DailyWidget, apiService } from '../../services/api';
-
-export const categoryColors = {
-  productivity: { value: 'productivity', label: 'Productivity', color: '#3B82F6' }, // blue
-  health: { value: 'health', label: 'Health', color: '#EF4444' }, // red
-  job: { value: 'job', label: 'Job', color: '#8B5CF6' }, // purple
-  information: { value: 'information', label: 'Information', color: '#EAB308' }, // yellow
-  entertainment: { value: 'entertainment', label: 'Entertainment', color: '#EC4899' }, // pink
-  utilities: { value: 'utilities', label: 'Utilities', color: '#6B7280' }, // gray
-  personal: { value: 'personal', label: 'Personal', color: '#10B981' } // green
-};
+import { categoryColors } from './CalendarWidget';
 
 interface TaskData {
   id: string;
@@ -56,6 +47,19 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const getCategoryColor = (category: string) => {
+    category = category.toLowerCase();
+    if (!category || !categoryColors[category as keyof typeof categoryColors]) {
+      return 'gray';
+    }
+    return categoryColors[category as keyof typeof categoryColors].color;
+  };
+  // Enhanced color utilities
+  const getCategoryColorHex = (category: string): string => {
+    if (!category) return 'gray';
+    const lowerCategory = category.toLowerCase();
+    return categoryColors[lowerCategory as keyof typeof categoryColors]?.hex || '#6B7280';
+  };
   const fetchGraphData = async (year: number, month: number) => {
     try {
       setLoading(true);
@@ -76,26 +80,26 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
       // Process tasks data
       const tasks = items.filter((todo: DailyWidget) =>
         !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'notes', 'habitTracker', 'yearCalendar', 'pillarsGraph'].includes(todo.widget_type)).map(item => ({
-        id: item.daily_widget_id || item.id,
-        title: item.title,
-        category: item.category,
-        widget_id: item.widget_id,
-        date: item.date || new Date().toISOString().split('T')[0],
-        activity_data: item.activity_data,
-      }));
+          id: item.daily_widget_id || item.id,
+          title: item.title,
+          category: item.category,
+          widget_id: item.widget_id,
+          date: item.date || new Date().toISOString().split('T')[0],
+          activity_data: item.activity_data,
+        }));
 
       // Calculate category statistics
       const categoryMap = new Map<string, { added: number; completed: number }>();
-      
+
       tasks.forEach(task => {
         const category = task.category || 'personal';
         const current = categoryMap.get(category) || { added: 0, completed: 0 };
-        
+
         current.added += 1;
         if (task.activity_data?.status === 'completed') {
           current.completed += 1;
         }
-        
+
         categoryMap.set(category, current);
       });
 
@@ -244,37 +248,36 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
         <div className="flex-1 overflow-y-auto">
           <div className="flex items-end justify-between space-x-2 h-[200px] px-2">
             {graphData.categoryStats.map((stat) => {
-              const color = categoryColors[stat.category as keyof typeof categoryColors]?.color || '#6B7280';
-              const addedWidth = maxValue > 0 ? ((stat.totalAdded-stat.totalCompleted) / maxValue) * 50 : 0;
+              const color = getCategoryColorHex(stat.category);
+              const addedWidth = maxValue > 0 ? ((stat.totalAdded - stat.totalCompleted) / maxValue) * 50 : 0;
               const completedWidth = maxValue > 0 ? (stat.totalCompleted / maxValue) * 50 : 0;
               const completionRate: number = stat.totalCompleted / stat.totalAdded * 100;
               return (
                 <div key={stat.category} className="flex flex-col items-center space-y-2">
                   {/* Single Horizontal Bar with Stacked Sections */}
-                  <div className="relative" style={{  width: `50px` }}>
-                    <div 
+                  <div className="relative" style={{ width: `50px` }}>
+                    <div
                       className="h-full bg-gray-300 transition-all duration-300"
-                      style={{ height: `${100-completionRate}px` }}
+                      style={{ height: `${100 - completionRate}px` }}
                     />
-                    <div 
-                      className="h-full transition-all duration-300"
-                      style={{ 
-                        height: `${completionRate}px`, 
-                        backgroundColor: color
+                    <div
+                      className={`h-full transition-all duration-300 bg-${getCategoryColor(stat.category)}-100 border border-${getCategoryColor(stat.category)}-200`}
+                      style={{
+                        height: `${completionRate}px`,
                       }}
                     />
                   </div>
-                  
+
                   {/* Category Label */}
                   <div className="text-xs font-medium text-gray-700 text-center">
                     {categoryColors[stat.category as keyof typeof categoryColors]?.label || stat.category}
                   </div>
-                  
+
                   {/* Task Count */}
                   <div className="text-xs text-gray-500 text-center">
                     {stat.totalCompleted}/{stat.totalAdded}
                   </div>
-                  
+
                   {/* Completion Rate */}
                   <div className="text-xs text-gray-500 text-center">
                     {stat.completionRate.toFixed()}%
