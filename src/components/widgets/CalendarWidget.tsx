@@ -7,7 +7,7 @@ import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
 export const categoryColors = {
   productivity: { value: 'productivity', label: 'Productivity', color: 'blue', hex: '#5a97f8ff' },
   health: { value: 'health', label: 'Health', color: 'red', hex: '#f75d5dff' },
-  work: { value: 'work', label: 'Work', color: 'purple', hex: '#b071eaff' },
+  work: { value: 'work', label: 'Work', color: 'purple', hex: '#5500a3' },
   research: { value: 'research', label: 'Research', color: 'orange', hex: '#f97316' },
   entertainment: { value: 'entertainment', label: 'Entertainment', color: 'pink', hex: '#f772b5ff' },
   utilities: { value: 'utilities', label: 'Utilities', color: 'gray', hex: '#6b7280' },
@@ -17,7 +17,6 @@ export const categoryColors = {
   yearCalendar: { value: 'yearCalendar', label: 'Year Calendar', color: 'transparent', hex: 'transparent' },
   pillarsGraph: { value: 'pillarsGraph', label: 'Pillars Graph', color: 'transparent', hex: 'transparent' }
 };
-
 interface CalendarEvent {
   id: string;
   title: string;
@@ -83,6 +82,23 @@ const getCategoryColor = (category: string): string => {
   if (!category) return 'gray';
   const lowerCategory = category.toLowerCase();
   return categoryColors[lowerCategory as keyof typeof categoryColors]?.color || 'gray';
+};
+const getCategoryColorHex = (category: string): string => {
+  if (!category) return '#6b7280';
+  const lowerCategory = category.toLowerCase();
+  const hex = categoryColors[lowerCategory as keyof typeof categoryColors]?.hex;
+  return (hex && hex !== 'transparent' ? hex : '#6b7280') as string;
+};
+/** Returns rgba string for the category color with the given opacity (0–1). Use for stroke so fill can stay opaque. */
+const getCategoryColorWithOpacity = (category: string, opacity: number): string => {
+  const hex = getCategoryColorHex(category);
+  if (hex === 'transparent') return 'transparent';
+  const clean = hex.replace(/^#/, '');
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  console.log(r, g, b, opacity, hex);
+  return `rgba(${r},${g},${b},${opacity})`;
 };
 const getStreakSize = (day: number, totalStreakDays: number): number => {
   const position = totalStreakDays - day + 1;
@@ -257,7 +273,19 @@ const StreakIndicator = ({ streaksByCategory, size = 12 }: StreakIndicatorProps)
             className="flex items-center"
             title={`${category} streak: ${totalStreakDays} days`}
           >
-            <span
+            {totalStreakDays < 7 && (<span
+              className=""
+              style={{ fontSize: `${getStreakSize(totalStreakDays, totalStreakDays)}px` }}
+            >
+              <Flame
+                size={12}
+                fill="white"
+                stroke={getCategoryColorWithOpacity(category, totalStreakDays >= 7 ? 1 : 0.16 * totalStreakDays)}
+                strokeWidth={2}
+              />
+            </span>)}
+
+            {totalStreakDays >= 7 && (<span
               className=""
               style={{
                 fontSize: `${getStreakSize(totalStreakDays, totalStreakDays)}px`,
@@ -265,8 +293,8 @@ const StreakIndicator = ({ streaksByCategory, size = 12 }: StreakIndicatorProps)
                 opacity: totalStreakDays >= 7 ? 1 : 0.2 * totalStreakDays
               }}
             >
-              <Flame size={12} />
-            </span>
+              <span className="text-xs">🔥</span>
+            </span>)}
           </div>
         );
       })}
@@ -285,7 +313,7 @@ const Top3Indicator = ({ completed, size = 12 }: Top3IndicatorProps) => {
 
   return (
     <div className="flex items-center justify-center">
-      <ThumbsUp size={size} color='green' />
+      <ThumbsUp size={size} color='green' fill='white' />
     </div>
   );
 };
@@ -831,10 +859,10 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
                     ${!day.isCurrentMonth ? 'text-gray-300' : 'text-gray-500'}`}
                 >
                   {/* Enhanced Day Header with Streaks */}
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center relative ml-2">
                     {/* Streak Indicators */}
                     {/* Date with Circular Progress */}
-                    <div className="">
+                    <div className="absolute top-0 left-0">
                       <CircularProgress
                         isToday={day.isToday}
                         isCurrentMonth={day.isCurrentMonth}
@@ -845,46 +873,52 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
                         strokeWidth={2}
                       />
                     </div>
+
+                    {/* Enhanced Events Display */}
+                    <div className="absolute top-0 left-0 flex">
+                      <div className="flex flex-row justify-end items-center pt-4">
+                        {/* Milestone Indicator */}
+                        {day.isCurrentMonth && day.milestonesAchieved?.size > 0 && (
+                          <div>
+                            {Array.from(day.milestonesAchieved).map((milestone) => (
+                              <div key={milestone.id} className="">
+                                <Trophy size={12} color={getCategoryColor(milestone.category)} 
+                                 />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Milestone Indicator */}
+                        {day.isCurrentMonth && day.milestones?.size > 0 && (
+                          <div className="">
+                            {Array.from(day.milestones).map((milestone) => {
+                              console.log("milestone", milestone, day.date, milestone.date);
+                              return (
+                              <div key={milestone.id+milestone.date} className="">
+                                <Trophy size={12}  fill='white' 
+                                stroke={getCategoryColor(milestone.category)} strokeWidth={2} />
+                              </div>
+                            )})}
+                          </div>
+                        )}
+
+
+                        {/* Top 3 Indicator */}
+                        {day.isCurrentMonth && day.top3Completed && (
+                          <div className="">
+                            <Top3Indicator completed={day.top3Completed} size={10} />
+                          </div>
+                        )}
+                        {day.isCurrentMonth && day.streaksByCategory && day.streaksByCategory.size > 0 && (
+                          <div className="">
+                            <StreakIndicator streaksByCategory={day.streaksByCategory} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Enhanced Events Display */}
-                  <div className="flex flex-row justify-center items-center">
-                    {/* Milestone Indicator */}
-                    {day.isCurrentMonth && day.milestonesAchieved?.size > 0 && (
-                      <div>
-                        {Array.from(day.milestonesAchieved).map((milestone) => (
-                          <div key={milestone.id} className="">
-                            <Trophy size={10} color={getCategoryColor(milestone.category)} />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Milestone Indicator */}
-                    {day.isCurrentMonth && day.milestones?.size > 0 && (
-                      <div className="">
-                        {Array.from(day.milestones).map((milestone) => (
-                          <div key={milestone.id} className="">
-                            <Trophy size={10} color={getCategoryColor(milestone.category)} />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-
-                    {/* Top 3 Indicator */}
-                    {day.isCurrentMonth && day.top3Completed && (
-                      <div className="">
-                        <Top3Indicator completed={day.top3Completed} size={10} />
-                      </div>
-                    )}
-                    {day.isCurrentMonth && day.streaksByCategory && day.streaksByCategory.size > 0 && (
-                      <div className="">
-                        <StreakIndicator streaksByCategory={day.streaksByCategory} />
-                      </div>
-                    )}
-
-                  </div>
 
                 </div>
               ))}

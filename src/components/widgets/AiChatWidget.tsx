@@ -115,15 +115,6 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     };
   }, []);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Focus input on mount
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isProcessing || !isConnected) {
@@ -297,9 +288,9 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
       onRemove={onRemove}
       className="flex flex-col"
     >
-      <div className="flex-1 flex flex-col h-full">
+      <div className="flex-1 flex flex-col min-h-[300px] h-full">
         {/* Header with connection status */}
-        <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+        <div className="flex items-center justify-between px-4 border-b bg-muted/30">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
               isConnected ? 'bg-green-500' : 'bg-red-500'
@@ -319,31 +310,33 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
         </div>
 
         {/* Messages container */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto pt-1">
           {messages.map((message) => renderMessage(message))}
           <div ref={messagesEndRef} />
         </div>
 
         {/* Input area */}
-        <div className="border-t bg-muted/30 p-4">
-          <div className="flex items-end gap-2">
-            <div className="flex-1 relative">
+        <div className="border-t bg-muted/30">
+          <div className="flex items-end gap-1">
+            <div className="flex-1 relative ">
               <textarea
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={(e) => handleKeyPress(e)}
+                onFocus={() => {
+                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }}
                 placeholder="Ask me anything... (Shift+Enter for new line)"
-                className="w-full resize-none border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                rows={1}
-                style={{ minHeight: '40px', maxHeight: '120px' }}
+                className="w-full resize-none  px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                rows={2}
                 disabled={!isConnected}
               />
             </div>
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isProcessing || !isConnected}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-2 py-1  bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isProcessing ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

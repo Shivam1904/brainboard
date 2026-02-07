@@ -283,8 +283,8 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskLi
               <div
                 key={task.id}
                 className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${task.completed
-                  ? `bg-${getCategoryColor(task.category)}-100 border border-${getCategoryColor(task.category)}-200 rounded-lg border-gray-200`
-                  : `bg-${getCategoryColor(task.category)}-100 border border-${getCategoryColor(task.category)}-200 rounded-lg hover:border-${getCategoryColor(task.category)}-300`
+                  ? ` rounded-lg border-gray-200`
+                  : ` rounded-lg hover:border-${getCategoryColor(task.category)}-300`
                   }`}
               >
                 <button

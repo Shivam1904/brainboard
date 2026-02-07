@@ -151,11 +151,6 @@ body {
   overflow: hidden;
 }
 
-.react-grid-item:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  border: 1px solid hsl(var(--border));
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
 
 .react-grid-item.cssTransforms {
   transition-property: transform;

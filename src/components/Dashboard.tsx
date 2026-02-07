@@ -219,7 +219,8 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
     setComputedPositions(positions)
   }, [processWidgetsForUI, sizeOverrides, getSavedLayout])
 
-  const onHeightChange = useCallback((dailyWidgetId: string, newHeight: number) => {
+  const onHeightChange = useCallback((dailyWidgetId: string, nh: number) => {
+    const newHeight = nh + 0.5;
     if (lastHeightValues.current[dailyWidgetId] !== newHeight) {
       lastHeightValues.current[dailyWidgetId] = newHeight
       setSizeOverrides((prev) => ({

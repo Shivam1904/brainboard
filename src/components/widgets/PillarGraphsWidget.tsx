@@ -200,9 +200,9 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
 
   return (
     <BaseWidget title={widget.title || "Pillar Graphs"} icon="📊" onRemove={onRemove}>
-      <div className="flex flex-col px-4 pt-4 h-full">
+      <div className="flex flex-col px-4 h-full">
         {/* Header */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button
               onClick={() => navigateMonth('prev')}
@@ -228,21 +228,6 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
           </button>
         </div>
 
-        {/* Summary Stats */}
-        {false && (<div className="grid grid-cols-3 gap-2 mb-4 text-center">
-          <div className="bg-blue-50 p-2 rounded">
-            <div className="text-lg font-bold text-blue-600">{graphData?.totalTasks}</div>
-            <div className="text-xs text-blue-500">Total Tasks</div>
-          </div>
-          <div className="bg-green-50 p-2 rounded">
-            <div className="text-lg font-bold text-green-600">{graphData?.totalCompleted}</div>
-            <div className="text-xs text-green-500">Completed</div>
-          </div>
-          <div className="bg-purple-50 p-2 rounded">
-            <div className="text-lg font-bold text-purple-600">{graphData?.overallCompletionRate.toFixed(1)}%</div>
-            <div className="text-xs text-purple-500">Success Rate</div>
-          </div>
-        </div>)}
 
         {/* Bar Charts */}
         <div className="flex-1 overflow-y-auto">
@@ -253,7 +238,7 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
               const completedWidth = maxValue > 0 ? (stat.totalCompleted / maxValue) * 50 : 0;
               const completionRate: number = stat.totalCompleted / stat.totalAdded * 100;
               return (
-                <div key={stat.category} className="flex flex-col items-center space-y-2">
+                <div key={stat.category} className="flex flex-col items-center">
                   {/* Single Horizontal Bar with Stacked Sections */}
                   <div className="relative" style={{ width: `50px` }}>
                     <div
@@ -273,14 +258,9 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
                     {categoryColors[stat.category as keyof typeof categoryColors]?.label || stat.category}
                   </div>
 
-                  {/* Task Count */}
-                  <div className="text-xs text-gray-500 text-center">
-                    {stat.totalCompleted}/{stat.totalAdded}
-                  </div>
-
                   {/* Completion Rate */}
                   <div className="text-xs text-gray-500 text-center">
-                    {stat.completionRate.toFixed()}%
+                    {stat.completionRate.toFixed()}% <br></br>{stat.totalCompleted}/{stat.totalAdded}
                   </div>
                 </div>
               );

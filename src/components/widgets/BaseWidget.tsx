@@ -30,17 +30,17 @@ const BaseWidget = ({
       setHover(false);
     }}
     >
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col mt-6">
       {/* Header with title and delete button */}
-      {hover && (<div className="absolute top-0 right-0 flex items-center px-2 py-1 bg-card/50 rounded-t-lg">
+      {hover && (<div className="absolute top-0 right-0 flex items-center ">
         <div className="widget-drag-handle items-center justify-end w-full">
           {/* Drag handle - ONLY this area is draggable */}
-          {hover && (<div 
+          <div 
             className="flex-1 min-h-[24px] cursor-move mx-4 flex items-center justify-end text-muted-foreground/50 hover:text-muted-foreground/80 transition-colors" 
             title="Drag to move widget"
           >
             <span className="text-xs select-none">⋮⋮</span>
-          </div>)}
+          </div>
         </div>
         <div className="flex items-center gap-1">
           {onRefresh && (
@@ -64,7 +64,7 @@ const BaseWidget = ({
       </div>)}
 
       {/* Content area */}
-      <div className="flex-1 overflow-hidden min-h-0">
+      <div className="flex-1 overflow-hidden min-h-0 mb-2">
         <div className="flex h-full flex-col">
           {children}
         </div>

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAllWidgetsData, useTodayWidgetsData } from '../hooks/useDashboardData';
 import { useDashboardActions } from '../stores/dashboardStore';
 import { DashboardWidget, apiService } from '../services/api';
-import { Plus, Minus, AlertCircle, MinusCircle, ArrowDownCircle, CalendarIcon } from 'lucide-react';
+import { Plus, Minus, AlertCircle, MinusCircle, ArrowDownCircle, CalendarIcon, ListOrdered } from 'lucide-react';
 import { categoryColors } from './widgets/CalendarWidget';
 import { handleRemoveWidgetUtil } from '../utils/widgetUtils';
 
@@ -12,6 +12,8 @@ interface WidgetPriorityInfo {
   priority: WidgetPriority;
   reason: string;
 }
+
+const PRIORITY_ORDER: Record<WidgetPriority, number> = { critical: 0, medium: 1, low: 2 };
 
 interface PlanTodayProps {
     date: string;
@@ -28,6 +30,7 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
     const [todayWidgetIds, setTodayWidgetIds] = useState<string[]>([]);
     const [widgetPriorities, setWidgetPriorities] = useState<Record<string, WidgetPriorityInfo>>({});
     const [priorityLoading, setPriorityLoading] = useState<Record<string, boolean>>({});
+    const [sortByPriority, setSortByPriority] = useState(true);
 
     useEffect(() => {
         if (todayWidgets) {
@@ -115,11 +118,18 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
     const trackerWidgets = allWidgets.filter(widget => {
         const type = widget.widget_type;
         const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar', 'pillarsGraph', 'habitTracker']);
-
-        console.log("trackerWidgets", widget);
-        // Exclude trackers and utilities
         return trackerTypes.has(type);
     });
+
+    // Sorted missions: by priority (critical first) when enabled, else list order
+    const sortedMissions = useMemo(() => {
+        if (!sortByPriority) return missionWidgets;
+        return [...missionWidgets].sort((a, b) => {
+            const pa = widgetPriorities[a.id]?.priority ?? 'medium';
+            const pb = widgetPriorities[b.id]?.priority ?? 'medium';
+            return PRIORITY_ORDER[pa] - PRIORITY_ORDER[pb];
+        });
+    }, [missionWidgets, sortByPriority, widgetPriorities]);
 
     /* Remove early return for loading to prevent scroll loss */
     // if (isLoadingAll || isLoadingToday) {
@@ -130,144 +140,173 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
     //     );
     // }
 
+    const linkedTrackers = (widget: DashboardWidget) =>
+        trackerWidgets.filter(
+            w =>
+                w.id === widget.widget_config?.selected_calendar ||
+                w.id === widget.widget_config?.selected_habit_calendar ||
+                w.id === widget.widget_config?.selected_yearly_calendar
+        );
+
     return (
-        <div className="flex flex-col h-screen w-full">
-            <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3">
-                    <button onClick={onClose} className="bg-gray-200 text-primary px-2 py-1 rounded-lg">X</button>
-                    <h2 className="text-md ">Select Missions for <span className="font-bold">{currentDate}</span></h2>
+        <div className="flex flex-col h-full min-h-0 w-full">
+            {/* Sticky header */}
+            <div className="shrink-0 flex items-center justify-between gap-3 py-2 pr-1 border-b border-border/60 bg-background">
+                <div className="flex items-center gap-2 min-w-0">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="shrink-0 size-8 flex items-center justify-center rounded-lg bg-muted text-muted-foreground hover:bg-muted/80"
+                        aria-label="Close"
+                    >
+                        ×
+                    </button>
+                    <h2 className="text-sm font-medium truncate">
+                        Missions for <span className="font-semibold text-foreground">{currentDate}</span>
+                    </h2>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                        {sortedMissions.length} {sortedMissions.length === 1 ? 'mission' : 'missions'}
+                    </span>
                 </div>
-                {(isLoadingAll || isLoadingToday) && (
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                    {(isLoadingAll || isLoadingToday) && (
+                        <div className="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => setSortByPriority(p => !p)}
+                        className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${sortByPriority ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                        title={sortByPriority ? 'Sorted by priority (Critical first)' : 'List order'}
+                    >
+                        <ListOrdered className="size-3.5" />
+                        {sortByPriority ? 'Priority' : 'Order'}
+                    </button>
+                </div>
             </div>
 
-            <div className="flex flex-col gap-2 overflow-y-auto pb-4 custom-scrollbar">
-                {missionWidgets.map(widget => {
-                    const isAdded = todayWidgetIds.includes(widget.id);
-                    const categoryColor = getCategoryColor(widget.category);
+            {/* Scrollable list — compact cards that scale from 5 to 30 */}
+            <div className="flex-1 min-h-0 overflow-y-auto py-3 px-1 custom-scrollbar">
+                <ul className="flex flex-col gap-2">
+                    {sortedMissions.map(widget => {
+                        const isAdded = todayWidgetIds.includes(widget.id);
+                        const categoryColor = getCategoryColor(widget.category);
+                        const trackers = linkedTrackers(widget);
+                        const priorityInfo = widgetPriorities[widget.id];
+                        const loading = priorityLoading[widget.id];
 
-                    return (
-                        <div
-                            key={widget.id}
-                            onClick={() => handleToggleWidget(widget)}
-
-                            className={`py-2 px-3 rounded-xl border transition-all duration-200 bg-card hover:shadow-sm  ${isAdded ? 'border-primary/50 bg-primary/5' : 'border-border/60'}`}
-                        >
-                            <div className="flex items-center justify-between gap-3"
-                                    >
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                        
-                                        <span className="font-semibold text-sm truncate">{widget.title}</span>
-                                    {widget.description && (
-                                        <span className="text-xs text-muted-foreground line-clamp-1 ml-1">{widget.description}</span>
-                                    )}
+                        return (
+                            <li
+                                key={widget.id}
+                                className={`rounded-xl border transition-all duration-200 bg-card hover:shadow-sm cursor-pointer ${isAdded ? 'border-primary/50 bg-primary/5' : 'border-border/60'}`}
+                                onClick={() => handleToggleWidget(widget)}
+                            >
+                                <div className="py-2 px-3">
+                                    {/* Row 1: Title + category + add/remove */}
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-semibold text-sm truncate">{widget.title}</p>
+                                            {widget.description ? (
+                                                <p className="text-xs text-muted-foreground truncate mt-0.5">{widget.description}</p>
+                                            ) : null}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <span
+                                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wider"
+                                                style={{ backgroundColor: `${categoryColor}18`, color: categoryColor }}
+                                            >
+                                                {widget.category || 'General'}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    handleToggleWidget(widget);
+                                                }}
+                                                disabled={processingWidget === widget.id}
+                                                className={`p-1.5 rounded-lg transition-colors shrink-0 ${isAdded ? ' hover:bg-destructive/20' : processingWidget === widget.id ? 'text-muted-foreground cursor-wait' : 'text-muted-foreground hover:bg-primary hover:text-primary-foreground'}`}
+                                                aria-label={isAdded ? 'Remove from today' : 'Add to today'}
+                                            >
+                                                {processingWidget === widget.id ? (
+                                                    <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                ) : isAdded ? (
+                                                    <Minus className="size-4" />
+                                                ) : (
+                                                    <Plus className="size-4" />
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
-                                    {/* Past performance: priority + reason */}
-                                    <div className="mt-1.5 ml-1 flex flex-wrap items-center gap-1.5">
-                                        {priorityLoading[widget.id] ? (
+                                    {/* Row 2: Priority badge + reason (single line) */}
+                                    <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                                        {loading ? (
                                             <span className="text-[10px] text-muted-foreground">Loading…</span>
-                                        ) : widgetPriorities[widget.id] ? (
+                                        ) : priorityInfo ? (
                                             <>
-                                                <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${priorityStyles[widgetPriorities[widget.id].priority].bg} ${priorityStyles[widgetPriorities[widget.id].priority].text}`}>
-                                                    {priorityStyles[widgetPriorities[widget.id].priority].icon}
-                                                    {priorityStyles[widgetPriorities[widget.id].priority].label}
+                                                <span
+                                                    className={`shrink-0 inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${priorityStyles[priorityInfo.priority].bg} ${priorityStyles[priorityInfo.priority].text}`}
+                                                >
+                                                    {priorityStyles[priorityInfo.priority].icon}
+                                                    {priorityStyles[priorityInfo.priority].label}
                                                 </span>
-                                                <span className="text-[10px] text-muted-foreground line-clamp-2" dangerouslySetInnerHTML={{ __html: widgetPriorities[widget.id].reason }}></span>
+                                                <span
+                                                    className="text-[10px] text-muted-foreground truncate"
+                                                    dangerouslySetInnerHTML={{ __html: priorityInfo.reason }}
+                                                />
                                             </>
                                         ) : null}
                                     </div>
-                                </div>
-                                <span
-                                            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0"
-                                            style={{
-                                                backgroundColor: `${categoryColor}20`,
-                                                color: categoryColor
-                                            }}
-                                        >
-                                            {widget.category || 'General'}
-                                        </span>
-                                <button
-                                    onClick={() => handleToggleWidget(widget)}
-                                    disabled={processingWidget === widget.id}
-                                    className={`p-1.5 rounded-lg transition-all shrink-0 ${isAdded
-                                        ? 'text-destructive bg-destructive/10 hover:bg-destructive/20'
-                                        : processingWidget === widget.id
-                                            ? 'text-muted-foreground animate-pulse cursor-wait'
-                                            : 'text-muted-foreground hover:bg-primary hover:text-primary-foreground'
-                                        }`}
-                                >
-                                    {processingWidget === widget.id ? (
-                                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                    ) : isAdded ? (
-                                        <Minus className="w-4 h-4" />
-                                    ) : (
-                                        <Plus className="w-4 h-4" />
-                                    )}
-                                </button>
-                                
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {trackerWidgets.filter(w => w.id === widget.widget_config?.selected_calendar || w.id === widget.widget_config?.selected_habit_calendar || w.id === widget.widget_config?.selected_yearly_calendar).map(trackerWidget => {
-                                    const isAdded = todayWidgetIds.includes(trackerWidget.id);
-
-                                    return (
-                                        <div
-                                            key={trackerWidget.id}
-                                            className={`py-1 px-2 rounded-md  transition-all duration-200  bg-card hover:shadow-sm  ${isAdded ? 'border border-primary/50 bg-primary/5' : ''}`}
-                                        >
-                                            <div className="flex items-center justify-between gap-3"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleToggleWidget(trackerWidget);
-                                                    }}
+                                    {/* Row 3: Tracker chips (compact horizontal wrap) */}
+                                    {trackers.length > 0 ? (
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {trackers.map(trackerWidget => {
+                                                const trackerAdded = todayWidgetIds.includes(trackerWidget.id);
+                                                return (
+                                                    <button
+                                                        key={trackerWidget.id}
+                                                        type="button"
+                                                        onClick={e => {
+                                                            e.stopPropagation();
+                                                            handleToggleWidget(trackerWidget);
+                                                        }}
+                                                        disabled={processingWidget === trackerWidget.id}
+                                                        className={`inline-flex items-center gap-1.5 py-1 px-2 rounded-lg border text-xs transition-colors ${trackerAdded ? 'border-primary/50 bg-primary/5 text-primary' : 'border-border/60 bg-muted/50 text-muted-foreground hover:border-primary/40 hover:bg-muted'}`}
                                                     >
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-1 mb-0.5 text-gray-500">
-                                                        <CalendarIcon className="w-3 h-3" />
-                                                        <p className="text-xs truncate">{trackerWidget.title}</p>
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    disabled={processingWidget === trackerWidget.id}
-                                                    className={`p-1 rounded-lg transition-all shrink-0 ${isAdded
-                                                        ? 'text-destructive bg-destructive/10 hover:bg-destructive/20'
-                                                        : processingWidget === trackerWidget.id
-                                                            ? 'text-muted-foreground animate-pulse cursor-wait'
-                                                            : 'text-muted-foreground hover:bg-primary hover:text-primary-foreground'
-                                                        }`}
-                                                >
-                                                    {processingWidget === trackerWidget.id ? (
-                                                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                                    ) : isAdded ? (
-                                                        <Minus className="w-4 h-4" />
-                                                    ) : (
-                                                        <Plus className="w-4 h-4" />
-                                                    )}
-                                                </button>
-                                            </div>
-
+                                                        <CalendarIcon className="size-3 shrink-0" />
+                                                        <span className="truncate max-w-[120px]">{trackerWidget.title}</span>
+                                                        {processingWidget === trackerWidget.id ? (
+                                                            <div className="size-3 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+                                                        ) : trackerAdded ? (
+                                                            <Minus className="size-3 shrink-0" />
+                                                        ) : (
+                                                            <Plus className="size-3 shrink-0" />
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                    ) : null}
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
 
-                        </div>
-                    );
-                })}
-
-                {missionWidgets.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                        <p className="text-sm">No missions found. Create some widgets first!</p>
+                {sortedMissions.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                        <p className="text-sm">No missions found. Create widgets to use as missions.</p>
                     </div>
                 )}
             </div>
-            <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3">
-                    <button onClick={onClose} className="bg-primary text-primary-foreground px-2 py-1 rounded-lg">Done</button>
-                </div>
+
+            {/* Sticky footer */}
+            <div className="shrink-0 flex justify-end py-3 px-1 border-t border-border/60 bg-background">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+                >
+                    Done
+                </button>
             </div>
         </div>
     );

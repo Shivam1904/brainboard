@@ -454,7 +454,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
       <div
         className={`flex flex-1 h-full p-2 flex-col overflow-y-auto rounded-lg transition-all ${isAlerting
           ? 'bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 text-white animate-pulse'
-          : `bg-${getCategoryColor(widgetData.category)}-100 border border-${getCategoryColor(widgetData.category)}-200 rounded-lg`
+          : `border border-gray-200 rounded-lg`
           }`}
       >
         {/* Error Indicator */}
@@ -485,7 +485,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
                 {widgetData.title}
               </h4>
               {widgetData.category && (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium text-${getCategoryColor(widgetData.category)}-800  `}>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium text-${getCategoryColor(widgetData.category)}-800 bg-${getCategoryColor(widgetData.category)}-100 border border-${getCategoryColor(widgetData.category)}-200   `}>
                   {widgetData.category}
                 </span>
               )}

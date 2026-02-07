@@ -252,55 +252,54 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
                         return (
                           <div
                             key={widget.id}
-                            className={`relative p-2 ${isAdded
+                            className={`fp-2 ${isAdded
                               ? 'font-bold'
                               : 'font-normal'
                               }`}
                           >
-                            <div className="flex items-start justify-between">
-                              <div className=" flex-1 min-w-0 ">
-                                <div className="flex items-center ">
-                                  <span className={`text-xs truncate text-${getCategoryColor(widget.category)}-600`}>{widget.title}</span>
+                            <div className="flex lex flex-row justify-between ">
 
-                                </div>
+                              <span className={`text-xs }`}>
+                                {widget.title}
+                              </span>
+                              <div className="flex items-center gap-2">
 
-                              </div>
+                                {widget.category && (
+                                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium text-${getCategoryColor(widget.category)}-800 bg-${getCategoryColor(widget.category)}-100`}>
+                                    {widget.category}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => handleEditWidget(widget)}
+                                  className="px-2 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                  title="Edit baseline"
+                                >
+                                  <Pen className='w-3 h-3' />
+                                </button>
 
-                            </div>
-
-                            <div className="absolute right-0 top-0 flex items-center">
-                              <div className='flex flex-col'>
-                                <div className='flex '>
-                                  <button
-                                    onClick={() => handleEditWidget(widget)}
-                                    className="px-2 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                                    title="Edit baseline"
-                                  >
-                                    <Pen className='w-3 h-3' />
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleAddToToday(widget, targetDate)}
-                                    disabled={addingToToday === widget.id || isAdded}
-                                    className={`px-2 rounded-lg transition-all ${isAdded
-                                      ? 'text-primary bg-primary/10'
-                                      : addingToToday === widget.id
-                                        ? 'text-muted-foreground animate-pulse'
-                                        : 'text-emerald-500 hover:bg-emerald-500/10 hover:shadow-inner'
-                                      }`}
-                                    title={isAdded ? 'Already active today' : 'Add to today'}
-                                  >
-                                    {addingToToday === widget.id ? (
-                                      <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                    ) : isAdded ? (
-                                      <Check className='w-4 h-4' />
-                                    ) : (
-                                      <Plus className='w-4 h-4' />
-                                    )}
-                                  </button>
-                                </div>
+                                <button
+                                  onClick={() => handleAddToToday(widget, targetDate)}
+                                  disabled={addingToToday === widget.id || isAdded}
+                                  className={`px-2 rounded-lg transition-all ${isAdded
+                                    ? 'text-primary bg-primary/10'
+                                    : addingToToday === widget.id
+                                      ? 'text-muted-foreground animate-pulse'
+                                      : 'text-emerald-500 hover:bg-emerald-500/10 hover:shadow-inner'
+                                    }`}
+                                  title={isAdded ? 'Already active today' : 'Add to today'}
+                                >
+                                  {addingToToday === widget.id ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                  ) : isAdded ? (
+                                    <Check className='w-4 h-4' />
+                                  ) : (
+                                    <Plus className='w-4 h-4' />
+                                  )}
+                                </button>
                               </div>
                             </div>
+
+
                           </div>
                         );
                       })}
