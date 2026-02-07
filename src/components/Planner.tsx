@@ -5,7 +5,7 @@ interface PlannerProps {
     date: string;
     isPlanning?: boolean;
     onStartPlanning?: () => void;
-    onEndPlanning?: () => void;
+    onEndPlanning: () => void;
 }
 
 const Planner = ({ date, isPlanning, onStartPlanning, onEndPlanning }: PlannerProps) => {
@@ -13,7 +13,7 @@ const Planner = ({ date, isPlanning, onStartPlanning, onEndPlanning }: PlannerPr
     // To simplifiy, we assume NewDashboard is the primary user and provides props.
 
     if (isPlanning) {
-        return <PlanToday date={date} onClose={() => onEndPlanning?.()} />;
+        return <PlanToday date={date} onClose={onEndPlanning} />;
     }
 
     return (

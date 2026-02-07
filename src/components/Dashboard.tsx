@@ -265,50 +265,48 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
       // Actually, the util handles the core logic. 
       // For the associated websearch removal, it requires finding the websearch widget ID.
 
-      if (confirm(`Are you sure you want to remove this advanced single task widget? This will also remove the associated web search widget if it exists.`)) {
-        try {
-          await removeWidgetFromToday(dailyWidgetId, date);
+      try {
+        await removeWidgetFromToday(dailyWidgetId, date);
 
-          // Logic for removing associated web search
-          // In original code: const webSearchWidgetId = `websearch-${widget.id}`;
-          // But widget.id in processed UI was `advanced-${real_id}`.
-          // dailyWidgetId passed here is real `daily_widget_id`.
-          // The websearch widget in UI list would have id `websearch-${dailyWidgetId}` approx?
-          // Original: const webSearchWidgetId = `websearch-${widget.id}`; 
-          // Wait, widget found via find(daily_widget_id) has `id` overridden to `advanced-...` (line 125).
-          // So websearch ID constructed is `websearch-advanced-...` ??
-          // Line 138: id: `websearch-${widget.daily_widget_id}`.
-          // Original code line 272: `websearch-${widget.id}`. If widget.id is `advanced-...`, this is `websearch-advanced-...`.
-          // BUT checks `processWidgetsForUI.find(w => w.daily_widget_id === webSearchWidgetId)`.
-          // `daily_widget_id` for websearch widget (line 138) is `websearch-${widget.daily_widget_id}`.
-          // So it seems it constructs an ID to find the UI element?
+        // Logic for removing associated web search
+        // In original code: const webSearchWidgetId = `websearch-${widget.id}`;
+        // But widget.id in processed UI was `advanced-${real_id}`.
+        // dailyWidgetId passed here is real `daily_widget_id`.
+        // The websearch widget in UI list would have id `websearch-${dailyWidgetId}` approx?
+        // Original: const webSearchWidgetId = `websearch-${widget.id}`; 
+        // Wait, widget found via find(daily_widget_id) has `id` overridden to `advanced-...` (line 125).
+        // So websearch ID constructed is `websearch-advanced-...` ??
+        // Line 138: id: `websearch-${widget.daily_widget_id}`.
+        // Original code line 272: `websearch-${widget.id}`. If widget.id is `advanced-...`, this is `websearch-advanced-...`.
+        // BUT checks `processWidgetsForUI.find(w => w.daily_widget_id === webSearchWidgetId)`.
+        // `daily_widget_id` for websearch widget (line 138) is `websearch-${widget.daily_widget_id}`.
+        // So it seems it constructs an ID to find the UI element?
 
-          // Let's simplify. If we just blindly try to remove the websearch widget that matches the task...
-          // The `removeWidgetFromToday` needs a DB ID.
-          // The websearch widget "Activity" in DB has its own daily_widget_id.
-          // The UI construction fakes a daily_widget_id for websearch: `websearch-${widget.daily_widget_id}` (line 138).
-          // This fake ID is NOT in the DB. `removeWidgetFromToday` with a fake ID will fail or do nothing on backend?
-          // Line 138: `id: websearch-${widget.daily_widget_id}, daily_widget_id: websearch-${widget.daily_widget_id}`...
-          // If these are not real DB items, how did `handleRemoveWidget` work before?
-          // It calls `removeWidgetFromToday(webSearchWidgetId, date)`.
-          // Does the backend handle 'websearch-...' IDs? Or is `removeWidgetFromToday` handling it?
-          // `removeWidgetFromToday` calls API.
+        // Let's simplify. If we just blindly try to remove the websearch widget that matches the task...
+        // The `removeWidgetFromToday` needs a DB ID.
+        // The websearch widget "Activity" in DB has its own daily_widget_id.
+        // The UI construction fakes a daily_widget_id for websearch: `websearch-${widget.daily_widget_id}` (line 138).
+        // This fake ID is NOT in the DB. `removeWidgetFromToday` with a fake ID will fail or do nothing on backend?
+        // Line 138: `id: websearch-${widget.daily_widget_id}, daily_widget_id: websearch-${widget.daily_widget_id}`...
+        // If these are not real DB items, how did `handleRemoveWidget` work before?
+        // It calls `removeWidgetFromToday(webSearchWidgetId, date)`.
+        // Does the backend handle 'websearch-...' IDs? Or is `removeWidgetFromToday` handling it?
+        // `removeWidgetFromToday` calls API.
 
-          // If the websearch widget is purely client-side generated (implied by "makeWidget" in "processWidgetsForUI"),
-          // then we don't need to call API to remove it? It disappears when the main task is removed (re-render).
-          // Yes, line 134 loops validWidgets. If task is removed from DB, validWidgets won't have it, so no websearch generated.
-          // So the API call `removeWidgetFromToday(webSearchWidgetId)` in original code might have been redundant or failing silently?
-          // UNLESS the websearch widget IS persisted.
-          // Line 134: `if (cfg.include_websearch_details)`. This is config on the TASK widget.
-          // So removing the task widget removes the config source.
-          // So we just need to remove the task widget.
+        // If the websearch widget is purely client-side generated (implied by "makeWidget" in "processWidgetsForUI"),
+        // then we don't need to call API to remove it? It disappears when the main task is removed (re-render).
+        // Yes, line 134 loops validWidgets. If task is removed from DB, validWidgets won't have it, so no websearch generated.
+        // So the API call `removeWidgetFromToday(webSearchWidgetId)` in original code might have been redundant or failing silently?
+        // UNLESS the websearch widget IS persisted.
+        // Line 134: `if (cfg.include_websearch_details)`. This is config on the TASK widget.
+        // So removing the task widget removes the config source.
+        // So we just need to remove the task widget.
 
-          // I will proceed with just removing the main widget using the util.
+        // I will proceed with just removing the main widget using the util.
 
-        } catch (error) {
-          console.error('Failed to remove widget:', error);
-          alert('Failed to remove widget.');
-        }
+      } catch (error) {
+        console.error('Failed to remove widget:', error);
+        alert('Failed to remove widget.');
       }
       return;
     }

@@ -15,7 +15,7 @@ import Dashboard from './Dashboard'
 import Planner from './Planner'
 import { handleRemoveWidgetUtil } from '../utils/widgetUtils'
 
-const MainContent = ({ date, allWidgets, todayWidgets }: { date: string, allWidgets: DashboardWidget[], todayWidgets: DailyWidget[] }) => {
+const MainContent = ({ date, allWidgets, todayWidgets, refreshAllWidgets }: { date: string, allWidgets: DashboardWidget[], todayWidgets: DailyWidget[], refreshAllWidgets: () => void }) => {
     const [isPlanning, setIsPlanning] = useState(false)
 
     // Reset planning mode if widgets are cleared (optional, but keeps logic clean)
@@ -30,7 +30,10 @@ const MainContent = ({ date, allWidgets, todayWidgets }: { date: string, allWidg
                     date={date}
                     isPlanning={isPlanning}
                     onStartPlanning={() => setIsPlanning(true)}
-                    onEndPlanning={() => setIsPlanning(false)}
+                    onEndPlanning={() => {
+                        setIsPlanning(false)
+                        refreshAllWidgets()
+                    }}
                 />
             </div>
         )
@@ -38,7 +41,8 @@ const MainContent = ({ date, allWidgets, todayWidgets }: { date: string, allWidg
 
     return (
         <div className="flex-1 h-full">
-            <Dashboard date={date} allWidgets={allWidgets} todayWidgets={todayWidgets} />
+            <button onClick={() => setIsPlanning(true)} className="bg-primary text-primary-foreground px-2 py-1 rounded-lg">Plan</button>
+            <Dashboard date={date} allWidgets={allWidgets} todayWidgets={todayWidgets} refreshAllWidgets={refreshAllWidgets} />
         </div>
     )
 }
@@ -247,13 +251,14 @@ const NewDashboard = () => {
         return { data, isExpanded };
     }
 
-    if (isLoading) {
-        return (
-            <div className="h-full w-full flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
-        )
-    }
+    /* Remove early return for isLoading to prevent layout unmounting and scroll loss */
+    // if (isLoading) {
+    //     return (
+    //         <div className="h-full w-full flex items-center justify-center">
+    //             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    //         </div>
+    //     )
+    // }
 
     if (error) {
         return (
@@ -289,6 +294,12 @@ const NewDashboard = () => {
                 </div>
 
                 <div className="flex items-center gap-6">
+                    {isLoading && (
+                        <div className="flex items-center gap-2 text-primary animate-pulse">
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-[10px] font-medium uppercase tracking-wider">Syncing...</span>
+                        </div>
+                    )}
                     <div className="flex items-center gap-3 bg-muted/50 px-3 py-1 rounded-full border border-border/50">
                         <button className="hover:text-primary transition-colors" onClick={() => setCurrentDate(new Date(new Date(currentDate).setDate(new Date(currentDate).getDate() - 1)).toISOString().split('T')[0])}>
                             ‹
@@ -327,7 +338,7 @@ const NewDashboard = () => {
 
                 {/* Center Main Area */}
                 <div className="flex-1 flex flex-col">
-                    <MainContent date={currentDate} allWidgets={allWidgetsData} todayWidgets={todayWidgetsData} />
+                    <MainContent date={currentDate} allWidgets={allWidgetsData} todayWidgets={todayWidgetsData} refreshAllWidgets={refreshAllWidgets} />
                 </div>
 
                 {/* Right Sidebar */}

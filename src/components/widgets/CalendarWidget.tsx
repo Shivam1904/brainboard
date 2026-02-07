@@ -5,13 +5,11 @@ import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
 
 
 export const categoryColors = {
-  productivity: { value: 'productivity', label: 'Productivity', color: 'blue', hex: '#3b82f6' },
-  health: { value: 'health', label: 'Health', color: 'red', hex: '#ef4444' },
-  job: { value: 'job', label: 'Job', color: 'purple', hex: '#a855f7' },
-  work: { value: 'work', label: 'Work', color: 'purple', hex: '#a855f7' },
+  productivity: { value: 'productivity', label: 'Productivity', color: 'blue', hex: '#5a97f8ff' },
+  health: { value: 'health', label: 'Health', color: 'red', hex: '#f75d5dff' },
+  work: { value: 'work', label: 'Work', color: 'purple', hex: '#b071eaff' },
   research: { value: 'research', label: 'Research', color: 'orange', hex: '#f97316' },
-  information: { value: 'information', label: 'Information', color: 'yellow', hex: '#eab308' },
-  entertainment: { value: 'entertainment', label: 'Entertainment', color: 'pink', hex: '#ec4899' },
+  entertainment: { value: 'entertainment', label: 'Entertainment', color: 'pink', hex: '#f772b5ff' },
   utilities: { value: 'utilities', label: 'Utilities', color: 'gray', hex: '#6b7280' },
   personal: { value: 'personal', label: 'Personal', color: 'transparent', hex: 'transparent' },
   notes: { value: 'notes', label: 'Notes', color: 'transparent', hex: 'transparent' },

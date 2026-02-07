@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { Target, BarChart3 } from 'lucide-react'
 import { getAllWidgets, getImplementedWidgets, WidgetConfig } from '../config/widgets'
 import AddWidgetForm from './AddWidgetForm'
+import { DashboardWidget } from '../services/api'
 
 interface AddWidgetButtonProps {
-  onAddWidget: (widgetId: string) => void
+  onAddWidget: (widget: DashboardWidget | 'refresh') => void | Promise<void>
   canAddWidget?: boolean
   existingViewWidgets?: Array<any>
   refreshAllWidgets?: () => void
 }
 
-const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
+const AddWidgetButton = ({ onAddWidget, refreshAllWidgets }: AddWidgetButtonProps) => {
   const [isTrackerOpen, setIsTrackerOpen] = useState(false)
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null)
 
@@ -40,7 +41,11 @@ const AddWidgetButton = ({ onAddWidget }: AddWidgetButtonProps) => {
   }
 
   const handleFormSuccess = () => {
-    onAddWidget('refresh')
+    if (refreshAllWidgets) {
+      refreshAllWidgets()
+    } else {
+      onAddWidget('refresh')
+    }
     setSelectedWidgetId(null)
   }
 

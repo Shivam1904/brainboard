@@ -79,24 +79,25 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
         return trackerTypes.has(type);
     });
 
-    if (isLoadingAll || isLoadingToday) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-        );
-    }
+    /* Remove early return for loading to prevent scroll loss */
+    // if (isLoadingAll || isLoadingToday) {
+    //     return (
+    //         <div className="flex items-center justify-center h-full">
+    //             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    //         </div>
+    //     );
+    // }
 
     return (
-        <div className="flex flex-col h-full w-full max-w-4xl mx-auto p-4">
-            <div className="flex items-center gap-3 mb-4">
-                <button
-                    onClick={onClose}
-                    className="p-1.5 hover:bg-muted rounded-full transition-colors"
-                >
-                    <X className="w-4 h-4" />
-                </button>
-                <h2 className="text-md font-bold">Select Missions for Today</h2>
+        <div className="flex flex-col h-full w-full">
+            <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                    <button onClick={onClose} className="bg-gray-200 text-primary px-2 py-1 rounded-lg">X</button>
+                    <h2 className="text-md font-bold">Select Missions for Today</h2>
+                </div>
+                {(isLoadingAll || isLoadingToday) && (
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                )}
             </div>
 
             <div className="flex flex-col gap-2 overflow-y-auto pb-4 custom-scrollbar">

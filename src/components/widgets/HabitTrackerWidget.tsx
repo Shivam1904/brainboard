@@ -401,7 +401,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                               : dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'rgba(223, 209, 120, 0.39)'
                                 : day.date === currentDate.toISOString().split('T')[0] ? 'rgba(230, 227, 207, 0.39)'
                                   : dayTask ? 'rgba(143, 121, 121, 0.39)'
-                                    : 'rgba(255, 255, 255, 0.39)'}
+                                    : 'hsla(0, 0%, 81%, 0.39)'}
                             strokeWidth={WIDTH - 1}
                             fill="none"
                             className={`${dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'cursor-pointer' : 'cursor-default'} hover:stroke-width-10 transition-all duration-200`}
