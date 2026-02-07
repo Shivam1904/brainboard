@@ -11,7 +11,8 @@ from services.service_factory import ServiceFactory
 from schemas.dashboard_widget import (
     DashboardWidgetCreate,
     DashboardWidgetUpdate,
-    DashboardWidgetResponse
+    DashboardWidgetResponse,
+    WidgetPriorityResponse,
 )
 
 router = APIRouter(tags=["dashboard-widgets"])
@@ -61,6 +62,32 @@ async def get_user_widgets(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get user widgets: {str(e)}"
+        )
+
+
+@router.get("/{widget_id}/priority", response_model=WidgetPriorityResponse)
+async def get_widget_priority_for_date(
+    widget_id: str,
+    date: str = Query(..., description="Target date (YYYY-MM-DD)"),
+    db: AsyncSession = Depends(get_db_session_dependency),
+):
+    """Get priority and reason for a dashboard widget on a given date (past performance)."""
+    try:
+        from datetime import datetime
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        service_factory = ServiceFactory(db)
+        service = service_factory.widget_priority_service
+        result = await service.get_priority_for_date(widget_id, target_date)
+        return WidgetPriorityResponse(**result)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid date format. Use YYYY-MM-DD.",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get widget priority: {str(e)}",
         )
 
 

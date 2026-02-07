@@ -1,4 +1,3 @@
-import React from 'react';
 import { FrequencySettings, getFrequencyOptions } from '../../types/frequency';
 
 interface FrequencyControlsProps {
@@ -10,9 +9,21 @@ interface FrequencyControlsProps {
 
 
 const FrequencyControls = ({ frequency, onChange, pillarColor = '#3B82F6' }: FrequencyControlsProps) => {
-  const frequencyOptions = getFrequencyOptions(frequency.frequencyPeriod);
-  const frequencyUnits = ['TIMES', 'HOURS'];
-  const frequencyPeriods = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'];
+  const frequencyUnits = ['TIMES', 'HOURS'] as const;
+  const frequencyPeriods = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'] as const;
+
+  // Normalize so dropdown value always matches an option (API may return lowercase or wrong types)
+  const rawPeriod = (frequency.frequencyPeriod || 'DAILY').toUpperCase();
+  const period = (frequencyPeriods as readonly string[]).includes(rawPeriod) ? rawPeriod as typeof frequencyPeriods[number] : 'DAILY';
+  const rawUnit = (frequency.frequencyUnit || 'TIMES').toUpperCase();
+  const unit = (frequencyUnits as readonly string[]).includes(rawUnit) ? rawUnit as typeof frequencyUnits[number] : 'TIMES';
+  const frequencyOptions = getFrequencyOptions(period);
+  const amount = (() => {
+    const n = Number(frequency.frequency);
+    if (Number.isNaN(n) || n < frequencyOptions[0]) return frequencyOptions[0];
+    if (n > frequencyOptions[frequencyOptions.length - 1]) return frequencyOptions[frequencyOptions.length - 1];
+    return frequencyOptions.includes(n) ? n : frequencyOptions[0];
+  })();
   
   const updateFrequency = (updates: Partial<FrequencySettings>) => {
     const newFrequency = { ...frequency, ...updates };
@@ -38,8 +49,9 @@ const FrequencyControls = ({ frequency, onChange, pillarColor = '#3B82F6' }: Fre
             Amount
           </label>
           <select
-            value={frequency.frequency}
-            onChange={(e) => updateFrequency({ frequency: parseInt(e.target.value) })}
+            id='freq-amount'     
+            value={amount}
+            onChange={(e) => updateFrequency({ frequency: parseInt(e.target.value, 10) })}
             className="w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
           >
             {frequencyOptions.map(option => (
@@ -54,13 +66,14 @@ const FrequencyControls = ({ frequency, onChange, pillarColor = '#3B82F6' }: Fre
             Unit
           </label>
           <select
-            value={frequency.frequencyUnit}
+            id='freq-unit'   
+            value={unit}
             onChange={(e) => updateFrequency({ frequencyUnit: e.target.value as 'TIMES' | 'HOURS' })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium text-white"
+            className="w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
             style={{ backgroundColor: pillarColor }}
           >
-            {frequencyUnits.map(unit => (
-              <option key={unit} value={unit}>{unit}</option>
+            {frequencyUnits.map(u => (
+              <option key={u} value={u}>{u}</option>
             ))}
           </select>
         </div>
@@ -71,13 +84,14 @@ const FrequencyControls = ({ frequency, onChange, pillarColor = '#3B82F6' }: Fre
             Period
           </label>
           <select
-            value={frequency.frequencyPeriod}
-            onChange={(e) => updateFrequency({ frequencyPeriod: e.target.value as any })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium text-white"
+            id='freq-period'   
+            value={period}  
+            onChange={(e) => updateFrequency({ frequencyPeriod: e.target.value as typeof frequencyPeriods[number] })}
+            className="w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
             style={{ backgroundColor: pillarColor }}
           >
-            {frequencyPeriods.map(period => (
-              <option key={period} value={period}>{period}</option>
+            {frequencyPeriods.map(p => (
+              <option key={p} value={p}>{p}</option>
             ))}
           </select>
         </div>
@@ -86,7 +100,7 @@ const FrequencyControls = ({ frequency, onChange, pillarColor = '#3B82F6' }: Fre
       {/* Summary */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border border-blue-200">
         <p className="text-sm font-bold text-gray-800 text-center">
-          Approx. {frequency.frequency} {frequency.frequencyUnit} {frequency.frequencyPeriod}
+          Approx. {amount} {unit} {period}
         </p>
       </div>
     </div>

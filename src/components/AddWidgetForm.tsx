@@ -65,11 +65,20 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
   // Initialize form data with existing widget data if in edit mode
   const getInitialFormData = (): FormData => {
     if (editMode && existingWidget) {
+      const saved = existingWidget.frequency_details as FrequencySettings | undefined;
+      const hasValidFrequencyDetails = saved && typeof saved.frequencyPeriod === 'string' && typeof saved.frequency === 'number';
       return {
         title: existingWidget.title,
         description: existingWidget.description,
         is_permanent: existingWidget.is_permanent || false,
-        frequency_details: {
+        frequency_details: hasValidFrequencyDetails ? {
+          frequencySet: saved.frequencySet ?? 'BALANCED',
+          frequencySetValue: saved.frequencySetValue ?? 0.6,
+          frequency: saved.frequency,
+          frequencyUnit: saved.frequencyUnit ?? 'TIMES',
+          frequencyPeriod: saved.frequencyPeriod,
+          isDailyHabit: saved.isDailyHabit ?? false
+        } : {
           frequencySet: 'BALANCED',
           frequencySetValue: 0.6,
           frequency: 3,
@@ -210,12 +219,13 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
       const apiFrequency: ApiFrequency = formData.frequency_details.frequencyPeriod === 'DAILY' ? 'daily' :
         formData.frequency_details.frequencyPeriod === 'WEEKLY' ? 'weekly' : 'monthly';
 
-      // Prepare API data with common fields and widget_config
+      // Prepare API data with common fields and widget_config (include full frequency_details for persistence)
       const apiData = {
         widget_type: widgetConfig.apiWidgetType as ApiWidgetType,
         title: formData.title.trim(),
         description: formData.description?.trim(),
         frequency: apiFrequency,
+        frequency_details: formData.frequency_details as unknown as Record<string, any>,
         importance: formData.importance,
         category: formData.category,
         is_permanent: formData.is_permanent,

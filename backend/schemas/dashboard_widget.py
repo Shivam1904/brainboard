@@ -36,6 +36,12 @@ class DashboardWidgetUpdate(BaseModel):
     widget_config: Optional[Dict[str, Any]] = None
 
 
+class WidgetPriorityResponse(BaseModel):
+    """Response for widget priority for a given date (past performance / importance)."""
+    priority: str = Field(..., description="One of: critical, medium, low")
+    reason: str = Field(..., description="Short explanation for the priority")
+
+
 class DashboardWidgetResponse(DashboardWidgetBase):
     """Schema for dashboard widget response."""
     id: str

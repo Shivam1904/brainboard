@@ -10,6 +10,7 @@ export const API_CONFIG = {
     updateWidget: '/api/v1/dashboard-widgets/{widget_id}/update', // PUT - Update widget
     deleteWidget: '/api/v1/dashboard-widgets/{widget_id}/delete', // DELETE - Delete widget
     getWidgetsByType: '/api/v1/dashboard-widgets/alloftype/{widget_type}', // GET - Get widgets by type
+    getWidgetPriorityForDate: '/api/v1/dashboard-widgets/{widget_id}/priority', // GET - Priority + reason for widget on date
   },
   
   // AI Service endpoints (/api/v1/ai/)

@@ -109,12 +109,13 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
 
       // Check for presence of data to determine if it's an advanced widget
       // The boolean flags might be missing/undefined in some API responses
-      const hasTracker = !!cfg.include_tracker_details || !!cfg.value_type;
-      const hasAlarm = !!cfg.include_alarm_details || (Array.isArray(cfg.alarm_times) && cfg.alarm_times.length > 0);
-      const hasProgress = !!cfg.include_progress_details || (milestones.length > 0 && hasUpcomingMilestone(milestones));
+      const hasTracker = cfg.include_tracker_details ;
+      const hasAlarm = cfg.include_alarm_details ;
+      const hasProgress = (milestones.length > 0 && hasUpcomingMilestone(milestones));
 
       const advCondition = hasTracker || hasAlarm || hasProgress;
 
+      console.log('widget', widget, 'advCondition', hasTracker , hasAlarm , hasProgress);
       if (trackerWidgetTypes.includes(widget.widget_type)) {
         trackerWidgets.push(makeWidget(widget, {
           id: `tracker-${widget.daily_widget_id}`,

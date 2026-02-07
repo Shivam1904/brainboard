@@ -17,7 +17,7 @@ const Planner = ({ date, isPlanning, onStartPlanning, onEndPlanning }: PlannerPr
     }
 
     return (
-        <div className="flex flex-col items-center justify-center h-full gap-6">
+        <div className="flex flex-col items-center justify-center gap-6">
             <h2 className="text-2xl font-semibold text-foreground/80">Plan Your Day</h2>
             <div className="flex gap-4">
                 <button

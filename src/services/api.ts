@@ -10,6 +10,7 @@ export interface DashboardWidget {
   widget_type: string;
   title: string;
   frequency: string;
+  frequency_details?: Record<string, any>;
   importance: number;
   category: string;
   description?: string;
@@ -89,6 +90,7 @@ class ApiService {
     widget_type: string;
     title: string;
     frequency: string;
+    frequency_details?: Record<string, any>;
     importance: number;
     category: string;
     description?: string;
@@ -135,6 +137,12 @@ class ApiService {
   async getWidgetsByType(widgetType: string): Promise<DashboardWidget[]> {
     const url = buildApiUrlWithParams(API_CONFIG.dashboardWidgets.getWidgetsByType, { widget_type: widgetType });
     return this.request<DashboardWidget[]>(url);
+  }
+
+  // GET /api/v1/dashboard-widgets/{widget_id}/priority?date=YYYY-MM-DD
+  async getWidgetPriorityForDate(widgetId: string, date: string): Promise<{ priority: 'critical' | 'medium' | 'low'; reason: string }> {
+    const url = buildApiUrlWithParams(API_CONFIG.dashboardWidgets.getWidgetPriorityForDate, { widget_id: widgetId }, { date });
+    return this.request<{ priority: 'critical' | 'medium' | 'low'; reason: string }>(url);
   }
 
   // ============================================================================

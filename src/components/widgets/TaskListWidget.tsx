@@ -31,12 +31,15 @@ interface MissionFormData {
 }
 
 
-const getCategoryColor = (category: string) => {
-  category = category.toLowerCase();
-  if (!category || !categoryColors[category as keyof typeof categoryColors]) {
+const getCategoryColor = (category: string | undefined) => {
+  if (category == null || typeof category !== 'string') {
     return 'gray';
   }
-  return categoryColors[category as keyof typeof categoryColors].color;
+  const key = category.toLowerCase();
+  if (!key || !categoryColors[key as keyof typeof categoryColors]) {
+    return 'gray';
+  }
+  return categoryColors[key as keyof typeof categoryColors].color;
 };
 
 const getPriorityFromNumber = (priority: number): 'High' | 'Medium' | 'Low' => {
@@ -57,6 +60,7 @@ interface TaskListWidgetProps {
 
 const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskListWidgetProps) => {
   const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
+  console.log('todayWidgets', todayWidgets);
   const updateWidgetActivity = useUpdateWidgetActivity();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);

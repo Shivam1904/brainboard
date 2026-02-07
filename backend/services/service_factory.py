@@ -5,6 +5,7 @@ Service Factory for creating service instances with proper session management
 from sqlalchemy.ext.asyncio import AsyncSession
 from .dashboard_widget_service import DashboardWidgetService
 from .daily_widget_service import DailyWidgetService
+from .widget_priority_service import WidgetPriorityService
 
 class ServiceFactory:
     """
@@ -19,6 +20,7 @@ class ServiceFactory:
         self.db = db
         self._dashboard_widget_service = None
         self._daily_widget_service = None
+        self._widget_priority_service = None
     
     @property
     def dashboard_widget_service(self) -> DashboardWidgetService:
@@ -33,3 +35,10 @@ class ServiceFactory:
         if self._daily_widget_service is None:
             self._daily_widget_service = DailyWidgetService(self.db)
         return self._daily_widget_service
+
+    @property
+    def widget_priority_service(self) -> WidgetPriorityService:
+        """Get widget priority service instance (uses DB for completion history)."""
+        if self._widget_priority_service is None:
+            self._widget_priority_service = WidgetPriorityService(self.db)
+        return self._widget_priority_service

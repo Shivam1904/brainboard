@@ -328,6 +328,35 @@ class DailyWidgetService:
             raise
 
 
+    async def get_daily_widgets_in_date_range(
+        self,
+        widget_id: str,
+        start_date: date,
+        end_date: date,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all daily widget rows for a widget in a date range (inclusive).
+        Used for priority service to count completed days in 2d / 7d / 15d / 30d / 60d windows.
+        """
+        try:
+            stmt = select(DailyWidget).where(
+                and_(
+                    DailyWidget.widget_id == widget_id,
+                    DailyWidget.date >= start_date,
+                    DailyWidget.date <= end_date,
+                    DailyWidget.delete_flag == False,
+                )
+            ).order_by(DailyWidget.date.asc())
+            result = await self.db.execute(stmt)
+            rows = result.scalars().all()
+            return [
+                {"date": dw.date, "activity_data": dw.activity_data or {}}
+                for dw in rows
+            ]
+        except Exception as e:
+            logger.error(f"Error getting daily widgets in date range for {widget_id}: {e}")
+            raise
+
     async def get_today_widget_by_widget_id(self, widget_id: str, target_date: str) -> Dict[str, Any]:
         """Get activity data for a daily widget by widget_id."""
         try:

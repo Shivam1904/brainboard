@@ -25,7 +25,7 @@ const MainContent = ({ date, allWidgets, todayWidgets, refreshAllWidgets }: { da
     // If there are no widgets for today, OR if we are explicitly in planning mode
     if ((!todayWidgets || todayWidgets.length === 0) || isPlanning) {
         return (
-            <div className="flex-1 h-full">
+            <div className="">
                 <Planner
                     date={date}
                     isPlanning={isPlanning}
@@ -42,7 +42,7 @@ const MainContent = ({ date, allWidgets, todayWidgets, refreshAllWidgets }: { da
     return (
         <div className="flex-1 h-full">
             <button onClick={() => setIsPlanning(true)} className="bg-primary text-primary-foreground px-2 py-1 rounded-lg">Plan</button>
-            <Dashboard date={date} allWidgets={allWidgets} todayWidgets={todayWidgets} refreshAllWidgets={refreshAllWidgets} />
+            <Dashboard date={date} allWidgets={allWidgets} todayWidgets={todayWidgets}  />
         </div>
     )
 }

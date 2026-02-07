@@ -7,6 +7,7 @@ export interface CreateWidgetData {
   widget_type: string;
   title: string;
   frequency: string;
+  frequency_details?: Record<string, any>;
   importance: number;
   category: string;
   description?: string;
@@ -17,6 +18,7 @@ export interface CreateWidgetData {
 export interface UpdateWidgetData {
   title?: string;
   frequency?: string;
+  frequency_details?: Record<string, any>;
   importance?: number;
   category?: string;
   description?: string;

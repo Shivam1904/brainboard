@@ -547,12 +547,12 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
         {/* Top bar: Next alarm + completed badge */}
         <div className="flex items-center justify-between gap-2">
 
-          {widgetConfig.target_value && (<div className={`text-xs ${isAlerting ? 'text-white/80' : 'text-green-700'} 
+          {widgetConfig.include_tracker_details && (<div className={`text-xs ${isAlerting ? 'text-white/80' : 'text-green-700'} 
                            flex items-center justify-center gap-2`}>
             <Target className="h-4 w-4" /> {widgetConfig.target_value}
             {widgetConfig.value_unit}
           </div>)}
-          {widgetConfig.alarm_times && widgetConfig.alarm_times.length > 0 && (
+          {widgetConfig.include_alarm_details && (
             <div className="flex items-center gap-2">
               <Clock className={`h-4 w-4 ${isAlerting ? 'text-white' : 'text-yellow-600'}`} />
               <span className={`text-xs ${isAlerting ? 'text-white' : 'text-yellow-800'}`}>
