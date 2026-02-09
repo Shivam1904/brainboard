@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, Loader2 } from 'lucide-react';
 import { getWidgetConfig } from '../config/widgets';
 import { ApiWidgetType, ApiFrequency, ApiCategory } from '../types/widgets';
@@ -265,9 +266,12 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
     }));
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+  const modalContent = (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" aria-modal="true">
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+        style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+      >
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6">
           <div className="flex justify-between items-center">
@@ -829,6 +833,8 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default AddWidgetForm; 

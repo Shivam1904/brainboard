@@ -288,9 +288,6 @@ const NewDashboard = () => {
                     <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
                         🧠 Brainboard
                     </h1>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                        New Dashboard Layout
-                    </p>
                 </div>
 
                 <div className="flex items-center gap-6">

@@ -312,20 +312,17 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
         </div>
       </div>
 
-      {/* Forms via Portal */}
+      {/* Edit form: AddWidgetForm renders its own overlay and portal to body */}
       {editingWidget && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="w-full max-w-lg animate-in zoom-in-95 duration-200">
-            <AddWidgetForm
-              widgetId={editingWidget.widget_type}
-              onClose={handleFormClose}
-              onSuccess={handleFormSuccess}
-              editMode={true}
-              existingWidget={editingWidget}
-            />
-          </div>
-        </div>
-        , document.body)}
+        <AddWidgetForm
+          widgetId={editingWidget.widget_type}
+          onClose={handleFormClose}
+          onSuccess={handleFormSuccess}
+          editMode={true}
+          existingWidget={editingWidget}
+        />,
+        document.body
+      )}
     </BaseWidget>
   );
 };
