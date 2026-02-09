@@ -167,7 +167,6 @@ const NewDashboard = () => {
 
     const onHeightChange = useCallback((dailyWidgetId: string, newHeight: number) => {
         if (lastHeightValues.current[dailyWidgetId] !== newHeight) {
-            console.log('Widget height changed:', dailyWidgetId, newHeight)
             lastHeightValues.current[dailyWidgetId] = newHeight
             setSizeOverrides((prev) => ({
                 ...prev,

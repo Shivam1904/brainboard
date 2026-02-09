@@ -132,7 +132,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
           oscillator.start(audioContext.currentTime);
           oscillator.stop(audioContext.currentTime + 0.3);
         } catch (error) {
-          console.log('Audio not supported, but alarm is triggered!');
+          // Audio not supported, but alarm is triggered
         }
       } else if (!shouldAlert && isAlerting) {
         setIsAlerting(false);

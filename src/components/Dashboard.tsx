@@ -115,7 +115,6 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
 
       const advCondition = hasTracker || hasAlarm || hasProgress;
 
-      console.log('widget', widget, 'advCondition', hasTracker , hasAlarm , hasProgress);
       if (trackerWidgetTypes.includes(widget.widget_type)) {
         trackerWidgets.push(makeWidget(widget, {
           id: `tracker-${widget.daily_widget_id}`,

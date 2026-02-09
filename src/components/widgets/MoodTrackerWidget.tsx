@@ -41,7 +41,6 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
   // Hydrate from today's daily widget if it exists; do not create automatically
   useEffect(() => {
     const ensureDailyWidget = async () => {
-      console.log('widget', widget);
       if (!widget.widget_id) {
         setLoading(false);
         return;
@@ -53,7 +52,6 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
           setDailyWidgetId(todayDw.id);
           const currentMoods: string[] = todayDw.activity_data?.selected_moods || [];
           setSelectedMoodIds(new Set(currentMoods));
-          console.log('todayDw', todayDw);
         }
       } catch (err) {
         console.error('Failed to prepare mood tracker daily widget', err);

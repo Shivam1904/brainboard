@@ -125,19 +125,14 @@ const findOptimalPosition = (widgetType, existingWidgets) => {
 
 // Test the widget processing logic
 function testWidgetLogic() {
-  console.log('=== Testing Widget Logic ===');
-  
   const uiWidgets = [];
   const viewWidgetTypes = ['allSchedules', 'aiChat'];
-  
+
   // Step 1: Handle view widgets
-  console.log('\n1. Processing view widgets...');
   viewWidgetTypes.forEach(widgetType => {
     const allWidgetsViewWidget = sampleAllWidgets.find(w => w.widget_type === widgetType);
     const isVisible = allWidgetsViewWidget?.widget_config?.visibility;
-    
-    console.log(`  ${widgetType}: visibility = ${isVisible}`);
-    
+
     if (isVisible) {
       const config = getWidgetConfig(widgetType);
       const position = findOptimalPosition(widgetType, uiWidgets);
@@ -158,12 +153,10 @@ function testWidgetLogic() {
       };
       
       uiWidgets.push(viewWidget);
-      console.log(`  ✓ Added ${widgetType} widget`);
     }
   });
-  
+
   // Step 2: Process today's widgets
-  console.log('\n2. Processing today\'s widgets...');
   const advancedSingleTaskWidgets = [];
   const regularTaskWidgets = [];
   const webSearchWidgets = [];
@@ -177,19 +170,11 @@ function testWidgetLogic() {
     const hasProgressDetails = widgetConfig.include_progress_details === true;
     
     // Check if milestone is coming up in 7 days (mock: assume milestone is upcoming)
-    const hasUpcomingMilestone = hasProgressDetails && widgetConfig.milestones && 
+    const hasUpcomingMilestone = hasProgressDetails && widgetConfig.milestones &&
       Array.isArray(widgetConfig.milestones) && widgetConfig.milestones.length > 0;
-    
-    console.log(`  ${widget.title}:`, {
-      hasTrackerDetails,
-      hasAlarmDetails,
-      hasProgressDetails,
-      hasUpcomingMilestone
-    });
-    
+
     // Determine widget type
     if (hasTrackerDetails && hasAlarmDetails && hasProgressDetails && hasUpcomingMilestone) {
-      console.log(`  ✓ Creating advanced single task widget for: ${widget.title}`);
       const config = getWidgetConfig('advanced-single-task');
       const position = findOptimalPosition('advanced-single-task', uiWidgets);
       
@@ -209,13 +194,11 @@ function testWidgetLogic() {
       
       advancedSingleTaskWidgets.push(advancedWidget);
     } else {
-      console.log(`  ✓ Adding to regular task list: ${widget.title}`);
       regularTaskWidgets.push(widget);
     }
-    
+
     // Check for web search widget
     if (widgetConfig.include_websearch_details === true) {
-      console.log(`  ✓ Creating web search widget for: ${widget.title}`);
       const config = getWidgetConfig('websearch');
       const position = findOptimalPosition('websearch', uiWidgets);
       
@@ -237,13 +220,11 @@ function testWidgetLogic() {
       webSearchWidgets.push(webSearchWidget);
     }
   });
-  
+
   // Step 3: Add advanced single task widgets
-  console.log(`\n3. Adding ${advancedSingleTaskWidgets.length} advanced single task widgets`);
   uiWidgets.push(...advancedSingleTaskWidgets);
-  
+
   // Step 4: Create combined task list
-  console.log(`\n4. Creating combined task list with ${regularTaskWidgets.length} regular tasks`);
   if (regularTaskWidgets.length > 0) {
     const config = getWidgetConfig('todo-task');
     const position = findOptimalPosition('todo-task', uiWidgets);
@@ -272,22 +253,12 @@ function testWidgetLogic() {
     
     uiWidgets.push(taskListWidget);
   }
-  
+
   // Step 5: Add web search widgets
-  console.log(`\n5. Adding ${webSearchWidgets.length} web search widgets`);
   uiWidgets.push(...webSearchWidgets);
-  
-  // Results
-  console.log('\n=== Results ===');
-  console.log(`Total widgets created: ${uiWidgets.length}`);
-  console.log('Widget types:');
-  uiWidgets.forEach(widget => {
-    console.log(`  - ${widget.widget_type}: ${widget.title}`);
-  });
-  
+
   return uiWidgets;
 }
 
 // Run the test
-const results = testWidgetLogic();
-console.log('\nTest completed! Check the results above.'); 
+const results = testWidgetLogic(); 

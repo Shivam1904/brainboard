@@ -131,7 +131,6 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
 
       // Generate habit structure
       const base = generateHabitStructure(year, month, targetDate);
-      console.log('Generated base structure:', base.days.map(d => ({ date: d.date, day: d.day, isCurrentMonth: d.isCurrentMonth })));
 
       // Map API items to habit tasks
       const tasks = items.map(item => ({
@@ -145,23 +144,17 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
 
       // Place tasks into days
       const dayByKey = new Map(base.days.map(d => [d.date, d] as const));
-      console.log('Day mapping:', Array.from(dayByKey.keys()));
-      console.log('Tasks to place:', tasks);
 
       for (const task of tasks) {
         // Use the task's date field to determine which day it belongs to
         const key = task.date || new Date().toISOString().split('T')[0];
-        console.log(`Placing task "${task.title}" on date ${key}, status: ${task.activity_data?.status}`);
 
         const day = dayByKey.get(key);
         if (day) {
           day.tasks.push(task);
           if (task.activity_data?.status === 'completed') {
             day.completedTasks.push(task);
-            console.log(`Task "${task.title}" marked as completed for day ${day.day}`);
           }
-        } else {
-          console.log(`No day found for date ${key}`);
         }
       }
 
@@ -407,7 +400,6 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                             className={`${dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'cursor-pointer' : 'cursor-default'} hover:stroke-width-10 transition-all duration-200`}
                             onClick={async () => {
                               // Handle arc click - toggle completion
-                              console.log(`Toggle ${taskTitle} for day ${day.day}, ${dayTask?.id}`);
                               if (dayTask?.id && dayTask.date === currentDate.toISOString().split('T')[0]) {
                                 try {
                                   // Update the API

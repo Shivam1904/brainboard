@@ -28,7 +28,7 @@ const Planner = ({ date, isPlanning, onStartPlanning, onEndPlanning }: PlannerPr
                 </button>
                 <button
                     className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium shadow-sm active:scale-95 transform duration-100"
-                    onClick={() => console.log('Auto Plan clicked')}
+                    onClick={() => {}}
                 >
                     Auto Plan
                 </button>

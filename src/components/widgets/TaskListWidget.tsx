@@ -60,7 +60,6 @@ interface TaskListWidgetProps {
 
 const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskListWidgetProps) => {
   const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
-  console.log('todayWidgets', todayWidgets);
   const updateWidgetActivity = useUpdateWidgetActivity();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);

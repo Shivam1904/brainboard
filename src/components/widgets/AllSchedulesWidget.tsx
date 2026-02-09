@@ -248,7 +248,6 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
                     <div className="px-3 pb-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                       {groupWidgets.map((widget) => {
                         const isAdded = todayWidgetIds.includes(widget.id);
-                        console.log(widget)
                         return (
                           <div
                             key={widget.id}

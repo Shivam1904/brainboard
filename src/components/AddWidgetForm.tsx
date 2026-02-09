@@ -237,11 +237,9 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
       if (editMode && existingWidget) {
         // Update existing widget
         response = await dashboardService.updateWidget(existingWidget.id, apiData);
-        console.log('Widget updated successfully:', response);
       } else {
         // Create new widget
         response = await dashboardService.createWidget(apiData);
-        console.log('Widget created successfully:', response);
       }
 
       onSuccess();

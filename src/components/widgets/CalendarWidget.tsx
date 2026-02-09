@@ -97,7 +97,6 @@ const getCategoryColorWithOpacity = (category: string, opacity: number): string 
   const r = parseInt(clean.slice(0, 2), 16);
   const g = parseInt(clean.slice(2, 4), 16);
   const b = parseInt(clean.slice(4, 6), 16);
-  console.log(r, g, b, opacity, hex);
   return `rgba(${r},${g},${b},${opacity})`;
 };
 const getStreakSize = (day: number, totalStreakDays: number): number => {
@@ -357,7 +356,6 @@ const generateCalendarStructure = (year: number, month: number, targetDate: stri
 
     const isCurrentMonth = date.getMonth() === month - 1;
     const isToday = date.toISOString().split('T')[0] === targetDate;
-    console.log(date.toISOString().split('T')[0], targetDate, isToday);
 
     days.push({
       date: date.toISOString().split('T')[0],
@@ -539,7 +537,6 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
       for (const item of items) {
         const milestones = Array.isArray((item as any).widget_config?.milestones) ? (item as any).widget_config.milestones : [];
         const widgetId = item.widget_id;
-        console.log(item.category, "category1");
 
         for (const m of milestones) {
           if (!m?.due_date || tempMilestones.find(milestone => milestone.due_date === m.due_date && milestone.widget_id === item.widget_id)) continue;
@@ -574,7 +571,6 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
 
       //get achieved milestones from activity_data
       for (const item of items) {
-        console.log(item.category, "category2");
         const milestones = Array.isArray((item as any).activity_data?.milestones_achieved) ? (item as any).activity_data.milestones_achieved : [];
         const widgetId = item.widget_id;
         const dateKey = item.date || new Date().toISOString().split('T')[0];
@@ -892,14 +888,12 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
                         {/* Milestone Indicator */}
                         {day.isCurrentMonth && day.milestones?.size > 0 && (
                           <div className="">
-                            {Array.from(day.milestones).map((milestone) => {
-                              console.log("milestone", milestone, day.date, milestone.date);
-                              return (
+                            {Array.from(day.milestones).map((milestone) => (
                               <div key={milestone.id+milestone.date} className="">
                                 <Trophy size={12}  fill='white' 
                                 stroke={getCategoryColor(milestone.category)} strokeWidth={2} />
                               </div>
-                            )})}
+                            ))}
                           </div>
                         )}
 

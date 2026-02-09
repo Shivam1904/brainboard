@@ -21,7 +21,6 @@ const NotesWidget = ({ onRemove, widget, targetDate }: NotesWidgetProps) => {
   // Hydrate from today's daily widget if it exists; do not create automatically
   useEffect(() => {
     const ensureDailyWidget = async () => {
-      console.log('widget', widget);
       if (!widget.widget_id) {
         setLoading(false);
         return;
@@ -33,7 +32,6 @@ const NotesWidget = ({ onRemove, widget, targetDate }: NotesWidgetProps) => {
           setDailyWidgetId(todayDw.id);
           const currentNotes: string = todayDw.activity_data?.notes || '';
           setNotes(currentNotes);
-          console.log('todayDw', todayDw);
         }
       } catch (err) {
         console.error('Failed to prepare notes widget daily widget', err);

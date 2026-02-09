@@ -78,7 +78,6 @@ class SocketService {
         this.socket = new WebSocket(wsUrl);
         
         this.socket.onopen = () => {
-          console.log('WebSocket connected');
           this.isConnected = true;
           this.isConnecting = false;
           this.connectionStatus = 'connected';
@@ -90,7 +89,6 @@ class SocketService {
         this.socket.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data);
-            console.log('Received WebSocket message:', message);
             this.handleMessage(message);
           } catch (error) {
             console.error('Failed to parse WebSocket message:', error);
@@ -98,7 +96,6 @@ class SocketService {
         };
 
         this.socket.onclose = (event) => {
-          console.log('WebSocket disconnected:', event.code, event.reason);
           this.isConnected = false;
           this.isConnecting = false;
           this.connectionStatus = 'disconnected';
@@ -266,9 +263,7 @@ class SocketService {
   private scheduleReconnect(): void {
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-    
-    console.log(`Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`);
-    
+
     setTimeout(() => {
       if (!this.isConnected && !this.isConnecting) {
         this.connect().catch(error => {

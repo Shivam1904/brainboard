@@ -31,12 +31,9 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
   // Connect to WebSocket on mount
   useEffect(() => {
     const connectWebSocket = () => {
-      console.log('Connecting to WebSocket...');
       const ws = aiWebSocket.connect(
         // onMessage handler
         (data: any) => {
-          console.log('WebSocket message received:', data);
-          
           // Handle connection status - don't add connection message to chat
           if (data.type === 'connection') {
             setIsConnected(true);
@@ -91,14 +88,12 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
         },
         // onClose handler
         () => {
-          console.log('WebSocket connection closed');
           setIsConnected(false);
         }
       );
       
       // Set connection status when WebSocket opens
       ws.onopen = () => {
-        console.log('WebSocket connected');
         setIsConnected(true);
       };
       
@@ -135,8 +130,6 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     try {
       if (websocket && websocket.readyState === WebSocket.OPEN) {
         // Just send the current message - backend will maintain conversation history
-        console.log('🟢 Sending current message:', inputValue.trim());
-        
         aiWebSocket.sendMessage(
           websocket,
           inputValue.trim(),
