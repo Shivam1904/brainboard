@@ -19,7 +19,7 @@ const ResponsiveGridLayout = WidthProvider(Responsive)
 
 interface DashboardProps {
   date: string;
-  allWidgets: any[]; // Using any[] to match the structure or Import Types
+  allWidgets: DashboardWidget[];
   todayWidgets: DailyWidget[];
 }
 
@@ -81,12 +81,12 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
     const isValidWidget = (w: DailyWidget) =>
       w && w.daily_widget_id && w.widget_id && w.widget_type;
 
-    const hasUpcomingMilestone = (milestones: any[]) => {
+    const hasUpcomingMilestone = (milestones: Record<string, unknown>[]) => {
       const today = new Date();
       const weekAhead = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
       return milestones.some(m => {
         if (!m?.due_date) return false;
-        const date = new Date(m.due_date);
+        const date = new Date(m.due_date as string);
         return date >= today && date <= weekAhead;
       });
     };
@@ -109,8 +109,8 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
 
       // Check for presence of data to determine if it's an advanced widget
       // The boolean flags might be missing/undefined in some API responses
-      const hasTracker = cfg.include_tracker_details ;
-      const hasAlarm = cfg.include_alarm_details ;
+      const hasTracker = cfg.include_tracker_details;
+      const hasAlarm = cfg.include_alarm_details;
       const hasProgress = (milestones.length > 0 && hasUpcomingMilestone(milestones));
 
       const advCondition = hasTracker || hasAlarm || hasProgress;
@@ -176,7 +176,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
     uiWidgets.push(...trackerWidgets, ...webSearchWidgets);
 
     return uiWidgets;
-  }, [allWidgetsData, todayWidgetsData]);
+  }, [todayWidgetsData]);
 
   // Compute initial row-wise positions so items are spread across the row before wrapping
   const computeRowWiseLayout = (
@@ -394,7 +394,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
         );
-      default:
+      default: {
         const config = getWidgetConfig(widget.widget_type);
         return (
           <BaseWidget
@@ -414,6 +414,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
             </div>
           </BaseWidget>
         )
+      }
     }
   }
 

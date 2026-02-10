@@ -7,7 +7,7 @@ import { DashboardWidget } from '../services/api'
 interface AddWidgetButtonProps {
   onAddWidget: (widget: DashboardWidget | 'refresh') => void | Promise<void>
   canAddWidget?: boolean
-  existingViewWidgets?: Array<any>
+  existingViewWidgets?: Array<unknown>
   refreshAllWidgets?: () => void
 }
 

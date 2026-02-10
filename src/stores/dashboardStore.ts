@@ -6,11 +6,12 @@ interface DashboardState {
   // Data
   allWidgets: DashboardWidget[]
   todayWidgets: DailyWidget[]
-  
+
   // Loading states
   isLoading: boolean
   error: string | null
-  
+  lastLoadedDate: string | null
+
   // Actions
   loadData: (targetDate: string) => Promise<void>
   addWidgetToToday: (widgetId: string, targetDate: string) => Promise<{
@@ -20,7 +21,7 @@ interface DashboardState {
     widget_id: string;
   }>
   removeWidgetFromToday: (dailyWidgetId: string, targetDate: string) => Promise<void>
-  updateWidgetActivity: (dailyWidgetId: string, activityData: Record<string, any>) => Promise<void>
+  updateWidgetActivity: (dailyWidgetId: string, activityData: Record<string, unknown>) => Promise<void>
   updateDashboardWidgetLayout: (widgetId: string, layout: { w: number; h: number }) => Promise<void>
 }
 
@@ -30,9 +31,15 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   todayWidgets: [],
   isLoading: false,
   error: null,
+  lastLoadedDate: null,
 
   // Load data
   loadData: async (targetDate: string) => {
+    // Avoid double-loading or re-loading the same date if not needed
+    if (get().isLoading || (get().lastLoadedDate === targetDate && get().allWidgets.length > 0)) {
+      return
+    }
+
     set({ isLoading: true, error: null })
 
     try {
@@ -44,7 +51,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       set({
         allWidgets,
         todayWidgets,
-        isLoading: false
+        isLoading: false,
+        lastLoadedDate: targetDate
       })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load data'
@@ -58,47 +66,34 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
   // Add widget to today
   addWidgetToToday: async (widgetId: string, targetDate: string) => {
-    try {
-      const result = await dashboardService.addWidgetToToday(widgetId, targetDate)
-      // Refresh today's widgets
-      set({
-        todayWidgets: [...get().todayWidgets, result as unknown as DailyWidget]
-      })
-      return result
-    } catch (error) {
-      throw error
-    }
+    const result = await dashboardService.addWidgetToToday(widgetId, targetDate)
+    // Refresh today's widgets
+    set({
+      todayWidgets: [...get().todayWidgets, result as unknown as DailyWidget]
+    })
+    return result
   },
 
   // Remove widget from today
   removeWidgetFromToday: async (dailyWidgetId: string, targetDate: string) => {
-    try {
-      await dashboardService.removeWidgetFromToday(dailyWidgetId, targetDate)
-      // Refresh today's widgets
-      set({
-        todayWidgets: get().todayWidgets.filter(widget => widget.daily_widget_id !== dailyWidgetId)
-      })
-    } catch (error) {
-      throw error
-    }
+    await dashboardService.removeWidgetFromToday(dailyWidgetId, targetDate)
+    // Refresh today's widgets
+    set({
+      todayWidgets: get().todayWidgets.filter(widget => widget.daily_widget_id !== dailyWidgetId)
+    })
   },
 
   // Update widget activity
-  updateWidgetActivity: async (dailyWidgetId: string, activityData: Record<string, any>) => {
-    try {
-      await dashboardService.updateActivity(dailyWidgetId, activityData)
-      // Refresh today's widgets
-      const targetDate = new Date().toISOString().split('T')[0]
-      const newActivityData = {
-        ...get().todayWidgets.find(widget => widget.daily_widget_id === dailyWidgetId)?.activity_data,
-        ...activityData
-      }
-      set({
-        todayWidgets: get().todayWidgets.map(widget => widget.daily_widget_id === dailyWidgetId ? { ...widget, activity_data: newActivityData } : widget)
-      })
-    } catch (error) {
-      throw error
+  updateWidgetActivity: async (dailyWidgetId: string, activityData: Record<string, unknown>) => {
+    await dashboardService.updateActivity(dailyWidgetId, activityData)
+    // Refresh today's widgets
+    const newActivityData = {
+      ...get().todayWidgets.find(widget => widget.daily_widget_id === dailyWidgetId)?.activity_data,
+      ...activityData
     }
+    set({
+      todayWidgets: get().todayWidgets.map(widget => widget.daily_widget_id === dailyWidgetId ? { ...widget, activity_data: newActivityData } : widget)
+    })
   },
 
   // Persist widget size (w, h) to dashboard widget's widget_config.layout

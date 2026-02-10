@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DailyWidget, apiService } from '../../services/api';
-import { categoryColors } from './CalendarWidget';
+import { categoryColors } from '../../constants/widgetConstants';
 
 interface TaskData {
   id: string;
@@ -10,7 +10,7 @@ interface TaskData {
   category: string;
   widget_id: string;
   date: string;
-  activity_data?: Record<string, any>;
+  activity_data?: Record<string, unknown>;
 }
 
 interface CategoryStats {
@@ -55,11 +55,7 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
     return categoryColors[category as keyof typeof categoryColors].color;
   };
   // Enhanced color utilities
-  const getCategoryColorHex = (category: string): string => {
-    if (!category) return 'gray';
-    const lowerCategory = category.toLowerCase();
-    return categoryColors[lowerCategory as keyof typeof categoryColors]?.hex || '#6B7280';
-  };
+
   const fetchGraphData = async (year: number, month: number) => {
     try {
       setLoading(true);
@@ -155,6 +151,7 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
 
   useEffect(() => {
     fetchGraphData(currentDate.getFullYear(), currentDate.getMonth() + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -193,11 +190,6 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
     );
   }
 
-  // Find the maximum value for scaling
-  const maxValue = Math.max(
-    ...graphData.categoryStats.map(stat => Math.max(stat.totalAdded, stat.totalCompleted))
-  );
-
   return (
     <BaseWidget title={widget.title || "Pillar Graphs"} icon="📊" onRemove={onRemove}>
       <div className="flex flex-col px-4 h-full">
@@ -233,10 +225,7 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
         <div className="flex-1 overflow-y-auto">
           <div className="flex items-end justify-between space-x-2 h-[200px] px-2">
             {graphData.categoryStats.map((stat) => {
-              const color = getCategoryColorHex(stat.category);
-              const addedWidth = maxValue > 0 ? ((stat.totalAdded - stat.totalCompleted) / maxValue) * 50 : 0;
-              const completedWidth = maxValue > 0 ? (stat.totalCompleted / maxValue) * 50 : 0;
-              const completionRate: number = stat.totalCompleted / stat.totalAdded * 100;
+              const completionRate: number = stat.totalAdded > 0 ? (stat.totalCompleted / stat.totalAdded) * 100 : 0;
               return (
                 <div key={stat.category} className="flex flex-col items-center">
                   {/* Single Horizontal Bar with Stacked Sections */}

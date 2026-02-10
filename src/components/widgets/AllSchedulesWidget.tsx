@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import BaseWidget from './BaseWidget';
-import { DashboardWidget, DailyWidget } from '../../services/api';
+import { DailyWidget, DashboardWidget } from '../../services/api';
+import { categoryColors } from '../../constants/widgetConstants';
 import { useAllWidgetsData, useTodayWidgetsData } from '../../hooks/useDashboardData';
 
 import AddWidgetForm from '../AddWidgetForm';
 import { createPortal } from 'react-dom';
 import { dashboardService } from '@/services/dashboard';
 import { Check, Pen, Plus } from 'lucide-react';
-import { categoryColors } from './CalendarWidget';
 
 interface AllSchedulesWidgetProps {
   widget: DailyWidget;
@@ -39,12 +39,13 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
   };
 
   // Helper function to extract today widget IDs from API response
-  const extractTodayWidgetIds = (todayWidgetsResponse: any[]): string[] => {
-    let todayIds: string[] = [];
+  const extractTodayWidgetIds = (todayWidgetsResponse: unknown[]): string[] => {
+    const todayIds: string[] = [];
     if (Array.isArray(todayWidgetsResponse)) {
-      todayWidgetsResponse.forEach((dailyWidget: any) => {
-        if (dailyWidget.widget_id) {
-          todayIds.push(dailyWidget.widget_id);
+      todayWidgetsResponse.forEach((dailyWidget) => {
+        const dw = dailyWidget as Record<string, unknown>;
+        if (dw.widget_id) {
+          todayIds.push(dw.widget_id as string);
         }
       });
     }
@@ -80,7 +81,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
   };
 
   // Handle add to today
-  const handleAddToToday = async (widget: DashboardWidget, targetDate: string) => {
+  const handleAddToToday = async (widget: DashboardWidget) => {
     try {
       setAddingToToday(widget.id);
 
@@ -103,37 +104,41 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
   };
 
   // Get widget type icon
-  const getWidgetTypeIcon = (type: string): string => {
-    const icons: Record<string, string> = {
-      'todo-habit': '🔄',
-      'todo-task': '📋',
-      'todo-event': '📅',
-      'alarm': '⏰',
-      'single_item_tracker': '📊',
-      'websearch': '🔍',
-      'aiChat': '🤖',
-      'allSchedules': '⚙️',
-      'moodTracker': '😊',
-      'weatherWidget': '⛅️',
-      'simpleClock': '🕒'
+  /*
+    const getWidgetTypeIcon = (type: string): string => {
+      const icons: Record<string, string> = {
+        'todo-habit': '🔄',
+        'todo-task': '📋',
+        'todo-event': '📅',
+        'alarm': '⏰',
+        'single_item_tracker': '📊',
+        'websearch': '🔍',
+        'aiChat': '🤖',
+        'allSchedules': '⚙️',
+        'moodTracker': '😊',
+        'weatherWidget': '⛅️',
+        'simpleClock': '🕒'
+      };
+      return icons[type] || '⚙️';
     };
-    return icons[type] || '⚙️';
-  };
+  */
 
 
   // Group widgets into Trackers and Missions, excluding specific types
-  const groupedWidgets = widgets.reduce((groups: GroupedWidgets, widget) => {
-    const type = widget.widget_type;
-    const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar', 'pillarsGraph', 'habitTracker']);
-    const excludedTypes = new Set(['aiChat', 'moodTracker', 'notes', 'weatherWidget', 'simpleClock', 'allSchedules']);
+  const groupedWidgets = useMemo(() => {
+    return widgets.reduce((groups: GroupedWidgets, widget) => {
+      const type = widget.widget_type;
+      const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar', 'pillarsGraph', 'habitTracker']);
+      const excludedTypes = new Set(['aiChat', 'moodTracker', 'notes', 'weatherWidget', 'simpleClock', 'allSchedules']);
 
-    if (excludedTypes.has(type)) return groups;
+      if (excludedTypes.has(type)) return groups;
 
-    const groupName = trackerTypes.has(type) ? 'trackers' : 'missions';
-    if (!groups[groupName]) groups[groupName] = [];
-    groups[groupName].push(widget);
-    return groups;
-  }, {} as GroupedWidgets);
+      const groupName = trackerTypes.has(type) ? 'trackers' : 'missions';
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(widget);
+      return groups;
+    }, {} as GroupedWidgets);
+  }, [widgets]);
 
   // Toggle group expansion
   const toggleGroup = (groupName: string) => {
@@ -277,7 +282,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
                                 </button>
 
                                 <button
-                                  onClick={() => handleAddToToday(widget, targetDate)}
+                                  onClick={() => handleAddToToday(widget)}
                                   disabled={addingToToday === widget.id || isAdded}
                                   className={`px-2 rounded-lg transition-all ${isAdded
                                     ? 'text-primary bg-primary/10'

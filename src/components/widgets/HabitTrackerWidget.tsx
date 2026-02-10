@@ -3,7 +3,7 @@ import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Check, Pencil } from 'lucide-react';
 import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
 import { useUpdateWidgetActivity } from '@/stores/dashboardStore';
-import { categoryColors } from './CalendarWidget';
+import { categoryColors } from '../../constants/widgetConstants';
 
 
 interface HabitTask {
@@ -12,7 +12,7 @@ interface HabitTask {
   category: string;
   widget_id: string;
   date: string;
-  activity_data?: Record<string, any>;
+  activity_data?: Record<string, unknown>;
 }
 
 interface HabitDay {
@@ -182,11 +182,13 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
     fetchHabitData(newDate.getFullYear(), newDate.getMonth() + 1);
   };
 
-  const goToToday = () => {
-    const today = new Date();
-    setCurrentDate(today);
-    fetchHabitData(today.getFullYear(), today.getMonth() + 1);
-  };
+  /*
+    const goToToday = () => {
+      const today = new Date();
+      setCurrentDate(today);
+      fetchHabitData(today.getFullYear(), today.getMonth() + 1);
+    };
+  */
 
   // Fetch available widgets for selection
   const fetchAvailableWidgets = async () => {
@@ -273,6 +275,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
   useEffect(() => {
     fetchHabitData(currentDate.getFullYear(), currentDate.getMonth() + 1);
     fetchAvailableWidgets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -317,6 +320,16 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
   return (
     <BaseWidget title={widget.title} icon="🔄" onRemove={onRemove}>
       <div className=" flex-col px-4 pt-4">
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-4 p-2 bg-green-50 border border-green-200 text-green-700 text-xs rounded-lg animate-fade-in flex items-center justify-between">
+            <span>{successMessage}</span>
+            <button onClick={() => setSuccessMessage(null)} className="p-1 hover:bg-green-100 rounded">
+              <Check size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
@@ -380,7 +393,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
 
                         // Determine if this day/task combination is completed
                         const dayTask = day.tasks.find(t => t.title === taskTitle);
-                        let isCompleted = dayTask && day.completedTasks.includes(dayTask);
+                        const isCompleted = dayTask && day.completedTasks.includes(dayTask);
 
                         // Create arc path
                         const largeArcFlag = (endAngle - startAngle) > 180 ? 1 : 0;
@@ -463,12 +476,15 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
             <div className="px-2">
               {availableWidgets.map((event, index) => (
                 <span key={event.id}
-                  onClick={() => handleWidgetSelection(event.id, !selectedWidgets.has(event.id))}
+                  onClick={() => {
+                    if (updatingWidget) return;
+                    handleWidgetSelection(event.id, !selectedWidgets.has(event.id));
+                  }}
                   className={`text-gray-800 text-sm cursor-pointer
                         ${selectedWidgets.has(event.id)
                       ? 'font-bold'
                       : ''
-                    }`}
+                    } ${updatingWidget === event.id ? 'opacity-50' : ''}`}
                   style={{ color: getCategoryColorHex(event.category) }}>
                   {event.title + (index < availableWidgets.length - 1 ? ', ' : '')}
                 </span>

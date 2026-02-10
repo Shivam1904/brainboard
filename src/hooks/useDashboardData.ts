@@ -1,50 +1,57 @@
-import { useEffect, useRef, useMemo } from 'react'
-import { useDashboardStore, useAllWidgets, useTodayWidgets } from '../stores/dashboardStore'
+import { useEffect, useMemo } from 'react'
+import { useDashboardStore } from '../stores/dashboardStore'
 
 /**
  * Simple hook to load dashboard data with proper memoization
  */
 export const useDashboardData = (targetDate: string) => {
-  const lastLoadedDate = useRef<string | null>(null)
-  const store = useDashboardStore()
-  
+  const allWidgets = useDashboardStore(state => state.allWidgets)
+  const todayWidgets = useDashboardStore(state => state.todayWidgets)
+  const isLoading = useDashboardStore(state => state.isLoading)
+  const error = useDashboardStore(state => state.error)
+  const loadData = useDashboardStore(state => state.loadData)
+
   useEffect(() => {
-    store.loadData(targetDate)
-  }, [targetDate])
+    if (targetDate) {
+      loadData(targetDate)
+    }
+  }, [targetDate, loadData])
 
   // Memoize the return object to prevent unnecessary re-renders
   return useMemo(() => ({
-    allWidgets: store.allWidgets,
-    todayWidgets: store.todayWidgets,
-    isLoading: store.isLoading,
-    error: store.error
-  }), [store.allWidgets, store.todayWidgets, store.isLoading, store.error])
+    allWidgets,
+    todayWidgets,
+    isLoading,
+    error
+  }), [allWidgets, todayWidgets, isLoading, error])
 }
 
 /**
  * Hook for accessing only today's widgets data
  */
-export const useTodayWidgetsData = (targetDate: string) => {
-  const lastLoadedDate = useRef<string | null>(null)
-  const store = useDashboardStore()
-  
+export const useTodayWidgetsData = () => {
+  const todayWidgets = useDashboardStore(state => state.todayWidgets)
+  const isLoading = useDashboardStore(state => state.isLoading)
+  const error = useDashboardStore(state => state.error)
+
   return useMemo(() => ({
-    todayWidgets: store.todayWidgets,
-    isLoading: store.isLoading,
-    error: store.error
-  }), [store.todayWidgets, store.isLoading, store.error])
+    todayWidgets,
+    isLoading,
+    error
+  }), [todayWidgets, isLoading, error])
 }
 
 /**
  * Hook for accessing only all widgets data
  */
 export const useAllWidgetsData = () => {
-  const hasLoaded = useRef(false)
-  const store = useDashboardStore()
-  
+  const allWidgets = useDashboardStore(state => state.allWidgets)
+  const isLoading = useDashboardStore(state => state.isLoading)
+  const error = useDashboardStore(state => state.error)
+
   return useMemo(() => ({
-    allWidgets: store.allWidgets,
-    isLoading: store.isLoading,
-    error: store.error
-  }), [store.allWidgets, store.isLoading, store.error])
-} 
+    allWidgets,
+    isLoading,
+    error
+  }), [allWidgets, isLoading, error])
+}

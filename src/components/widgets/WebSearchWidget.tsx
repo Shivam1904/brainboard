@@ -4,17 +4,32 @@ import { DailyWidget } from '../../services/api';
 import { useTodayWidgetsData } from '../../hooks/useDashboardData';
 import { useDashboardActions } from '../../stores/dashboardStore';
 
+interface WebSearchData {
+  title?: string;
+  summary?: string;
+  search_successful?: boolean;
+  results_count?: number;
+  sources?: Array<{ title: string; url: string }>;
+  ai_model_used?: string;
+  created_at: string;
+  daily_widget_id: string;
+  activity_data?: {
+    status?: string;
+    updated_at?: string;
+  };
+  [key: string]: unknown;
+}
+
 interface WebSearchWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
-  targetDate: string;
 }
 
-const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps) => {
-  const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
+const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
+  const { isLoading, error } = useTodayWidgetsData();
   const { updateWidgetActivity } = useDashboardActions();
-  
-  const [webSearchData, setWebSearchData] = useState<any | null>(null);
+
+  const [webSearchData, setWebSearchData] = useState<WebSearchData | null>(null);
   const [isRead, setIsRead] = useState(false);
 
   // Use the passed widget prop directly - it already contains the widget data
@@ -23,16 +38,17 @@ const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps)
   // Update read status
   const updateReadStatus = async (read: boolean) => {
     if (!widget || !webSearchData) return;
-    
+
     try {
       // Update the activity status
+      const data = webSearchData;
       await updateWidgetActivity(widget.daily_widget_id, {
         status: read ? 'completed' : 'pending',
         reaction: read ? 'read' : 'unread',
-        summary: webSearchData.summary,
-        source_json: webSearchData.sources,
+        summary: data.summary as string,
+        source_json: data.sources as unknown,
       });
-      
+
       setIsRead(read);
     } catch (err) {
       console.error('Error updating read status:', err);
@@ -44,7 +60,7 @@ const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps)
   // Set initial data when widget is found
   useEffect(() => {
     if (widget) {
-      setWebSearchData(widget);
+      setWebSearchData(widget as unknown as WebSearchData);
       setIsRead(widget.activity_data?.status === 'completed');
     }
   }, [widget]);
@@ -52,9 +68,9 @@ const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps)
   // Show loading state
   if (isLoading) {
     return (
-      <BaseWidget 
-        title="Web Search" 
-        icon="🔍" 
+      <BaseWidget
+        title="Web Search"
+        icon="🔍"
         onRemove={onRemove}
       >
         <div className="flex items-center justify-center h-full">
@@ -70,9 +86,9 @@ const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps)
   // Show error state
   if (error) {
     return (
-      <BaseWidget 
-        title="Web Search" 
-        icon="🔍" 
+      <BaseWidget
+        title="Web Search"
+        icon="🔍"
         onRemove={onRemove}
       >
         <div className="flex items-center justify-center h-full">
@@ -93,9 +109,9 @@ const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps)
   // Show no data state
   if (!widget || !webSearchData) {
     return (
-      <BaseWidget 
-        title="Web Search" 
-        icon="🔍" 
+      <BaseWidget
+        title="Web Search"
+        icon="🔍"
         onRemove={onRemove}
       >
         <div className="flex items-center justify-center h-full">
@@ -107,36 +123,36 @@ const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps)
     );
   }
 
+  const data = webSearchData;
   return (
-    <BaseWidget 
-      title={webSearchData.title || "Web Search"} 
-      icon="🔍" 
+    <BaseWidget
+      title={data.title || "Web Search"}
+      icon="🔍"
       onRemove={onRemove}
     >
       <div className="space-y-4 h-full overflow-y-auto">
 
-        
+
         <div className="bg-card/50 border border-border rounded-lg p-4">
           <div className="space-y-3">
             {/* Title */}
             <h3 className="font-medium text-sm mb-2">Web Search</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {webSearchData.title}
+              {String(data.title || '')}
             </p>
 
             {/* Status and Read Checkbox */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`text-xs px-2 py-1 rounded ${
-                  webSearchData.search_successful ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {webSearchData.search_successful ? 'Search Successful' : 'Search Failed'}
+                <span className={`text-xs px-2 py-1 rounded ${data.search_successful ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                  {data.search_successful ? 'Search Successful' : 'Search Failed'}
                 </span>
                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  {webSearchData.results_count} results
+                  {data.results_count} results
                 </span>
               </div>
-              
+
               {/* Read Checkbox */}
               <div className="flex flex-col items-center gap-2">
                 <input
@@ -153,25 +169,25 @@ const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps)
             </div>
 
             {/* Summary */}
-            {webSearchData.summary && (
+            {data.summary && (
               <div>
                 <h3 className="font-medium text-sm mb-2">AI Summary</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  {webSearchData.summary}
+                  {data.summary || ''}
                 </p>
               </div>
             )}
 
             {/* Sources */}
-            {webSearchData.sources && webSearchData.sources.length > 0 && (
+            {data.sources && data.sources.length > 0 && (
               <div>
                 <h3 className="font-medium text-sm mb-2">Sources</h3>
                 <div className="space-y-1">
-                  {webSearchData.sources.map((source: any, index: number) => (
+                  {data.sources.map((source, index: number) => (
                     <div key={index} className="text-xs">
-                      <a 
-                        href={source.url} 
-                        target="_blank" 
+                      <a
+                        href={source.url}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline break-all"
                       >
@@ -185,10 +201,10 @@ const WebSearchWidget = ({ onRemove, widget, targetDate }: WebSearchWidgetProps)
 
             {/* AI Model Info */}
             <div className="text-xs text-muted-foreground pt-2 border-t">
-              <div>AI Model: {webSearchData.ai_model_used}</div>
-              <div>Generated: {new Date(webSearchData.created_at).toLocaleDateString()}</div>
-              {webSearchData.activity_data && (
-                <div>Last Activity: {new Date(webSearchData.activity_data?.updated_at).toLocaleDateString()}</div>
+              <div>AI Model: {String(data.ai_model_used || 'N/A')}</div>
+              <div>Generated: {new Date((data.created_at as string | number | Date) || Date.now()).toLocaleDateString()}</div>
+              {data.activity_data && (
+                <div>Last Activity: {new Date(((data.activity_data as Record<string, unknown>).updated_at as string | number | Date) || Date.now()).toLocaleDateString()}</div>
               )}
             </div>
           </div>

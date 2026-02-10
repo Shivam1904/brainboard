@@ -30,7 +30,7 @@ const NotesWidget = ({ onRemove, widget, targetDate }: NotesWidgetProps) => {
         const todayDw = await dashboardService.getTodayWidgetByWidgetId(widget.widget_id, targetDate);
         if (todayDw && todayDw.id) {
           setDailyWidgetId(todayDw.id);
-          const currentNotes: string = todayDw.activity_data?.notes || '';
+          const currentNotes: string = (todayDw.activity_data as Record<string, unknown>)?.notes as string || '';
           setNotes(currentNotes);
         }
       } catch (err) {
@@ -74,7 +74,7 @@ const NotesWidget = ({ onRemove, widget, targetDate }: NotesWidgetProps) => {
   // Auto-save with debouncing when typing stops
   useEffect(() => {
     if (notes === '' || !dailyWidgetId) return;
-    
+
     const timeoutId = setTimeout(() => {
       saveNotes();
     }, 1000); // Save 1 second after user stops typing

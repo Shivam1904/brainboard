@@ -2,7 +2,7 @@ import { ApiError } from '../services/api';
 
 // Utility functions for API operations
 
-export const handleApiError = (error: any): ApiError => {
+export const handleApiError = (error: unknown): ApiError => {
   if (error instanceof Error) {
     return {
       message: error.message,
@@ -10,7 +10,7 @@ export const handleApiError = (error: any): ApiError => {
       details: error
     };
   }
-  
+
   return {
     message: 'An unexpected error occurred',
     status: 500,
@@ -23,44 +23,44 @@ export const retryApiCall = async <T>(
   maxRetries: number = 3,
   delay: number = 1000
 ): Promise<T> => {
-  let lastError: any;
-  
+  let lastError: unknown;
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await apiCall();
     } catch (error) {
       lastError = error;
-      
+
       if (attempt === maxRetries) {
         throw error;
       }
-      
+
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, delay * attempt));
     }
   }
-  
+
   throw lastError;
 };
 
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
   let timeout: NodeJS.Timeout;
-  
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
 };
 
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): ((...args: Parameters<T>) => void) => {
   let inThrottle: boolean;
-  
+
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
       func(...args);
@@ -71,33 +71,34 @@ export const throttle = <T extends (...args: any[]) => any>(
 };
 
 // Data transformation utilities
-export const transformApiResponse = <T>(response: any): T => {
+export const transformApiResponse = <T>(response: unknown): T => {
   // Handle different response formats
   if (response && typeof response === 'object') {
-    if ('data' in response) {
-      return response.data;
+    const dataResponse = response as Record<string, unknown>;
+    if ('data' in dataResponse) {
+      return dataResponse.data as T;
     }
-    if ('result' in response) {
-      return response.result;
+    if ('result' in dataResponse) {
+      return dataResponse.result as T;
     }
   }
-  
-  return response;
-};
 
-export const validateApiResponse = <T>(response: any, schema?: any): T => {
-  // Basic validation - can be extended with proper schema validation
-  if (!response) {
-    throw new Error('Invalid API response: response is null or undefined');
-  }
-  
   return response as T;
 };
 
+export const validateResponse = <T>(data: unknown): T => {
+  // Basic validation - can be extended with proper schema validation
+  if (!data) {
+    throw new Error('Invalid API response: response is null or undefined');
+  }
+
+  return data as T;
+};
+
 // URL and parameter utilities
-export const buildQueryString = (params: Record<string, any>): string => {
+export const buildQueryString = (params: Record<string, unknown>): string => {
   const searchParams = new URLSearchParams();
-  
+
   Object.entries(params).forEach(([key, value]) => {
     if (value !== null && value !== undefined) {
       if (Array.isArray(value)) {
@@ -107,18 +108,18 @@ export const buildQueryString = (params: Record<string, any>): string => {
       }
     }
   });
-  
+
   return searchParams.toString();
 };
 
 export const parseQueryString = (queryString: string): Record<string, string> => {
   const params: Record<string, string> = {};
   const searchParams = new URLSearchParams(queryString);
-  
+
   searchParams.forEach((value, key) => {
     params[key] = value;
   });
-  
+
   return params;
 };
 
@@ -134,29 +135,29 @@ export const parseApiDate = (dateString: string): Date => {
 // Cache utilities
 export const createApiCache = <T>() => {
   const cache = new Map<string, { data: T; timestamp: number }>();
-  
+
   return {
     get: (key: string): T | null => {
       const item = cache.get(key);
       if (!item) return null;
-      
+
       // Check if cache is expired (5 minutes)
       if (Date.now() - item.timestamp > 5 * 60 * 1000) {
         cache.delete(key);
         return null;
       }
-      
+
       return item.data;
     },
-    
+
     set: (key: string, data: T): void => {
       cache.set(key, { data, timestamp: Date.now() });
     },
-    
+
     clear: (): void => {
       cache.clear();
     },
-    
+
     delete: (key: string): boolean => {
       return cache.delete(key);
     }
@@ -166,12 +167,12 @@ export const createApiCache = <T>() => {
 // Request/Response interceptors
 export const createRequestInterceptor = () => {
   const interceptors: Array<(request: Request) => Request> = [];
-  
+
   return {
     add: (interceptor: (request: Request) => Request) => {
       interceptors.push(interceptor);
     },
-    
+
     apply: (request: Request): Request => {
       return interceptors.reduce((req, interceptor) => interceptor(req), request);
     }
@@ -180,12 +181,12 @@ export const createRequestInterceptor = () => {
 
 export const createResponseInterceptor = () => {
   const interceptors: Array<(response: Response) => Response | Promise<Response>> = [];
-  
+
   return {
     add: (interceptor: (response: Response) => Response | Promise<Response>) => {
       interceptors.push(interceptor);
     },
-    
+
     apply: async (response: Response): Promise<Response> => {
       let result = response;
       for (const interceptor of interceptors) {

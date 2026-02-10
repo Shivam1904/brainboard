@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import React, { useState, useCallback } from 'react';
 import AllSchedulesWidget from './widgets/AllSchedulesWidget'
 import AiChatWidget from './widgets/AiChatWidget';
 import MoodTrackerWidget from './widgets/MoodTrackerWidget';
@@ -8,7 +8,7 @@ import NotesWidget from './widgets/NotesWidget';
 import AddWidgetButton from './AddWidgetButton'
 import { DailyWidget, DashboardWidget } from '../services/api';
 import { useDashboardData } from '../hooks/useDashboardData'
-import { useDashboardActions, useDashboardStore } from '../stores/dashboardStore'
+import { useAddWidgetToToday, useRemoveWidgetFromToday, useDashboardStore } from '../stores/dashboardStore'
 import { getWidgetConfig, getAllWidgets } from '../config/widgets'
 import { dashboardService } from '../services/dashboard'
 import Dashboard from './Dashboard'
@@ -42,7 +42,7 @@ const MainContent = ({ date, allWidgets, todayWidgets, refreshAllWidgets }: { da
     return (
         <div className="flex-1 h-full">
             <button onClick={() => setIsPlanning(true)} className="bg-primary text-primary-foreground px-2 py-1 rounded-lg">Plan</button>
-            <Dashboard date={date} allWidgets={allWidgets} todayWidgets={todayWidgets}  />
+            <Dashboard date={date} allWidgets={allWidgets} todayWidgets={todayWidgets} />
         </div>
     )
 }
@@ -50,7 +50,6 @@ const MainContent = ({ date, allWidgets, todayWidgets, refreshAllWidgets }: { da
 const SidebarWidgetContainer = ({
     title,
     children,
-    id,
     isExpanded,
     onToggle
 }: {
@@ -107,10 +106,12 @@ const NewDashboard = () => {
         error
     } = useDashboardData(currentDate)
 
-    const [sizeOverrides, setSizeOverrides] = useState<Record<string, { w?: number; h?: number }>>({})
-    const lastHeightValues = useRef<Record<string, number>>({})
 
-    const { addWidgetToToday, removeWidgetFromToday } = useDashboardActions()
+
+
+
+    const addWidgetToToday = useAddWidgetToToday()
+    const removeWidgetFromToday = useRemoveWidgetFromToday()
 
     const refreshAllWidgets = useCallback(() => {
         const store = useDashboardStore.getState()
@@ -165,14 +166,8 @@ const NewDashboard = () => {
         }
     }
 
-    const onHeightChange = useCallback((dailyWidgetId: string, newHeight: number) => {
-        if (lastHeightValues.current[dailyWidgetId] !== newHeight) {
-            lastHeightValues.current[dailyWidgetId] = newHeight
-            setSizeOverrides((prev) => ({
-                ...prev,
-                [dailyWidgetId]: { ...(prev[dailyWidgetId] || {}), h: newHeight },
-            }))
-        }
+    const onHeightChange = useCallback(() => {
+        // No-op in NewDashboard, height handled in Dashboard
     }, [])
 
     const handleRemoveWidget = useCallback(async (dailyWidgetId: string) => {
@@ -230,8 +225,8 @@ const NewDashboard = () => {
         const config = getWidgetConfig(type);
 
         const data = {
-            id: `new-${type}`,
-            daily_widget_id: `new-${type}`,
+            id: `new- ${type} `,
+            daily_widget_id: `new- ${type} `,
             widget_id: w?.id || '',
             widget_type: type,
             title: config?.title || type,
@@ -244,7 +239,7 @@ const NewDashboard = () => {
             importance: 0.5,
             category: 'utilities',
             priority: 'LOW',
-            layout: { i: `new-${type}`, x: 0, y: 0, w: 1, h: 1 }
+            layout: { i: `new- ${type} `, x: 0, y: 0, w: 1, h: 1 }
         } as DailyWidget;
 
         return { data, isExpanded };

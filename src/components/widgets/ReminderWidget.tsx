@@ -22,29 +22,26 @@ interface ReminderWidgetProps {
   };
 }
 
-const ReminderWidget = ({ onRemove, widget }: ReminderWidgetProps) => {
+const ReminderWidget = ({ onRemove }: ReminderWidgetProps) => {
   const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [newReminder, setNewReminder] = useState<Partial<Reminder>>({
-    title: '',
-    time: '',
-    date: new Date().toISOString().split('T')[0],
-    priority: 'Medium'
-  });
+  const [newReminderText, setNewReminderText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUsingDummyData, setIsUsingDummyData] = useState(false);
 
   // Initialize with empty array instead of dummy data
   useEffect(() => {
     setReminders([]);
   }, []);
 
+  const getDummyReminders = () => [
+    { id: '1', text: 'Call the bank', completed: false, createdAt: new Date().toISOString() },
+    { id: '2', text: 'Buy groceries', completed: true, createdAt: new Date().toISOString() },
+  ];
+
   const loadReminders = async () => {
     setIsLoading(true)
     setIsUsingDummyData(false)
     try {
-      // TODO: Replace with actual API call
-      // const response = await apiService.getReminders(widget.daily_widget_id);
-      // setReminders(response.reminders);
-      
       const dummyReminders = getDummyReminders();
       setIsUsingDummyData(true);
       setReminders(dummyReminders);
@@ -55,6 +52,11 @@ const ReminderWidget = ({ onRemove, widget }: ReminderWidgetProps) => {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadReminders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addReminder = async () => {
     if (!newReminderText.trim()) return
@@ -148,28 +150,25 @@ const ReminderWidget = ({ onRemove, widget }: ReminderWidgetProps) => {
             reminders.map((reminder) => (
               <div
                 key={reminder.id}
-                className={`flex items-center gap-3 p-2 border rounded-md ${
-                  reminder.completed ? 'bg-muted' : 'bg-background'
-                }`}
+                className={`flex items-center gap-3 p-2 border rounded-md ${reminder.completed ? 'bg-muted' : 'bg-background'
+                  }`}
               >
                 <button
                   onClick={() => toggleReminder(reminder.id)}
-                  className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${
-                    reminder.completed
-                      ? 'bg-primary border-primary text-primary-foreground'
-                      : 'border-muted-foreground hover:border-primary'
-                  }`}
+                  className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${reminder.completed
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : 'border-muted-foreground hover:border-primary'
+                    }`}
                 >
                   {reminder.completed && <Check size={12} />}
                 </button>
-                
+
                 <div className="flex-1 min-w-0">
                   <p
-                    className={`text-sm ${
-                      reminder.completed
-                        ? 'line-through text-muted-foreground'
-                        : 'text-foreground'
-                    }`}
+                    className={`text-sm ${reminder.completed
+                      ? 'line-through text-muted-foreground'
+                      : 'text-foreground'
+                      }`}
                   >
                     {reminder.text}
                   </p>
@@ -182,8 +181,8 @@ const ReminderWidget = ({ onRemove, widget }: ReminderWidgetProps) => {
                     </div>
                   )}
                 </div>
-                
-                                <button
+
+                <button
                   onClick={() => {
                     deleteReminder(reminder.id)
                   }}

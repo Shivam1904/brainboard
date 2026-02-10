@@ -182,7 +182,7 @@ export interface WebSearchActivity {
   status: 'pending' | 'completed' | 'failed';
   reaction: string;
   summary: string;
-  source_json: any; // Backend: source_json (JSON field)
+  source_json: unknown; // Backend: source_json (JSON field)
   created_at: string;
   updated_at: string;
 }

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import BaseWidget from './BaseWidget';
-import { CheckCircle, Circle, Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import FrequencySection from './FrequencySection';
 import { useTodayWidgetsData } from '../../hooks/useDashboardData';
 import { DailyWidget } from '../../services/api';
@@ -18,8 +18,8 @@ interface Task {
 }
 
 import { FrequencySettings } from '../../types/frequency';
-import { categoryColors } from './CalendarWidget';
-import { useDashboardActions } from '@/stores/dashboardStore';
+import { categoryColors } from '../../constants/widgetConstants';
+// import { useDashboardActions } from '@/stores/dashboardStore';
 
 interface MissionFormData {
   title: string;
@@ -58,12 +58,12 @@ interface TaskListWidgetProps {
   targetDate: string;
 }
 
-const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskListWidgetProps) => {
-  const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
+const TaskListWidget = ({ onRemove, widget, onHeightChange }: TaskListWidgetProps) => {
+  const { todayWidgets, isLoading, error } = useTodayWidgetsData();
   const updateWidgetActivity = useUpdateWidgetActivity();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [progressText, setProgressText] = useState<string>('');
+  // const [progressText, setProgressText] = useState<string>('');
   const [formData, setFormData] = useState<MissionFormData>({
     title: '',
     description: '',
@@ -182,6 +182,7 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskLi
     if (todayWidgets.length > 0) {
       try {
         // Convert API response to internal Task format
+        /*
         const allTasksToCount = todayWidgets.filter((todo: DailyWidget) =>
           !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'notes', 'habitTracker', 'yearCalendar', 'pillarsGraph'].includes(todo.widget_type)
         ).length;
@@ -189,8 +190,9 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskLi
         const allTasksCompleted = todayWidgets.filter((todo: DailyWidget) =>
           !['calendar', 'allSchedules', 'aiChat', 'moodTracker', 'notes', 'habitTracker', 'yearCalendar', 'pillarsGraph'].includes(todo.widget_type) && todo.activity_data?.status === 'completed'
         ).length;
+        */
 
-        setProgressText(`${allTasksCompleted} / ${allTasksToCount} `);
+        // setProgressText(`${allTasksCompleted} / ${allTasksToCount} `);
 
         // Convert API response to internal Task format
         const convertedTasks: Task[] = todayWidgets.filter((todo: DailyWidget) =>
@@ -201,8 +203,8 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskLi
             category: todo.category,
             description: todo.description || '',
             completed: todo.activity_data?.status === 'completed',
-            priority: getPriorityFromNumber(todo.activity_data?.progress / 25), // Convert progress to priority
-            dueDate: todo.activity_data?.due_date || '',
+            priority: getPriorityFromNumber((todo.activity_data as Record<string, unknown> | undefined)?.progress as number / 25), // Convert progress to priority
+            dueDate: (todo.activity_data as Record<string, unknown> | undefined)?.due_date as string || '',
             createdAt: todo.created_at || ''
           }));
 
@@ -213,10 +215,10 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange, targetDate }: TaskLi
         setTasks([]);
       }
     }
-  }, [todayWidgets]);
+  }, [todayWidgets, onHeightChange, widget.daily_widget_id]);
 
   const completedTasks = tasks.filter(task => task.completed);
-  const pendingTasks = tasks.filter(task => !task.completed);
+  // const pendingTasks = tasks.filter(task => !task.completed);
   const progressPercentage = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
 
   if (isLoading) {

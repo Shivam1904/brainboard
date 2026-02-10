@@ -50,7 +50,7 @@ interface FormData {
     include_websearch_details?: boolean;
 
     // Any other fields can be added here
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -226,20 +226,17 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
         title: formData.title.trim(),
         description: formData.description?.trim(),
         frequency: apiFrequency,
-        frequency_details: formData.frequency_details as unknown as Record<string, any>,
+        frequency_details: formData.frequency_details as unknown as Record<string, unknown>,
         importance: formData.importance,
         category: formData.category,
         is_permanent: formData.is_permanent,
-        widget_config: formData.widgetConfig
+        widget_config: formData.widgetConfig as Record<string, unknown>
       };
 
-      let response;
       if (editMode && existingWidget) {
-        // Update existing widget
-        response = await dashboardService.updateWidget(existingWidget.id, apiData);
+        await dashboardService.updateWidget(existingWidget.id, apiData);
       } else {
-        // Create new widget
-        response = await dashboardService.createWidget(apiData);
+        await dashboardService.createWidget(apiData);
       }
 
       onSuccess();
@@ -254,7 +251,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
   };
 
   // Update widget configuration
-  const updateWidgetConfig = (key: string, value: any) => {
+  const updateWidgetConfig = (key: string, value: unknown) => {
     setFormData(prev => ({
       ...prev,
       widgetConfig: {
@@ -523,7 +520,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
                             Milestones
                           </label>
                           <div className="space-y-3">
-                            {(formData.widgetConfig.milestones || []).map((milestone: any, index: number) => (
+                            {(formData.widgetConfig.milestones as Array<{ text: string; due_date: string }> || []).map((milestone, index) => (
                               <div key={index} className="flex items-center space-x-2 p-3 bg-white/50 rounded-lg border border-orange-200">
                                 <div className="flex-1">
                                   <input
@@ -551,7 +548,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const newMilestones = (formData.widgetConfig.milestones || []).filter((_: any, i: number) => i !== index);
+                                    const newMilestones = (formData.widgetConfig.milestones as Array<{ text: string; due_date: string }> || []).filter((_, i) => i !== index);
                                     updateWidgetConfig('milestones', newMilestones);
                                   }}
                                   className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
@@ -630,7 +627,7 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const newTimes = (formData.widgetConfig.alarm_times || ['09:00']).filter((_: any, i: number) => i !== index);
+                                      const newTimes = (formData.widgetConfig.alarm_times as string[] || ['09:00']).filter((_, i) => i !== index);
                                       updateWidgetConfig('alarm_times', newTimes);
                                     }}
                                     className="px-3 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600"

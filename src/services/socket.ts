@@ -3,7 +3,7 @@
 
 export interface SocketMessage {
   type: 'thinking' | 'response' | 'interactive' | 'error' | 'connection';
-  data: any;
+  data: unknown;
   timestamp: number;
 }
 
@@ -27,8 +27,8 @@ export interface InteractiveComponent {
   type: 'button' | 'select' | 'input' | 'slider' | 'checkbox';
   label: string;
   options?: string[];
-  value?: any;
-  metadata?: any;
+  value?: unknown;
+  metadata?: unknown;
 }
 
 export interface ChatMessage {
@@ -46,7 +46,7 @@ class SocketService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
-  private listeners: Map<string, ((data: any) => void)[]> = new Map();
+  private listeners: Map<string, ((data: unknown) => void)[]> = new Map();
   private isConnecting = false;
 
   // Connection state
@@ -73,10 +73,10 @@ class SocketService {
       this.connectionStatus = 'connecting';
 
       const wsUrl = url || this.getWebSocketUrl();
-      
+
       try {
         this.socket = new WebSocket(wsUrl);
-        
+
         this.socket.onopen = () => {
           this.isConnected = true;
           this.isConnecting = false;
@@ -100,7 +100,7 @@ class SocketService {
           this.isConnecting = false;
           this.connectionStatus = 'disconnected';
           this.emit('connection', { status: 'disconnected', code: event.code });
-          
+
           // Attempt to reconnect if not a clean close
           if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
             this.scheduleReconnect();
@@ -135,7 +135,7 @@ class SocketService {
   }
 
   // Send message to server
-  public send(type: SocketMessage['type'] | string, data: any): void {
+  public send(type: SocketMessage['type'] | string, data: unknown): void {
     if (!this.isConnected || !this.socket) {
       console.warn('WebSocket not connected, cannot send message');
       return;
@@ -157,7 +157,7 @@ class SocketService {
       message,
       session_id: sessionId
     };
-    
+
     if (this.socket && this.isConnected) {
       this.socket.send(JSON.stringify(messageData));
     } else {
@@ -166,7 +166,7 @@ class SocketService {
   }
 
   // Send interactive component action
-  public sendInteractiveAction(componentId: string, action: string, value: any): void {
+  public sendInteractiveAction(componentId: string, action: string, value: unknown): void {
     this.send('interactive_action', {
       componentId,
       action,
@@ -176,7 +176,7 @@ class SocketService {
   }
 
   // Subscribe to events
-  public on(event: string, callback: (data: any) => void): void {
+  public on(event: string, callback: (data: unknown) => void): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
@@ -184,7 +184,7 @@ class SocketService {
   }
 
   // Unsubscribe from events
-  public off(event: string, callback: (data: any) => void): void {
+  public off(event: string, callback: (data: unknown) => void): void {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       const index = callbacks.indexOf(callback);
@@ -195,7 +195,7 @@ class SocketService {
   }
 
   // Emit event to listeners
-  private emit(event: string, data: any): void {
+  private emit(event: string, data: unknown): void {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       callbacks.forEach(callback => {
@@ -209,7 +209,8 @@ class SocketService {
   }
 
   // Handle incoming messages
-  private handleMessage(message: any): void {
+  private handleMessage(rawMessage: unknown): void {
+    const message = rawMessage as Record<string, unknown>;
     // Handle the format sent by our backend
     switch (message.type) {
       case 'thinking':
@@ -276,10 +277,10 @@ class SocketService {
   // Get WebSocket URL based on environment
   private getWebSocketUrl(): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = process.env.NODE_ENV === 'development' 
-      ? 'localhost:8989' 
+    const host = process.env.NODE_ENV === 'development'
+      ? 'localhost:8989'
       : window.location.host;
-    
+
     return `${protocol}//${host}/api/v1/chat/ws/chat`;
   }
 

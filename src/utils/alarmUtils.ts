@@ -1,4 +1,9 @@
 
+export interface AlarmActivity {
+    timestamp: string;
+    type: 'stop' | 'snooze';
+}
+
 export const formatSnoozeTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -19,13 +24,12 @@ export const getNextAlarmTime = (alarm_times?: string[]): string => {
 
 export const checkAlarmTrigger = (
     alarm_times: string[],
-    activityHistory: any[],
+    activityHistory: AlarmActivity[],
     snoozeTime: number = 10
 ): { shouldAlert: boolean; activeSnoozeTimeLeft: number | null } => {
     const now = new Date();
     let shouldAlert = false;
     let activeSnoozeTimeLeft: number | null = null;
-    let activeSnoozeFound = false;
 
     alarm_times.forEach((alarmTime: string) => {
         const [hours, minutes] = alarmTime.split(':').map(Number);
@@ -35,10 +39,10 @@ export const checkAlarmTrigger = (
 
         if (now >= alarmStart && now < alarmEnd) {
             // Filter activities relevant to this specific alarm window
-            const relevantActivities = activityHistory.filter((activity: any) => {
+            const relevantActivities = activityHistory.filter((activity: AlarmActivity) => {
                 const t = new Date(activity.timestamp);
                 return t >= alarmStart && t < alarmEnd;
-            }).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            }).sort((a: AlarmActivity, b: AlarmActivity) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
             if (relevantActivities.length === 0) {
                 // No activity, should alert
@@ -51,7 +55,6 @@ export const checkAlarmTrigger = (
                     const snoozeEnd = new Date(lastActivity.timestamp).getTime() + (snoozeTime * 60 * 1000);
                     if (now.getTime() < snoozeEnd) {
                         // Still snoozed
-                        activeSnoozeFound = true;
                         activeSnoozeTimeLeft = Math.ceil((snoozeEnd - now.getTime()) / 1000);
                     } else {
                         // Snooze expired, should alert again
@@ -67,7 +70,7 @@ export const checkAlarmTrigger = (
 
 export const getNearestUpcomingAlarm = (
     alarm_times: string[],
-    activityHistory: any[],
+    activityHistory: AlarmActivity[],
     currentTime: Date
 ) => {
     if (!Array.isArray(alarm_times)) return null;
@@ -83,7 +86,7 @@ export const getNearestUpcomingAlarm = (
         const alarmEndDate = new Date(alarmDate.getTime() + 60 * 60 * 1000);
 
         // Check if handling needed
-        const isHandled = activityHistory.some((activity: any) => {
+        const isHandled = activityHistory.some((activity: AlarmActivity) => {
             const activityTime = new Date(activity.timestamp);
             return activityTime >= alarmDate && activityTime < alarmEndDate;
         });
@@ -104,7 +107,7 @@ export type AlarmStatus = 'pending' | 'active' | 'snoozed' | 'done' | 'dismissed
 
 export const getAlarmStatus = (
     alarmTimeStr: string,
-    activityHistory: any[],
+    activityHistory: AlarmActivity[],
     currentTime: Date,
     isAlerting: boolean, // Pass isAlerting from widget state to know if THIS alarm is ringing
     snoozeTime: number = 10
@@ -127,7 +130,7 @@ export const getAlarmStatus = (
         // So `activityHistory` will contain a future timestamp.
 
         // Let's optimize: Check if there's any 'stop' activity targeting this alarm window
-        const isDismissed = activityHistory.some((activity: any) => {
+        const isDismissed = activityHistory.some((activity: AlarmActivity) => {
             const t = new Date(activity.timestamp);
             return activity.type === 'stop' && t >= alarmDate && t < alarmEndDate;
         });
@@ -151,10 +154,10 @@ export const getAlarmStatus = (
         // We are in the window.
 
         // Check activities
-        const relevantActivities = activityHistory.filter((activity: any) => {
+        const relevantActivities = activityHistory.filter((activity: AlarmActivity) => {
             const t = new Date(activity.timestamp);
             return t >= alarmDate && t < alarmEndDate;
-        }).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        }).sort((a: AlarmActivity, b: AlarmActivity) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         if (relevantActivities.length === 0) {
             // No activity, but time passed? 
@@ -184,7 +187,7 @@ export const getAlarmStatus = (
 
     // 4. Past (outside window)
     // Check if it was handled
-    const wasHandled = activityHistory.some((activity: any) => {
+    const wasHandled = activityHistory.some((activity: AlarmActivity) => {
         const t = new Date(activity.timestamp);
         return t >= alarmDate && t < alarmEndDate; // Basic check
     });

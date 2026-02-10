@@ -19,7 +19,7 @@ interface AiChatWidgetProps {
 // Track if we've already shown the welcome message this page load (avoids duplicate when React Strict Mode double-mounts)
 let hasShownWelcomeThisSession = false;
 
-const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
+const AiChatWidget: React.FC<AiChatWidgetProps> = ({ onRemove }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,9 +33,10 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     const connectWebSocket = () => {
       const ws = aiWebSocket.connect(
         // onMessage handler
-        (data: any) => {
+        (data: unknown) => {
+          const messageData = data as Record<string, unknown>;
           // Handle connection status - don't add connection message to chat
-          if (data.type === 'connection') {
+          if (messageData.type === 'connection') {
             setIsConnected(true);
             // Show welcome message only once per page load (avoids duplicate on Strict Mode remount)
             if (!hasShownWelcomeThisSession) {
@@ -50,39 +51,41 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
             }
             return;
           }
-          
+
           // Don't add the initial "thinking" welcome step - we already show one above
-          if (data.type === 'thinking' && data.step === 'welcome') {
+          if (messageData.type === 'thinking' && messageData.step === 'welcome') {
             return;
           }
-          
+
           // Stop processing indicator for response or error
-          if (data.type === 'response' || data.type === 'error') {
+          if (messageData.type === 'response' || messageData.type === 'error') {
             setIsProcessing(false);
           }
-          
+
           // For any socket ping that comes in, we will show it
-          let messageContent = data.content?.message || data.content?.ai_response?.ai_response;
-          let messageType = data.type || 'unknown';
-          
+          const content = messageData.content as Record<string, unknown> | undefined;
+          const aiResponse = content?.ai_response as Record<string, unknown> | undefined;
+          let messageContent = (content?.message as string) || (aiResponse?.ai_response as string);
+          let messageType = (messageData.type as string) || 'unknown';
+
           // Handle malformed responses gracefully
-          if (data.type === 'error' && messageContent?.includes('Failed to parse AI response')) {
+          if (messageData.type === 'error' && messageContent?.includes('Failed to parse AI response')) {
             messageType = 'error';
             messageContent = 'The AI response could not be processed. Please try rephrasing your request.';
           }
-          
+
           const message: Message = {
-            id: Date.now().toString()+'-'+messageType+'-'+Math.random().toString(36).substring(2, 15),
+            id: Date.now().toString() + '-' + messageType + '-' + Math.random().toString(36).substring(2, 15),
             type: messageType,
             content: messageContent,
-            details: data.details,
+            details: messageData.details as string,
             timestamp: new Date()
           };
-          
+
           setMessages(prev => [...prev, message]);
         },
         // onError handler
-        (error: any) => {
+        (error: unknown) => {
           console.error('WebSocket error:', error);
           setIsConnected(false);
         },
@@ -91,23 +94,17 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
           setIsConnected(false);
         }
       );
-      
+
       // Set connection status when WebSocket opens
       ws.onopen = () => {
         setIsConnected(true);
       };
-      
+
       setWebsocket(ws);
     };
 
     connectWebSocket();
 
-    // Cleanup on unmount
-    return () => {
-      if (websocket) {
-        websocket.close();
-      }
-    };
   }, []);
 
 
@@ -143,14 +140,14 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     } catch (error) {
       console.error('Error sending message:', error);
       setIsProcessing(false);
-      
+
       const errorMessage: Message = {
         id: Date.now().toString(),
         type: 'error',
         content: 'Failed to send message. Please try again.',
         timestamp: new Date()
       };
-      
+
       setMessages(prev => [...prev, errorMessage]);
     }
   };
@@ -222,52 +219,52 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
     return (
       <div key={message.id} className={`${getMessageStyle()} rounded-lg shadow-sm`}>
         {/* Message Header */}
-        {(message.type === 'response'||message.type === 'user') && (<div className={`flex items-center gap-3 border-b border-gray-100`}>
+        {(message.type === 'response' || message.type === 'user') && (<div className={`flex items-center gap-3 border-b border-gray-100`}>
           <span className={`text-lg`}>{getMessageIcon()}</span>
           <div className="flex-1">
             <span className={`font-semibold text-gray-700 text-xs`}>
               {getMessageTitle()}
             </span>
             <span className={`text-gray-500 ml-2 text-xs`}>
-              {message.timestamp.toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
+              {message.timestamp.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
               })}
             </span>
           </div>
         </div>)}
-        
+
         {/* Message Content */}
         <div>
           {/* Show content->message field for response type */}
-          {(message.type === 'response'||message.type === 'user') &&  message.content && (
+          {(message.type === 'response' || message.type === 'user') && message.content && (
             <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-              {message.content+''}
+              {message.content + ''}
             </div>
           )}
-          
+
           {/* Show details field for thinking type */}
           {message.type === 'thinking' && message.details && (
             <div className="text-xs text-yellow-800 italic leading-tight">
-              {message.details+''}
+              {message.details + ''}
             </div>
           )}
-          
+
           {/* Show content for other types */}
           {message.type !== 'response' && message.type !== 'thinking' && message.type !== 'user' && (
             <div className={`flex items-center `}>
-            <div className="flex flex-row flex-1 justify-between">
-              <span className={`font-semibold text-gray-700 text-xs`}>
-                {getMessageTitle()}
-              </span>
-              <span className={`text-gray-500 text-xs`}>
-                {message.timestamp.toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </span>
+              <div className="flex flex-row flex-1 justify-between">
+                <span className={`font-semibold text-gray-700 text-xs`}>
+                  {getMessageTitle()}
+                </span>
+                <span className={`text-gray-500 text-xs`}>
+                  {message.timestamp.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
             </div>
-          </div>
           )}
         </div>
       </div>
@@ -279,15 +276,13 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
       title="AI Chat"
       icon="🤖"
       onRemove={onRemove}
-      className="flex flex-col"
     >
       <div className="flex-1 flex flex-col min-h-[300px] h-full">
         {/* Header with connection status */}
         <div className="flex items-center justify-between px-4 border-b bg-muted/30">
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-green-500' : 'bg-red-500'
-            }`}></div>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'
+              }`}></div>
             <span className="text-xs text-muted-foreground">
               {isConnected ? 'Connected' : 'Disconnected'}
             </span>
@@ -338,14 +333,14 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ widget, onRemove }) => {
               )}
             </button>
           </div>
-          
+
           {/* Processing indicator */}
           {isProcessing && (
             <div className="mt-2 text-xs text-muted-foreground">
               AI is processing...
             </div>
           )}
-          
+
           {/* Connection status */}
           {!isConnected && (
             <div className="mt-2 text-xs text-red-500">

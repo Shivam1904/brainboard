@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService, ApiError } from '../services/api';
 import { retryApiCall, createApiCache } from '../utils/apiUtils';
-import { getEnvironmentConfig } from '../config/environment';
 
 interface UseApiOptions<T> {
   immediate?: boolean;
@@ -11,7 +10,7 @@ interface UseApiOptions<T> {
   cacheKey?: string;
   onSuccess?: (data: T) => void;
   onError?: (error: ApiError) => void;
-  dependencies?: any[];
+  dependencies?: unknown[];
 }
 
 interface UseApiState<T> {
@@ -22,9 +21,9 @@ interface UseApiState<T> {
 }
 
 // Create a global cache instance
-const globalCache = createApiCache<any>();
+const globalCache = createApiCache<unknown>();
 
-export function useApi<T = any>(
+export function useApi<T = unknown>(
   endpoint: string,
   options: UseApiOptions<T> = {}
 ): UseApiState<T> {
@@ -43,11 +42,10 @@ export function useApi<T = any>(
     data: null,
     loading: false,
     error: null,
-    refetch: async () => {}
+    refetch: async () => { }
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const config = getEnvironmentConfig();
 
   const fetchData = useCallback(async (signal?: AbortSignal) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
@@ -57,20 +55,20 @@ export function useApi<T = any>(
       if (cache && cacheKey) {
         const cachedData = globalCache.get(cacheKey);
         if (cachedData) {
-          setState(prev => ({ 
-            ...prev, 
-            data: cachedData, 
-            loading: false 
+          setState(prev => ({
+            ...prev,
+            data: cachedData as T,
+            loading: false
           }));
-          onSuccess?.(cachedData);
+          onSuccess?.(cachedData as T);
           return;
         }
       }
 
       // Make API call
       const apiCall = () => apiService.get<T>(endpoint);
-      const data = retry ? 
-        await retryApiCall(apiCall, retryAttempts) : 
+      const data = retry ?
+        await retryApiCall(apiCall, retryAttempts) :
         await apiCall();
 
       // Cache the result if enabled
@@ -78,10 +76,10 @@ export function useApi<T = any>(
         globalCache.set(cacheKey, data);
       }
 
-      setState(prev => ({ 
-        ...prev, 
-        data, 
-        loading: false 
+      setState(prev => ({
+        ...prev,
+        data,
+        loading: false
       }));
       onSuccess?.(data);
 
@@ -94,10 +92,10 @@ export function useApi<T = any>(
         details: error
       };
 
-      setState(prev => ({ 
-        ...prev, 
-        error: apiError, 
-        loading: false 
+      setState(prev => ({
+        ...prev,
+        error: apiError,
+        loading: false
       }));
       onError?.(apiError);
     }
@@ -111,7 +109,7 @@ export function useApi<T = any>(
 
     // Create new abort controller
     abortControllerRef.current = new AbortController();
-    
+
     await fetchData(abortControllerRef.current.signal);
   }, [fetchData]);
 
@@ -125,6 +123,7 @@ export function useApi<T = any>(
     if (immediate) {
       refetch();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [immediate, refetch, ...dependencies]);
 
   // Cleanup on unmount
@@ -140,7 +139,7 @@ export function useApi<T = any>(
 }
 
 // Hook for POST requests
-export function useApiPost<T = any, D = any>(
+export function useApiPost<T = unknown, D = unknown>(
   endpoint: string,
   options: UseApiOptions<T> = {}
 ) {
@@ -166,16 +165,16 @@ export function useApiPost<T = any, D = any>(
 
     try {
       const apiCall = () => apiService.post<T>(endpoint, data);
-      const result = retry ? 
-        await retryApiCall(apiCall, retryAttempts) : 
+      const result = retry ?
+        await retryApiCall(apiCall, retryAttempts) :
         await apiCall();
 
-      setState(prev => ({ 
-        ...prev, 
-        data: result, 
-        loading: false 
+      setState(prev => ({
+        ...prev,
+        data: result,
+        loading: false
       }));
-      onSuccess?.(result);
+      onSuccess?.(result as T);
 
     } catch (error) {
       const apiError: ApiError = {
@@ -184,10 +183,10 @@ export function useApiPost<T = any, D = any>(
         details: error
       };
 
-      setState(prev => ({ 
-        ...prev, 
-        error: apiError, 
-        loading: false 
+      setState(prev => ({
+        ...prev,
+        error: apiError,
+        loading: false
       }));
       onError?.(apiError);
     }
@@ -197,7 +196,7 @@ export function useApiPost<T = any, D = any>(
 }
 
 // Hook for PUT requests
-export function useApiPut<T = any, D = any>(
+export function useApiPut<T = unknown, D = unknown>(
   endpoint: string,
   options: UseApiOptions<T> = {}
 ) {
@@ -223,16 +222,16 @@ export function useApiPut<T = any, D = any>(
 
     try {
       const apiCall = () => apiService.put<T>(endpoint, data);
-      const result = retry ? 
-        await retryApiCall(apiCall, retryAttempts) : 
+      const result = retry ?
+        await retryApiCall(apiCall, retryAttempts) :
         await apiCall();
 
-      setState(prev => ({ 
-        ...prev, 
-        data: result, 
-        loading: false 
+      setState(prev => ({
+        ...prev,
+        data: result,
+        loading: false
       }));
-      onSuccess?.(result);
+      onSuccess?.(result as T);
 
     } catch (error) {
       const apiError: ApiError = {
@@ -241,10 +240,10 @@ export function useApiPut<T = any, D = any>(
         details: error
       };
 
-      setState(prev => ({ 
-        ...prev, 
-        error: apiError, 
-        loading: false 
+      setState(prev => ({
+        ...prev,
+        error: apiError,
+        loading: false
       }));
       onError?.(apiError);
     }
@@ -254,7 +253,7 @@ export function useApiPut<T = any, D = any>(
 }
 
 // Hook for DELETE requests
-export function useApiDelete<T = any>(
+export function useApiDelete<T = unknown>(
   endpoint: string,
   options: UseApiOptions<T> = {}
 ) {
@@ -280,16 +279,16 @@ export function useApiDelete<T = any>(
 
     try {
       const apiCall = () => apiService.delete<T>(endpoint);
-      const result = retry ? 
-        await retryApiCall(apiCall, retryAttempts) : 
+      const result = retry ?
+        await retryApiCall(apiCall, retryAttempts) :
         await apiCall();
 
-      setState(prev => ({ 
-        ...prev, 
-        data: result, 
-        loading: false 
+      setState(prev => ({
+        ...prev,
+        data: result,
+        loading: false
       }));
-      onSuccess?.(result);
+      onSuccess?.(result as T);
 
     } catch (error) {
       const apiError: ApiError = {
@@ -298,10 +297,10 @@ export function useApiDelete<T = any>(
         details: error
       };
 
-      setState(prev => ({ 
-        ...prev, 
-        error: apiError, 
-        loading: false 
+      setState(prev => ({
+        ...prev,
+        error: apiError,
+        loading: false
       }));
       onError?.(apiError);
     }

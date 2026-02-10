@@ -33,11 +33,9 @@ const MOODS: MoodOption[] = [
 
 const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetProps) => {
   const [selectedMoodIds, setSelectedMoodIds] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dailyWidgetId, setDailyWidgetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { addWidgetToToday, updateWidgetActivity} = useDashboardActions();
+  const { addWidgetToToday, updateWidgetActivity } = useDashboardActions();
   // Hydrate from today's daily widget if it exists; do not create automatically
   useEffect(() => {
     const ensureDailyWidget = async () => {
@@ -50,7 +48,7 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
         const todayDw = await dashboardService.getTodayWidgetByWidgetId(widget.widget_id, targetDate);
         if (todayDw && todayDw.id) {
           setDailyWidgetId(todayDw.id);
-          const currentMoods: string[] = todayDw.activity_data?.selected_moods || [];
+          const currentMoods: string[] = (todayDw.activity_data as Record<string, unknown>)?.selected_moods as string[] || [];
           setSelectedMoodIds(new Set(currentMoods));
         }
       } catch (err) {
@@ -74,19 +72,13 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
     saveSelection(Array.from(next));
   };
 
-  const clearSelection = () => {
-    const cleared = new Set<string>();
-    setSelectedMoodIds(cleared);
-    // Auto-save clear
-    saveSelection([]);
-  };
+
 
   const saveSelection = async (moodsOverride?: string[]) => {
     if (!widget.widget_id) {
       alert('Mood widget is not properly configured.');
       return;
     }
-    setSaving(true);
     try {
       let currentDailyWidgetId = dailyWidgetId;
       if (!currentDailyWidgetId) {
@@ -101,12 +93,9 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
         selected_moods: moodsOverride ?? Array.from(selectedMoodIds),
         saved_at: new Date().toISOString(),
       });
-      setSavedAt(new Date().toLocaleTimeString());
     } catch (err) {
       console.error('Failed to save mood selection', err);
       alert('Failed to save selection.');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -132,14 +121,14 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
                       key={mood.id}
                       onClick={() => toggleMood(mood.id)}
                       className={
-                        `flex flex-col items-center justify-center select-none ` }
+                        `flex flex-col items-center justify-center select-none `}
                       title={mood.label}
                     >
                       <div className={`rounded-full border p-2 px-3 transition-colors text-4xl
-                         ${isSelected ? 'bg-blue-300' 
-                         : 'bg-card text-card-foreground opacity-50 border-border hover:bg-accent hover:text-accent-foreground'}`}>
-                           {mood.emoji}
-                          </div>
+                         ${isSelected ? 'bg-blue-300'
+                          : 'bg-card text-card-foreground opacity-50 border-border hover:bg-accent hover:text-accent-foreground'}`}>
+                        {mood.emoji}
+                      </div>
                     </button>
                   );
                 })}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { TrendingUp, Target, Calendar, Plus, X, Save } from 'lucide-react';
-import { TrackerDetailsAndActivityResponse, TrackerDetails, TrackerActivity } from '../../types/widgets';
+import { Target, Plus, X, Save } from 'lucide-react';
+import { TrackerDetailsAndActivityResponse } from '../../types/widgets';
 import { dashboardService } from '../../services/dashboard';
 import { DailyWidget } from '../../services/api';
 
@@ -41,13 +41,13 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get the widget_id from the widget_ids array (first one for singleitemtracker widgets)
-      const widgetId = widget.widget_ids[0];
-      
+      const widgetId = widget.widget_ids?.[0] || widget.widget_id;
+
       // Call the real API
       const response = await dashboardService.getTrackerDetailsAndActivity(widgetId);
-      setTrackerData(response);
+      setTrackerData(response as TrackerDetailsAndActivityResponse);
     } catch (err) {
       console.error('Failed to fetch tracker:', err);
       setError('Failed to load tracker data');
@@ -60,21 +60,20 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
 
   const updateValue = async () => {
     if (!trackerData || !newValue.trim()) return;
-    
+
     // Check if activity exists
     if (!trackerData.activity) {
       console.error('No activity found for tracker');
       return;
     }
-    
+
     try {
       // Update tracker activity using the real API
       await dashboardService.updateTrackerActivity(trackerData.activity.id, {
         value: newValue,
-        time_added: new Date().toISOString(),
-        updated_by: 'user'
+        time_added: new Date().toISOString()
       });
-      
+
       // Refresh tracker data
       await fetchTracker();
       setNewValue('');
@@ -101,13 +100,11 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateValue();
-  };
+
 
   useEffect(() => {
     fetchTracker();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -125,7 +122,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
       <BaseWidget title="Item Tracker" icon="📈" onRemove={onRemove}>
         <div className="flex flex-col items-center justify-center h-32 text-center">
           <p className="text-orange-600 mb-2">{error}</p>
-          <button 
+          <button
             onClick={fetchTracker}
             className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
           >
@@ -149,7 +146,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
   // Safely access nested properties with null checks
   const trackerDetails = trackerData.tracker_details;
   const activity = trackerData.activity;
-  
+
   if (!trackerDetails) {
     return (
       <BaseWidget title="Item Tracker" icon="📈" onRemove={onRemove}>
@@ -160,7 +157,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
     );
   }
 
-  const progressPercentage = trackerDetails.target_value && activity?.value 
+  const progressPercentage = trackerDetails.target_value && activity?.value
     ? Math.min((parseFloat(activity.value) / parseFloat(trackerDetails.target_value)) * 100, 100)
     : null;
 
@@ -173,7 +170,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
             <p className="text-xs text-orange-700 text-center">{error}</p>
           </div>
         )}
-        
+
 
 
         {/* Current Value Display */}
@@ -197,10 +194,10 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
                 {trackerDetails.target_value}{trackerDetails.value_unit}
               </span>
             </div>
-            
+
             {progressPercentage !== null && (
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className={`h-2 rounded-full ${getProgressColor(progressPercentage)}`}
                   style={{ width: `${progressPercentage}%` }}
                 ></div>
@@ -248,7 +245,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
                   </button>
                 </div>
               </div>
-              
+
               {/* Form Content */}
               <div className="p-6">
                 <div className="space-y-4">
@@ -266,7 +263,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
                       required
                     />
                   </div>
-                  
+
                   {/* Notes Input */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -282,7 +279,7 @@ const SingleItemTrackerWidget = ({ onRemove, widget }: SingleItemTrackerWidgetPr
                   </div>
                 </div>
               </div>
-              
+
               {/* Footer */}
               <div className="bg-gray-50 p-6 rounded-b-xl">
                 <div className="flex gap-3">

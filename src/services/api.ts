@@ -4,21 +4,28 @@
 import { API_CONFIG, buildApiUrl, buildApiUrlWithParams } from '../config/api';
 
 // Basic types for the new API structure
+export interface ApiError {
+  message: string;
+  status?: number;
+  details?: unknown;
+}
+
 export interface DashboardWidget {
   id: string;
   user_id: string;
   widget_type: string;
   title: string;
   frequency: string;
-  frequency_details?: Record<string, any>;
+  frequency_details?: Record<string, unknown>;
   importance: number;
   category: string;
   description?: string;
   is_permanent: boolean;
-  widget_config: Record<string, any>;
+  widget_config: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   delete_flag: boolean;
+  widget_ids?: string[];
 }
 
 import { Layout } from 'react-grid-layout';
@@ -27,7 +34,9 @@ export interface DailyWidget {
   id: string;
   daily_widget_id: string;
   widget_id: string;
+  widget_ids?: string[];
   widget_type: string;
+  date?: string;
   title: string;
   frequency: string;
   importance: number;
@@ -40,8 +49,8 @@ export interface DailyWidget {
   is_active?: boolean;
   isVisible?: boolean;
   layout: Layout;
-  widget_config?: Record<string, any>;
-  activity_data?: Record<string, any>;
+  widget_config?: Record<string, unknown>;
+  activity_data?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
   delete_flag?: boolean;
@@ -81,6 +90,31 @@ class ApiService {
     return response.json();
   }
 
+  // Generic HTTP methods to support hooks
+  async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: 'GET' });
+  }
+
+  async post<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async put<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+  }
+
   // ============================================================================
   // DASHBOARD WIDGETS ENDPOINTS (/api/v1/dashboard-widgets/)
   // ============================================================================
@@ -90,12 +124,12 @@ class ApiService {
     widget_type: string;
     title: string;
     frequency: string;
-    frequency_details?: Record<string, any>;
+    frequency_details?: Record<string, unknown>;
     importance: number;
     category: string;
     description?: string;
     is_permanent?: boolean;
-    widget_config?: Record<string, any>;
+    widget_config?: Record<string, unknown>;
   }): Promise<DashboardWidget> {
     const url = buildApiUrl(API_CONFIG.dashboardWidgets.createWidget);
     return this.request<DashboardWidget>(url, {
@@ -230,10 +264,10 @@ class ApiService {
   }
 
   // PUT /api/v1/dashboard/daily-widgets/{daily_widget_id}/updateactivity
-  async updateActivity(dailyWidgetId: string, activityData: Record<string, any>): Promise<{
+  async updateActivity(dailyWidgetId: string, activityData: Record<string, unknown>): Promise<{
     success: boolean;
     message: string;
-    activity_data: Record<string, any>;
+    activity_data: Record<string, unknown>;
   }> {
     const url = buildApiUrlWithParams(API_CONFIG.dashboard.updateActivity, { daily_widget_id: dailyWidgetId });
     return this.request(url, {
@@ -259,14 +293,14 @@ class ApiService {
   // ============================================================================
 
   // Get alarm details and activity
-  async getAlarmDetailsAndActivity(widgetId: string): Promise<any> {
+  async getAlarmDetailsAndActivity(widgetId: string): Promise<unknown> {
     // This would typically call a specific alarm endpoint
     // For now, we'll use the general getTodayWidget method
     return this.getTodayWidget(widgetId);
   }
 
   // Snooze alarm
-  async snoozeAlarm(activityId: string, minutes: number): Promise<any> {
+  async snoozeAlarm(activityId: string, minutes: number): Promise<unknown> {
     // This would typically call a specific alarm snooze endpoint
     // For now, we'll use the general updateActivity method
     return this.updateActivity(activityId, {
@@ -275,7 +309,7 @@ class ApiService {
   }
 
   // Stop alarm
-  async stopAlarm(activityId: string): Promise<any> {
+  async stopAlarm(activityId: string): Promise<unknown> {
     // This would typically call a specific alarm stop endpoint
     // For now, we'll use the general updateActivity method
     return this.updateActivity(activityId, {

@@ -1,4 +1,11 @@
 // Grid configuration that can be shared between TypeScript and CSS
+
+export interface Layout {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 export const GRID_CONFIG = {
   // Grid layout settings
   cols: {
@@ -63,7 +70,7 @@ export const gridUtils = {
   },
 
   // Constrain layout to grid boundaries
-  constrainLayout: (layout: any, maxCols: number = GRID_CONFIG.cols.lg, maxRows?: number) => {
+  constrainLayout: (layout: Layout, maxCols: number = GRID_CONFIG.cols.lg, maxRows?: number) => {
     if (!maxRows) {
       // Calculate max rows using the same logic as getMaxRows but inline to avoid circular reference
       const headerHeight = 80
@@ -97,8 +104,8 @@ export function findEmptyPosition({
   maxRows = 100,
 }: {
   widgetId: string,
-  widgets: Array<{ layout: { x: number; y: number; w: number; h: number } }>,
-  getWidgetConfig: (id: string) => any,
+  widgets: Array<{ layout: Layout }>,
+  getWidgetConfig: (id: string) => { defaultSize: { w: number; h: number } } | null,
   gridCols?: number,
   maxRows?: number,
 }): { x: number; y: number } | null {

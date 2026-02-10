@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
-import { CheckCircle, Circle, Plus, X } from 'lucide-react';
+import { CheckCircle, Circle, X } from 'lucide-react';
 import FrequencySection from './FrequencySection';
-import { TodoTodayResponse, TodoActivity } from '../../types';
+// import { TodoTodayResponse, TodoActivity } from '../../types';
 import { dashboardService } from '../../services/dashboard';
 import { DailyWidget } from '../../services/api';
+import { TodoDetailsAndActivityResponse } from '../../types/widgets';
 
 interface Task {
   id: string;
@@ -47,6 +48,7 @@ const getCategoryColor = (category: string) => {
   }
 };
 
+/*
 const getPriorityFromNumber = (priority: number): 'High' | 'Medium' | 'Low' => {
   switch (priority) {
     case 3: return 'High';
@@ -55,6 +57,7 @@ const getPriorityFromNumber = (priority: number): 'High' | 'Medium' | 'Low' => {
     default: return 'Medium';
   }
 };
+*/
 
 interface TaskListWidgetProps {
   onRemove: () => void;
@@ -86,10 +89,10 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Use real API call for events
-      const response = await dashboardService.getTodoItemDetailsAndActivity(widget.daily_widget_id ,widget.widget_ids[0]);
-      
+      const response = await dashboardService.getTodoItemDetailsAndActivity(widget.daily_widget_id, widget.widget_ids?.[0]) as TodoDetailsAndActivityResponse;
+
       // Convert API response to internal Task format
       const convertedTask: Task = {
         id: response.activity.id,
@@ -99,7 +102,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         priority: 'Medium',
         createdAt: response.todo_details.created_at
       };
-      
+
       setTask(convertedTask);
     } catch (err) {
       console.error('Failed to fetch task:', err);
@@ -116,10 +119,9 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       // Use real API call to update task status
       await dashboardService.updateTodoActivity(taskId, {
         status: completed ? 'completed' : 'pending',
-        progress: completed ? 100 : 0,
-        updated_by: 'user' // TODO: Get actual user ID
+        progress: completed ? 100 : 0
       });
-      
+
       // Update local state
       setTask({
         id: task?.id || '',
@@ -143,7 +145,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       //   method: 'POST',
       //   body: JSON.stringify(missionData)
       // });
-      
+
       // Add to local state (simulating API response)
       const newTask: Task = {
         id: Date.now().toString(),
@@ -155,7 +157,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         dueDate: missionData.dueDate,
         createdAt: new Date().toISOString()
       };
-      
+
       setTask(newTask);
       setShowAddForm(false);
       setFormData({
@@ -186,7 +188,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         dueDate: missionData.dueDate,
         createdAt: new Date().toISOString()
       };
-      
+
       setTask(newTask);
       setShowAddForm(false);
       setFormData({
@@ -215,9 +217,10 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
 
   useEffect(() => {
     fetchTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const completedTasks = task?.completed;
+  // const completedTasks = task?.completed;
   if (loading) {
     return (
       <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
@@ -233,7 +236,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
       <BaseWidget title="Event Tracker" icon="📋" onRemove={onRemove}>
         <div className="flex flex-col items-center justify-center h-32 text-center">
           <p className="text-orange-600 mb-2">{error}</p>
-          <button 
+          <button
             onClick={fetchTasks}
             className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
           >
@@ -253,9 +256,9 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
             <p className="text-xs text-orange-700 text-center">{error}</p>
           </div>
         )}
-        
 
-        
+
+
         {/* Tasks List */}
         <div className="space-y-3 ">
           {task === undefined ? (
@@ -264,59 +267,56 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
               <p className="text-sm">Add a mission to get started!</p>
             </div>
           ) : (
-              <div 
-                key={task?.id} 
-                className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
-                  task?.completed 
-                    ? 'bg-gray-50 border-gray-200' 
-                    : 'bg-white border-gray-200 hover:border-blue-300'
+            <div
+              key={task?.id}
+              className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${task?.completed
+                ? 'bg-gray-50 border-gray-200'
+                : 'bg-white border-gray-200 hover:border-blue-300'
                 }`}
+            >
+              <button
+                onClick={() => updateTaskStatus(task?.id, !task?.completed)}
+                className="mt-0.5 flex-shrink-0"
               >
-                <button
-                  onClick={() => updateTaskStatus(task?.id, !task?.completed)}
-                  className="mt-0.5 flex-shrink-0"
-                >
-                  {task?.completed ? (
-                    <CheckCircle size={20} className="text-green-600" />
-                  ) : (
-                    <Circle size={20} className="text-gray-400 hover:text-blue-600" />
-                  )}
-                </button>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className={`font-medium text-sm ${
-                      task?.completed ? 'line-through text-gray-500' : 'text-gray-900'
+                {task?.completed ? (
+                  <CheckCircle size={20} className="text-green-600" />
+                ) : (
+                  <Circle size={20} className="text-gray-400 hover:text-blue-600" />
+                )}
+              </button>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className={`font-medium text-sm ${task?.completed ? 'line-through text-gray-500' : 'text-gray-900'
                     }`}>
-                      {task?.title}
-                    </h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task?.priority || '')}`}>
-                      {task?.priority}
+                    {task?.title}
+                  </h4>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task?.priority || '')}`}>
+                    {task?.priority}
+                  </span>
+                </div>
+
+                {task?.description && (
+                  <p className={`text-xs mt-1 ${task?.completed ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                    {task?.description}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-2 mt-2">
+                  {task?.category && (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(task?.category)}`}>
+                      {task?.category}
                     </span>
-                  </div>
-                  
-                  {task?.description && (
-                    <p className={`text-xs mt-1 ${
-                      task?.completed ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
-                      {task?.description}
-                    </p>
                   )}
-                  
-                  <div className="flex items-center gap-2 mt-2">
-                    {task?.category && (
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(task?.category)}`}>
-                        {task?.category}
-                      </span>
-                    )}
-                    {task?.dueDate && (
-                      <span className="text-xs text-gray-500">
-                        Due: {new Date(task?.dueDate).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
+                  {task?.dueDate && (
+                    <span className="text-xs text-gray-500">
+                      Due: {new Date(task?.dueDate).toLocaleDateString()}
+                    </span>
+                  )}
                 </div>
               </div>
+            </div>
           )}
         </div>
       </div>
@@ -340,7 +340,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                 </button>
               </div>
             </div>
-            
+
             {/* Form Content */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -352,13 +352,13 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-4 py-3 bg-white/70 backdrop-blur-sm border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-lg"
                     placeholder="What do you want to achieve?"
                     required
                   />
                 </div>
-                
+
                 {/* Description Section */}
                 <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border border-pink-200">
                   <label className="block text-lg font-bold text-gray-800 mb-2">
@@ -366,13 +366,13 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                   </label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full px-4 py-3 bg-white/70 backdrop-blur-sm border border-pink-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none"
                     placeholder="Describe your mission in detail..."
                     rows={3}
                   />
                 </div>
-                
+
                 {/* Priority & Category Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Priority Section */}
@@ -385,19 +385,18 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                         <button
                           key={priority}
                           type="button"
-                          onClick={() => setFormData({...formData, priority: priority as 'High' | 'Medium' | 'Low'})}
-                          className={`px-4 py-3 rounded-lg font-medium transition-all ${
-                            formData.priority === priority
-                              ? 'bg-orange-500 text-white shadow-lg transform scale-105'
-                              : 'bg-white/70 text-gray-700 hover:bg-orange-100 hover:scale-102'
-                          }`}
+                          onClick={() => setFormData({ ...formData, priority: priority as 'High' | 'Medium' | 'Low' })}
+                          className={`px-4 py-3 rounded-lg font-medium transition-all ${formData.priority === priority
+                            ? 'bg-orange-500 text-white shadow-lg transform scale-105'
+                            : 'bg-white/70 text-gray-700 hover:bg-orange-100 hover:scale-102'
+                            }`}
                         >
                           {priority}
                         </button>
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Category Section */}
                   <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4 border border-green-200">
                     <label className="block text-lg font-bold text-gray-800 mb-3">
@@ -413,12 +412,11 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                         <button
                           key={category.value}
                           type="button"
-                          onClick={() => setFormData({...formData, category: category.value})}
-                          className={`px-4 py-3 rounded-lg font-medium transition-all ${
-                            formData.category === category.value
-                              ? `bg-gradient-to-r ${category.color} text-white shadow-lg transform scale-105`
-                              : 'bg-white/70 text-gray-700 hover:bg-gray-100 hover:scale-102'
-                          }`}
+                          onClick={() => setFormData({ ...formData, category: category.value })}
+                          className={`px-4 py-3 rounded-lg font-medium transition-all ${formData.category === category.value
+                            ? `bg-gradient-to-r ${category.color} text-white shadow-lg transform scale-105`
+                            : 'bg-white/70 text-gray-700 hover:bg-gray-100 hover:scale-102'
+                            }`}
                         >
                           {category.label}
                         </button>
@@ -426,7 +424,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Due Date Section */}
                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-200">
                   <label className="block text-lg font-bold text-gray-800 mb-2">
@@ -435,11 +433,11 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                   <input
                     type="date"
                     value={formData.dueDate}
-                    onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                     className="w-full px-4 py-3 bg-white/70 backdrop-blur-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                 </div>
-                
+
                 {/* Frequency Section */}
                 <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-200">
                   <label className="block text-lg font-bold text-gray-800 mb-3">
@@ -447,13 +445,13 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                   </label>
                   <FrequencySection
                     frequency={formData.frequency}
-                    onChange={(frequency) => setFormData({...formData, frequency})}
+                    onChange={(frequency) => setFormData({ ...formData, frequency })}
                     pillarColor={getCategoryColor(formData.category)}
                   />
                 </div>
               </form>
             </div>
-            
+
             {/* Footer */}
             <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 border-t border-gray-200">
               <div className="flex gap-4">

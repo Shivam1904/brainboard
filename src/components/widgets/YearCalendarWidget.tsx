@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, X, Pencil, Check } from 'lucide-react';
 import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
-import { categoryColors } from './CalendarWidget';
+import { categoryColors } from '../../constants/widgetConstants';
 
 
 
@@ -16,9 +16,8 @@ interface CalendarEvent {
   priority: 'High' | 'Medium' | 'Low';
   description?: string;
   category?: string;
-  widget_id?: string;
-  widget_config?: Record<string, any>;
-  activity_data?: Record<string, any>;
+  widget_config?: Record<string, unknown>;
+  activity_data?: Record<string, unknown>;
   due_date?: string;
   achieved_date?: string;
 }
@@ -29,11 +28,11 @@ interface CalendarDay {
   isCurrentMonth: boolean;
   isToday: boolean;
   events: CalendarEvent[];
-  todosCompleted: any[];
-  todosTotal: any[];
+  todosCompleted: unknown[];
+  todosTotal: unknown[];
   habitStreak: number;
-  milestones: Set<any>;
-  milestonesAchieved: Set<any>;
+  milestones: Set<unknown>;
+  milestonesAchieved: Set<unknown>;
   streaksByCategory?: Map<string, number>;
   top3Completed: boolean;
   milestonesData?: {
@@ -46,20 +45,20 @@ interface CalendarDay {
 const getCategoryColor = (category: string): string => {
   if (!category) return 'gray';
   const lowerCategory = category.toLowerCase();
-  return categoryColors[lowerCategory as keyof typeof categoryColors]?.color || 'gray';
+  return (categoryColors as Record<string, { color: string }>)[lowerCategory]?.color || 'gray';
 };
 
 // Circular progress component for the heatmap
 interface CircularProgressProps {
-  todosCompleted: any[];
-  todosTotal: any[];
+  todosCompleted: unknown[];
+  todosTotal: unknown[];
   day: number;
   size?: number;
   strokeWidth?: number;
   isToday?: boolean;
 }
 
-const CircularProgress = ({ todosCompleted, todosTotal, day, size = 12, strokeWidth = 1.5, isToday = false }: CircularProgressProps) => {
+const CircularProgress = ({ todosCompleted, todosTotal, size = 12, strokeWidth = 1.5, isToday = false }: CircularProgressProps) => {
   if (todosTotal.length === 0) {
     return (
       <div className="flex items-center justify-center" style={{ width: size, height: size }}>
@@ -91,13 +90,12 @@ const CircularProgress = ({ todosCompleted, todosTotal, day, size = 12, strokeWi
           fill={isToday ? 'white' : 'none'}
         />)}
         {/* Per-task arcs */}
-        {todosTotal
-          .sort((a, b) => a.category > b.category ? 1 : -1)
-          .sort((a, b) => a.activity_data?.status === 'completed' ? -1 : 1)
+        {(todosTotal as DailyWidget[])
+          .sort((a, b) => ((a.category || '') > (b.category || '') ? 1 : -1))
           .map((todo, index) => {
-            const isCompleted = todo?.activity_data?.status === 'completed'
+            const isCompleted = (todo?.activity_data as Record<string, unknown>)?.status === 'completed'
               || todosCompleted.includes(todo);
-            const strokeColor = isCompleted ? getCategoryColor(todo?.category) : 'transparent';
+            const strokeColor = isCompleted ? getCategoryColor(todo?.category || '') : 'transparent';
             const dashArray = `${segmentLength} ${circumference - segmentLength}`;
             const dashOffset = circumference - index * share;
             return (
@@ -120,17 +118,12 @@ const CircularProgress = ({ todosCompleted, todosTotal, day, size = 12, strokeWi
   );
 };
 
-const monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-];
 
-const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 
 interface YearCalendarWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
-  targetDate: string;
 }
 
 // Helper function to generate 6-month calendar structure (5 months before + 1 month after today)
@@ -198,9 +191,9 @@ const groupDaysByWeeks = (days: CalendarDay[]) => {
   return weeks;
 };
 
-const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidgetProps) => {
+const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
   const [yearlyCalendarData, setYearlyCalendarData] = useState<CalendarDay[]>([]);
-  const [currentDate, setCurrentDate] = useState(targetDate);
+  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -208,10 +201,12 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
   // New state for widget selection
   const [availableWidgets, setAvailableWidgets] = useState<DashboardWidget[]>([]);
   const [selectedWidgets, setSelectedWidgets] = useState<Set<string>>(new Set());
-  const [loadingWidgets, setLoadingWidgets] = useState(false);
-  const [updatingWidget, setUpdatingWidget] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingWidgets, setEditingWidgets] = useState(false);
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   const fetchSixMonthCalendarData = async (centerDate: string) => {
     try {
@@ -234,7 +229,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
         calendar_type: 'yearly'
-      });
+      }) as DailyWidget[];
 
       // Generate 6-month calendar structure
       const base = generateSixMonthCalendarStructure(centerDate);
@@ -267,7 +262,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
         const key = ev.date;
         const day = dayByKey.get(key);
         if (day) {
-          day.events.push(ev);
+          day.events.push(ev as CalendarEvent);
         }
       }
 
@@ -275,7 +270,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
       for (const day of base) {
         const todos = items.filter(item => item.date === day.date);
         day.todosTotal = todos;
-        day.todosCompleted = todos.filter(item => item.activity_data?.status === 'completed');
+        day.todosCompleted = todos.filter(item => (item.activity_data as Record<string, unknown>)?.status === 'completed');
       }
 
       setYearlyCalendarData(base);
@@ -302,7 +297,6 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
   // Fetch available widgets for selection
   const fetchAvailableWidgets = async () => {
     try {
-      setLoadingWidgets(true);
       const widgets = await apiService.getAllWidgets();
       // Filter out the current calendar widget and only show task-like widgets
       const taskWidgets = widgets.filter(w =>
@@ -322,17 +316,13 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
     } catch (err) {
       console.error('Error fetching available widgets:', err);
       setError('Failed to load available widgets');
-    } finally {
-      setLoadingWidgets(false);
     }
   };
 
   // Handle widget selection/deselection
   const handleWidgetSelection = async (widgetId: string, isSelected: boolean) => {
     try {
-      setUpdatingWidget(widgetId);
       setError(null);
-      setSuccessMessage(null);
 
       const newSelected = new Set(selectedWidgets);
       if (isSelected) {
@@ -357,10 +347,6 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
 
       await apiService.updateWidget(widgetId, updateData);
 
-      // Show success message
-      setSuccessMessage(`Task "${widgetToUpdate.title}" ${isSelected ? 'added to' : 'removed from'} calendar`);
-      setTimeout(() => setSuccessMessage(null), 3000);
-
       // Refresh calendar data to show the changes
       await fetchSixMonthCalendarData(currentDate);
     } catch (err) {
@@ -376,9 +362,6 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
 
       // Show error to user
       setError('Failed to update widget selection. Please try again.');
-      setTimeout(() => setError(null), 3000);
-    } finally {
-      setUpdatingWidget(null);
     }
   };
 
@@ -387,6 +370,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
   useEffect(() => {
     fetchSixMonthCalendarData(currentDate);
     fetchAvailableWidgets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -409,7 +393,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
   }
 
   const weeks = groupDaysByWeeks(yearlyCalendarData);
-  const isToday = (date: string): boolean => {
+  const isTodayDate = (date: string): boolean => {
     const today = new Date();
     return date === today.toISOString().split('T')[0];
   };
@@ -419,6 +403,14 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
       <div className="px-4 pt-4">
         {/* 6-Month Header */}
         <div className="mb-4">
+          {error && (
+            <div className="mb-4 p-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="p-1 hover:bg-red-100 rounded">
+                <X size={14} />
+              </button>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <button
@@ -474,7 +466,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
                       return (
                         <div
                           key={dayIndex}
-                          className={`w-3 h-3 rounded-sm transition-all ${isToday(day.date) ? 'bg-gray-100 border border-blue-500' : 'bg-white/50'
+                          className={`w-3 h-3 rounded-sm transition-all ${isTodayDate(day.date) ? 'bg-gray-100 border border-blue-500' : 'bg-white/50'
                             }`}
                           title={`${day.date}: ${day.todosTotal.length} tasks, ${day.todosCompleted.length} completed`}
                         >
@@ -484,7 +476,7 @@ const YearCalendarWidget = ({ onRemove, widget, targetDate }: YearCalendarWidget
                             day={day.day}
                             size={12}
                             strokeWidth={4}
-                            isToday={isToday(day.date)}
+                            isToday={isTodayDate(day.date)}
                           />
                         </div>
                       );

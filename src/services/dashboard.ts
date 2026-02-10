@@ -7,23 +7,23 @@ export interface CreateWidgetData {
   widget_type: string;
   title: string;
   frequency: string;
-  frequency_details?: Record<string, any>;
+  frequency_details?: Record<string, unknown>;
   importance: number;
   category: string;
   description?: string;
   is_permanent?: boolean;
-  widget_config?: Record<string, any>;
+  widget_config?: Record<string, unknown>;
 }
 
 export interface UpdateWidgetData {
   title?: string;
   frequency?: string;
-  frequency_details?: Record<string, any>;
+  frequency_details?: Record<string, unknown>;
   importance?: number;
   category?: string;
   description?: string;
   is_permanent?: boolean;
-  widget_config?: Record<string, any>;
+  widget_config?: Record<string, unknown>;
 }
 
 export class DashboardService {
@@ -91,10 +91,10 @@ export class DashboardService {
   }
 
   // Update activity data for a daily widget
-  async updateActivity(dailyWidgetId: string, activityData: Record<string, any>): Promise<{
+  async updateActivity(dailyWidgetId: string, activityData: Record<string, unknown>): Promise<{
     success: boolean;
     message: string;
-    activity_data: Record<string, any>;
+    activity_data: Record<string, unknown>;
   }> {
     return apiService.updateActivity(dailyWidgetId, activityData);
   }
@@ -123,7 +123,7 @@ export class DashboardService {
       description?: string;
       frequency?: string;
     },
-    config: Record<string, any>
+    config: Record<string, unknown>
   ): Promise<DashboardWidget> {
     return this.createWidget({
       widget_type: widgetType,
@@ -229,9 +229,8 @@ export class DashboardService {
   }): Promise<{
     success: boolean;
     message: string;
-    activity_data: Record<string, any>;
   }> {
-    return this.updateActivity(dailyWidgetId, alarmActivity);
+    return this.updateActivity(dailyWidgetId, alarmActivity as Record<string, unknown>);
   }
 
   // Update todo activity
@@ -242,9 +241,8 @@ export class DashboardService {
   }): Promise<{
     success: boolean;
     message: string;
-    activity_data: Record<string, any>;
   }> {
-    return this.updateActivity(dailyWidgetId, todoActivity);
+    return this.updateActivity(dailyWidgetId, todoActivity as Record<string, unknown>);
   }
 
   // Update tracker activity
@@ -255,9 +253,8 @@ export class DashboardService {
   }): Promise<{
     success: boolean;
     message: string;
-    activity_data: Record<string, any>;
   }> {
-    return this.updateActivity(dailyWidgetId, trackerActivity);
+    return this.updateActivity(dailyWidgetId, trackerActivity as Record<string, unknown>);
   }
 
   // Update web search activity
@@ -265,14 +262,14 @@ export class DashboardService {
     status: 'pending' | 'completed' | 'failed';
     reaction?: string;
     summary?: string;
-    source_json?: any;
+    source_json?: unknown;
     completed_at?: string;
   }): Promise<{
     success: boolean;
     message: string;
-    activity_data: Record<string, any>;
+    activity_data: Record<string, unknown>;
   }> {
-    return this.updateActivity(dailyWidgetId, webSearchActivity);
+    return this.updateActivity(dailyWidgetId, webSearchActivity as Record<string, unknown>);
   }
 
   // Get alarm activity data
@@ -304,19 +301,19 @@ export class DashboardService {
   // ============================================================================
 
   // Get alarm details and activity
-  async getAlarmDetailsAndActivity(widgetId: string): Promise<any> {
+  async getAlarmDetailsAndActivity(widgetId: string): Promise<unknown> {
     return apiService.getAlarmDetailsAndActivity(widgetId);
   }
 
   // Get tracker details and activity
-  async getTrackerDetailsAndActivity(widgetId: string): Promise<any> {
+  async getTrackerDetailsAndActivity(dailyWidgetId: string, _widgetId?: string): Promise<unknown> {
     // This would typically call a specific tracker endpoint
     // For now, we'll use the general getTodayWidget method
-    return this.getTodayWidget(widgetId);
+    return this.getTodayWidget(dailyWidgetId);
   }
 
   // Get todo item details and activity
-  async getTodoItemDetailsAndActivity(dailyWidgetId: string, _widgetId: string): Promise<any> {
+  async getTodoItemDetailsAndActivity(dailyWidgetId: string, _widgetId?: string): Promise<unknown> {
     // This would typically call a specific todo endpoint
     // For now, we'll use the general getTodayWidget method
     return this.getTodayWidget(dailyWidgetId);
@@ -324,4 +321,4 @@ export class DashboardService {
 }
 
 // Export singleton instance
-export const dashboardService = new DashboardService(); 
+export const dashboardService = new DashboardService();

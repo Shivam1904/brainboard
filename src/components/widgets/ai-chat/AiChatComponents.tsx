@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 export interface AiChatComponent {
   id: string;
   type: string;
-  props: Record<string, any>;
+  props: Record<string, unknown>;
 }
 
 // Component props interfaces
@@ -27,8 +27,8 @@ export interface ConfirmationProps {
 
 export interface DataDisplayProps {
   title: string;
-  data: any;
-  onAction?: (action: string, data: any) => void;
+  data: unknown;
+  onAction?: (action: string, data: unknown) => void;
 }
 
 export interface ProgressTrackerProps {
@@ -49,9 +49,9 @@ export interface QuickActionsProps {
 }
 
 export interface AlarmFormProps {
-  filledParams: Record<string, any>;
+  filledParams: Record<string, unknown>;
   missingParams: string[];
-  onSubmit: (data: Record<string, any>) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
   onCancel: () => void;
 }
 
@@ -188,7 +188,7 @@ export const ProgressTrackerComponent: React.FC<ProgressTrackerProps> = ({ curre
           <span>{percentage}%</span>
         </div>
         <div className="w-full bg-secondary rounded-full h-2">
-          <div 
+          <div
             className="bg-primary h-2 rounded-full transition-all duration-300"
             style={{ width: `${percentage}%` }}
           ></div>
@@ -232,7 +232,7 @@ export const QuickActionsComponent: React.FC<QuickActionsProps> = ({ actions, on
 
 // Alarm Form Component
 export const AlarmFormComponent: React.FC<AlarmFormProps> = ({ filledParams, missingParams, onSubmit, onCancel }) => {
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -269,7 +269,7 @@ export const AlarmFormComponent: React.FC<AlarmFormProps> = ({ filledParams, mis
   return (
     <div className="bg-muted/50 rounded-lg p-3 border">
       <h4 className="text-sm font-medium mb-2">Complete Alarm Details</h4>
-      
+
       {/* Show filled parameters */}
       {Object.keys(filledParams).length > 0 && (
         <div className="mb-3">
@@ -291,7 +291,7 @@ export const AlarmFormComponent: React.FC<AlarmFormProps> = ({ filledParams, mis
         {missingParams.map((param) => {
           const inputType = getParamType(param);
           const label = getParamLabel(param);
-          
+
           return (
             <div key={param}>
               <label className="block text-xs font-medium mb-1">{label} *</label>
@@ -315,7 +315,7 @@ export const AlarmFormComponent: React.FC<AlarmFormProps> = ({ filledParams, mis
             </div>
           );
         })}
-        
+
         <div className="flex gap-2 pt-2">
           <button
             type="submit"
@@ -337,57 +337,3 @@ export const AlarmFormComponent: React.FC<AlarmFormProps> = ({ filledParams, mis
   );
 };
 
-// Component registry
-export const AI_CHAT_COMPONENTS = {
-  'todo-form': TodoFormComponent,
-  'name-change': NameChangeComponent,
-  'confirmation': ConfirmationComponent,
-  'data-display': DataDisplayComponent,
-  'progress-tracker': ProgressTrackerComponent,
-  'quick-actions': QuickActionsComponent,
-  'alarm-form': AlarmFormComponent,
-} as const;
-
-// Component renderer
-export const renderAiChatComponent = (
-  component: AiChatComponent,
-  onAction: (componentId: string, action: string, data: any) => void
-) => {
-  const ComponentType = AI_CHAT_COMPONENTS[component.type as keyof typeof AI_CHAT_COMPONENTS];
-  
-  if (!ComponentType) {
-    console.warn(`Unknown component type: ${component.type}`);
-    return null;
-  }
-
-  // Create action handlers based on component type
-  const actionHandlers: any = {};
-  
-  if (component.type === 'todo-form') {
-    actionHandlers.onSubmit = (data: any) => onAction(component.id, 'submit', data);
-    actionHandlers.onCancel = () => onAction(component.id, 'cancel', null);
-  } else if (component.type === 'name-change') {
-    actionHandlers.onAccept = () => onAction(component.id, 'accept', null);
-    actionHandlers.onCancel = () => onAction(component.id, 'cancel', null);
-  } else if (component.type === 'confirmation') {
-    actionHandlers.onConfirm = () => onAction(component.id, 'confirm', null);
-    actionHandlers.onCancel = () => onAction(component.id, 'cancel', null);
-  } else if (component.type === 'data-display') {
-    actionHandlers.onAction = (action: string, data: any) => onAction(component.id, action, data);
-  } else if (component.type === 'progress-tracker') {
-    actionHandlers.onComplete = () => onAction(component.id, 'complete', null);
-  } else if (component.type === 'quick-actions') {
-    actionHandlers.onAction = (actionId: string) => onAction(component.id, 'click', actionId);
-  } else if (component.type === 'alarm-form') {
-    actionHandlers.onSubmit = (data: any) => onAction(component.id, 'submit', data);
-    actionHandlers.onCancel = () => onAction(component.id, 'cancel', null);
-  }
-
-  return (
-    <ComponentType
-      key={component.id}
-      {...component.props}
-      {...actionHandlers}
-    />
-  );
-}; 

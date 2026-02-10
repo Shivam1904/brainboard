@@ -28,11 +28,12 @@ export class AIResponseGenerator {
     return DEFAULT_RESPONSE;
   }
 
-  static generateFollowUpResponse(componentId: string, action: string, data: any): AIResponse {
+  static generateFollowUpResponse(componentId: string, action: string, data: unknown): AIResponse {
     // Handle follow-up responses based on component actions
     switch (componentId) {
       case 'todo-form-1':
         if (action === 'submit') {
+          const todoData = data as Record<string, unknown>;
           return {
             thinkingSteps: [
               'Processing todo submission...',
@@ -40,7 +41,7 @@ export class AIResponseGenerator {
               'Creating todo item...',
               'Saving to database...'
             ],
-            response: `Great! I've created a new todo: "${data.title}". ${data.description ? `Description: ${data.description}` : ''}`,
+            response: `Great! I've created a new todo: "${todoData.title}". ${todoData.description ? `Description: ${todoData.description}` : ''}`,
             components: [
               {
                 id: 'todo-success',
@@ -48,8 +49,8 @@ export class AIResponseGenerator {
                 props: {
                   title: 'Todo Created Successfully',
                   data: {
-                    title: data.title,
-                    description: data.description || 'No description',
+                    title: todoData.title,
+                    description: todoData.description || 'No description',
                     status: 'Pending',
                     created: new Date().toLocaleString()
                   }
@@ -167,7 +168,7 @@ export class AIResponseGenerator {
             }
           };
 
-          return actionMap[data] || DEFAULT_RESPONSE;
+          return actionMap[data as string] || DEFAULT_RESPONSE;
         }
         break;
     }

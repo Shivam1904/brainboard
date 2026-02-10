@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAllWidgetsData, useTodayWidgetsData } from '../hooks/useDashboardData';
+import { useDashboardData } from '../hooks/useDashboardData';
 import { useDashboardActions } from '../stores/dashboardStore';
-import { DashboardWidget, apiService } from '../services/api';
+import { DashboardWidget, apiService, DailyWidget } from '../services/api';
 import { Plus, Minus, AlertCircle, MinusCircle, ArrowDownCircle, CalendarIcon, ListOrdered } from 'lucide-react';
-import { categoryColors } from './widgets/CalendarWidget';
+import { categoryColors } from '../constants/widgetConstants';
 import { handleRemoveWidgetUtil } from '../utils/widgetUtils';
 
 export type WidgetPriority = 'critical' | 'medium' | 'low';
 
 interface WidgetPriorityInfo {
-  priority: WidgetPriority;
-  reason: string;
+    priority: WidgetPriority;
+    reason: string;
 }
 
 const PRIORITY_ORDER: Record<WidgetPriority, number> = { critical: 0, medium: 1, low: 2 };
@@ -22,8 +22,7 @@ interface PlanTodayProps {
 
 const PlanToday = ({ date, onClose }: PlanTodayProps) => {
     const currentDate = date;
-    const { allWidgets, isLoading: isLoadingAll } = useAllWidgetsData();
-    const { todayWidgets, isLoading: isLoadingToday } = useTodayWidgetsData(currentDate);
+    const { allWidgets, todayWidgets, isLoading } = useDashboardData(date);
     const { addWidgetToToday, removeWidgetFromToday } = useDashboardActions();
 
     const [processingWidget, setProcessingWidget] = useState<string | null>(null);
@@ -33,26 +32,37 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
     const [sortByPriority, setSortByPriority] = useState(true);
 
     useEffect(() => {
-        if (todayWidgets) {
-            setTodayWidgetIds(todayWidgets.map(w => w.widget_id));
+        if (todayWidgets && Array.isArray(todayWidgets)) {
+            const nextIds = todayWidgets.map((w: DailyWidget) => w.widget_id);
+            setTodayWidgetIds(prev => {
+                if (prev.length === nextIds.length && prev.every((id, i) => id === nextIds[i])) {
+                    return prev;
+                }
+                return nextIds;
+            });
         }
     }, [todayWidgets]);
 
     // Filter missions (used for list and for priority fetch) — only these get priority
-    const missionWidgets = allWidgets.filter(widget => {
-        const type = widget.widget_type;
-        const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar', 'pillarsGraph', 'habitTracker']);
-        const excludedTypes = new Set(['aiChat', 'moodTracker', 'notes', 'weatherWidget', 'simpleClock', 'allSchedules']);
-        return !trackerTypes.has(type) && !excludedTypes.has(type);
-    });
+    const missionWidgets = useMemo(() => {
+        if (!allWidgets) return [];
+        return (allWidgets as DashboardWidget[]).filter((widget: DashboardWidget) => {
+            const type = widget.widget_type;
+            const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar', 'pillarsGraph', 'habitTracker']);
+            const excludedTypes = new Set(['aiChat', 'moodTracker', 'notes', 'weatherWidget', 'simpleClock', 'allSchedules']);
+            return !trackerTypes.has(type) && !excludedTypes.has(type);
+        });
+    }, [allWidgets]);
 
     // Fetch priority for each mission only (backend uses completion history + frequency)
     const dateForApi = currentDate && currentDate.length >= 10 ? currentDate.slice(0, 10) : currentDate;
+    const missionIdsStr = useMemo(() => missionWidgets.map((w: DashboardWidget) => w.id).join(','), [missionWidgets]);
+
     useEffect(() => {
-        if (!dateForApi || missionWidgets.length === 0) return;
-        const missionIds = missionWidgets.map(w => w.id);
+        if (!dateForApi || missionIdsStr === '') return;
+        const missionIds = missionIdsStr.split(',');
         const abort = { current: false };
-        missionIds.forEach((widgetId) => {
+        missionIds.forEach((widgetId: string) => {
             setPriorityLoading(prev => ({ ...prev, [widgetId]: true }));
             apiService
                 .getWidgetPriorityForDate(widgetId, dateForApi)
@@ -73,7 +83,7 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
                 });
         });
         return () => { abort.current = true; };
-    }, [dateForApi, missionWidgets.map(w => w.id).join(',')]);
+    }, [dateForApi, missionIdsStr]);
 
     const getCategoryColor = (category: string) => {
         const lowerCategory = category?.toLowerCase() || 'utilities';
@@ -93,11 +103,11 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
         try {
             if (isAdded) {
                 // Find the daily_widget_id for this widget
-                const dailyWidget = todayWidgets.find(w => w.widget_id === widget.id);
+                const dailyWidget = (todayWidgets as DailyWidget[]).find((w: DailyWidget) => w.widget_id === widget.id);
                 if (dailyWidget) {
                     await handleRemoveWidgetUtil({
                         dailyWidgetId: dailyWidget.daily_widget_id,
-                        widgetType: widget.widget_type,
+                        _widgetType: widget.widget_type,
                         widgetTitle: widget.title,
                         date: currentDate,
                         removeWidgetFromToday
@@ -115,11 +125,14 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
     };
 
     // Filter trackers
-    const trackerWidgets = allWidgets.filter(widget => {
-        const type = widget.widget_type;
-        const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar', 'pillarsGraph', 'habitTracker']);
-        return trackerTypes.has(type);
-    });
+    const trackerWidgets = useMemo(() => {
+        if (!allWidgets) return [];
+        return (allWidgets as DashboardWidget[]).filter((widget: DashboardWidget) => {
+            const type = widget.widget_type;
+            const trackerTypes = new Set(['calendar', 'weekchart', 'yearCalendar', 'pillarsGraph', 'habitTracker']);
+            return trackerTypes.has(type);
+        });
+    }, [allWidgets]);
 
     // Sorted missions: by priority (critical first) when enabled, else list order
     const sortedMissions = useMemo(() => {
@@ -142,7 +155,7 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
 
     const linkedTrackers = (widget: DashboardWidget) =>
         trackerWidgets.filter(
-            w =>
+            (w: DashboardWidget) =>
                 w.id === widget.widget_config?.selected_calendar ||
                 w.id === widget.widget_config?.selected_habit_calendar ||
                 w.id === widget.widget_config?.selected_yearly_calendar
@@ -169,7 +182,7 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
                     </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                    {(isLoadingAll || isLoadingToday) && (
+                    {isLoading && (
                         <div className="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     )}
                     <button
@@ -187,7 +200,7 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
             {/* Scrollable list — compact cards that scale from 5 to 30 */}
             <div className="flex-1 min-h-0 overflow-y-auto py-3 px-1 custom-scrollbar">
                 <ul className="flex flex-col gap-2">
-                    {sortedMissions.map(widget => {
+                    {sortedMissions.map((widget: DashboardWidget) => {
                         const isAdded = todayWidgetIds.includes(widget.id);
                         const categoryColor = getCategoryColor(widget.category);
                         const trackers = linkedTrackers(widget);
@@ -258,7 +271,7 @@ const PlanToday = ({ date, onClose }: PlanTodayProps) => {
                                     {/* Row 3: Tracker chips (compact horizontal wrap) */}
                                     {trackers.length > 0 ? (
                                         <div className="mt-2 flex flex-wrap gap-1.5">
-                                            {trackers.map(trackerWidget => {
+                                            {trackers.map((trackerWidget: DashboardWidget) => {
                                                 const trackerAdded = todayWidgetIds.includes(trackerWidget.id);
                                                 return (
                                                     <button

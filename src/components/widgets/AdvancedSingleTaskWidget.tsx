@@ -3,24 +3,23 @@ import { createPortal } from 'react-dom';
 import BaseWidget from './BaseWidget';
 import {
   Target,
-  Plus,
-  X,
   Clock,
   RotateCcw,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  X,
+  Plus
 } from 'lucide-react';
 import { DailyWidget } from '../../services/api';
 import { useDashboardActions } from '../../stores/dashboardStore';
-import { categoryColors } from './CalendarWidget';
+import { categoryColors } from '../../constants/widgetConstants';
 
-import { checkAlarmTrigger, getAlarmStatus } from '../../utils/alarmUtils';
+import { checkAlarmTrigger, getAlarmStatus, AlarmActivity } from '../../utils/alarmUtils';
 
 interface AdvancedSingleTaskWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
   onHeightChange: (dailyWidgetId: string, height: number) => void;
-  targetDate: string;
 }
 
 const snoozeTime = 10;
@@ -49,7 +48,7 @@ const getCategoryColor = (category: string) => {
 
 
 
-const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate }: AdvancedSingleTaskWidgetProps) => {
+const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: AdvancedSingleTaskWidgetProps) => {
   const { updateWidgetActivity } = useDashboardActions();
 
   const [updating, setUpdating] = useState(false);
@@ -82,14 +81,13 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
   const dismissUpcoming = async (alarmDateStr: string) => {
     setUpdating(true);
     const alarmTime = new Date(alarmDateStr);
-    const existingActivity = widget?.activity_data?.activity_history || [];
+    const existingActivity = (widget?.activity_data?.activity_history as AlarmActivity[]) || [];
 
     // Create a new activity record timestamped at the alarm time
     // This effectively "handles" the alarm before it even starts ringing
-    const newActivity = {
+    const newActivity: AlarmActivity = {
       type: 'stop',
       timestamp: alarmTime.toISOString(),
-      total_snooze_count: widget?.activity_data?.snooze_count || 0
     };
 
     try {
@@ -110,9 +108,10 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
   useEffect(() => {
     if (!widget) return;
 
-    var height = 2;
-    if (widget?.activity_data?.activity_history) {
-      height += (widget.activity_data.activity_history.length * 0.75) + 1;
+    let height = 2;
+    const activityHistory = (widget?.activity_data?.activity_history as AlarmActivity[]) || [];
+    if (activityHistory.length > 0) {
+      height += (activityHistory.length * 0.75) + 1;
     }
     if (widget?.description) {
       height += 1;
@@ -121,23 +120,25 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
       height += 1;
     }
     // Simplified height adjustment
-    if (widget?.widget_config?.alarm_times && widget.widget_config.alarm_times.length > 0) {
+    const alarmTimes = (widget?.widget_config?.alarm_times as string[]) || [];
+    if (alarmTimes.length > 0) {
       // Approximate height for list
-      height += widget.widget_config.alarm_times.length * 0.8;
+      height += alarmTimes.length * 0.8;
     }
 
     onHeightChange(widget.daily_widget_id, height);
-  }, [widget, isAlerting]);
+  }, [widget, isAlerting, onHeightChange]);
 
   // Alarm Check Loop
   useEffect(() => {
     const checkAlarms = () => {
-      if (!widget?.widget_config?.alarm_times || !widget?.date) return;
+      const alarmTimes = (widget?.widget_config?.alarm_times as string[]) || [];
+      if (alarmTimes.length === 0 || !widget?.date) return;
       if (widget.date !== new Date().toISOString().split('T')[0]) return;
 
-      const activityHistory = widget?.activity_data?.activity_history || [];
+      const activityHistory = (widget?.activity_data?.activity_history as AlarmActivity[]) || [];
       const { shouldAlert, activeSnoozeTimeLeft } = checkAlarmTrigger(
-        widget.widget_config.alarm_times,
+        alarmTimes,
         activityHistory,
         snoozeTime
       );
@@ -148,7 +149,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
 
         // Play sound logic...
         try {
-          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
           const oscillator = audioContext.createOscillator();
           const gainNode = audioContext.createGain();
 
@@ -165,11 +166,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
           oscillator.start(audioContext.currentTime);
           oscillator.stop(audioContext.currentTime + 0.3);
         } catch (error) {
-<<<<<<< HEAD
           // Audio not supported, but alarm is triggered
-=======
-          // Silent fail
->>>>>>> 9638b4d (feat: add alarm utility functions and integrate them into the AdvancedSingleTaskWidget for comprehensive alarm management.)
         }
       } else if (!shouldAlert && isAlerting) {
         setIsAlerting(false);
@@ -191,8 +188,8 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [widget, isAlerting]); // Removed snoozeTimeLeft from dependency to avoid loop
+    }
+  }, [widget, isAlerting, snoozeTimeLeft]); // Added snoozeTimeLeft to dependency
 
   // Snooze Countdown
   useEffect(() => {
@@ -215,12 +212,11 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
   const snoozeAlarm = async () => {
     setUpdating(true);
     const now = new Date();
-    const newSnoozeCount = (widget?.activity_data?.snooze_count || 0) + 1;
-    const existingActivity = widget?.activity_data?.activity_history || [];
-    const newActivity = {
+    const newSnoozeCount = (Number(widget?.activity_data?.snooze_count) || 0) + 1;
+    const existingActivity = (widget?.activity_data?.activity_history as AlarmActivity[]) || [];
+    const newActivity: AlarmActivity = {
       type: 'snooze',
       timestamp: now.toISOString(),
-      snooze_count: newSnoozeCount
     };
 
     setIsAlerting(false);
@@ -244,11 +240,10 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
     setUpdating(true);
     const now = new Date();
     const startedAt = now.toISOString();
-    const existingActivity = widget?.activity_data?.activity_history || [];
-    const newActivity = {
+    const existingActivity = (widget?.activity_data?.activity_history as AlarmActivity[]) || [];
+    const newActivity: AlarmActivity = {
       type: 'stop',
       timestamp: now.toISOString(),
-      total_snooze_count: widget?.activity_data?.snooze_count || 0
     };
 
     setIsAlerting(false);
@@ -318,7 +313,6 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
 
   const activityData = widget.activity_data || {};
   const widgetConfig = widget.widget_config || {};
-  const trackerActivity = activityData || {};
   const isCompleted = widget.activity_data?.status === 'completed';
 
   return (
@@ -374,12 +368,12 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
               </h4>
 
               {/* Tracker Value Display (Compact) */}
-              {widgetConfig.value_type && widgetConfig.target_value && (
+              {Boolean(widgetConfig.value_type) && Boolean(widgetConfig.target_value) && (
                 <div className="flex flex-col items-end">
                   <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
                     <span className={`font-bold ${isAlerting ? 'text-red-500' : 'text-gray-700'}`}>
-                      {trackerActivity.value || '0'}
-                      <span className="text-xs font-normal text-gray-500 ml-0.5">{widgetConfig.value_unit}</span>
+                      {String(activityData.value || '0')}
+                      <span className="text-xs font-normal text-gray-500 ml-0.5">{widgetConfig.value_unit as string as string}</span>
                     </span>
                     {!isCompleted && (
                       <button
@@ -393,7 +387,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
                     )}
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 opacity-80">
-                    <Target className="w-3 h-3" /> Target: {widgetConfig.target_value}
+                    <Target className="w-3 h-3" /> Target: {widgetConfig.target_value as string}
                   </div>
                 </div>
               )}
@@ -401,7 +395,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
 
             {widget.description && (
               <p className={`text-xs mt-1 line-clamp-2 ${widget.activity_data?.status === 'completed' ? 'text-gray-300' : 'text-gray-500'}`}>
-                {widget.description}
+                {widget.description as string}
               </p>
             )}
 
@@ -410,7 +404,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
         </div>
 
         {/* 2. ALARMS LIST (Compact) */}
-        {widgetConfig.alarm_times && widgetConfig.alarm_times.length > 0 && (
+        {(widgetConfig.alarm_times as string[]) && (widgetConfig.alarm_times as string[]).length > 0 && (
           <div className="mt-4 border-t border-gray-100 pt-3">
             <div className="flex items-center justify-between mb-2">
               <div className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1">
@@ -419,8 +413,8 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
             </div>
 
             <div className="space-y-1.5">
-              {widgetConfig.alarm_times.map((time: string) => {
-                const statusData = getAlarmStatus(time, widget.activity_data?.activity_history || [], currentTime, isAlerting, snoozeTime);
+              {(widgetConfig.alarm_times as string[]).map((time: string) => {
+                const statusData = getAlarmStatus(time, (widget.activity_data?.activity_history as AlarmActivity[]) || [], currentTime, isAlerting, snoozeTime);
                 const status = statusData.status;
 
                 // Status styles - Minimalist
@@ -500,7 +494,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
         <div className="mt-auto pt-3 flex justify-end">
           {widget.category && (
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium text-${getCategoryColor(widget.category)}-700 bg-${getCategoryColor(widget.category)}-50 border border-${getCategoryColor(widget.category)}-100 opacity-80`}>
-              {widget.category}
+              {widget.category as string}
             </span>
           )}
         </div>
@@ -524,10 +518,10 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Value {widgetConfig.value_unit && `(${widgetConfig.value_unit})`}
+                      Value {(widgetConfig.value_unit as string) && `(${(widgetConfig.value_unit as string)})`}
                     </label>
                     <input
-                      type={getValueTypeInput(widgetConfig.value_type)}
+                      type={getValueTypeInput(widgetConfig.value_type as string)}
                       value={newValue}
                       onChange={(e) => setNewValue(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"

@@ -17,12 +17,11 @@ interface WeatherData {
 }
 
 interface WeatherWidgetProps {
-  targetDate: string;
   widget: DailyWidget;
   onRemove: () => void;
 }
 
-const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove, targetDate }) => {
+const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,28 +30,28 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove, targetDate }) =
   // Get weather icon based on icon code
   const getWeatherIcon = (iconCode: string, description: string): string => {
     const code = parseInt(iconCode);
-    
+
     // Clear sky
     if (code === 0) return '☀️';
-    
+
     // Partly cloudy
     if (code >= 1 && code <= 3) return '⛅️';
-    
+
     // Cloudy
     if (code >= 4 && code <= 6) return '☁️';
-    
+
     // Rain
     if (code >= 7 && code <= 19) return '🌧️';
-    
+
     // Snow
     if (code >= 20 && code <= 29) return '❄️';
-    
+
     // Thunderstorm
     if (code >= 30 && code <= 39) return '⛈️';
-    
+
     // Fog
     if (code >= 40 && code <= 49) return '🌫️';
-    
+
     // Default based on description
     const desc = description.toLowerCase();
     if (desc.includes('clear')) return '☀️';
@@ -61,7 +60,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove, targetDate }) =
     if (desc.includes('snow')) return '❄️';
     if (desc.includes('thunder')) return '⛈️';
     if (desc.includes('fog') || desc.includes('mist')) return '🌫️';
-    
+
     return '🌤️';
   };
 
@@ -109,7 +108,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove, targetDate }) =
             lon: position.coords.longitude
           });
         },
-        (_error) => {
+        () => {
           reject(new Error('Unable to retrieve your location.'));
         },
         {
@@ -126,7 +125,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove, targetDate }) =
     try {
       setLoading(true);
       setError(null);
-      
+
       const data: WeatherData = await apiService.getWeather(lat, lon, 'metric');
       setWeatherData(data);
     } catch (err) {

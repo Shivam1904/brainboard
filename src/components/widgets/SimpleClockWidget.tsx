@@ -18,9 +18,9 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
   const isToday = useMemo(() => {
     const today = new Date()
     const target = new Date(targetDate + 'T00:00:00') // Parse yyyy-mm-dd format
-    return today.getFullYear() === target.getFullYear() && 
-           today.getMonth() === target.getMonth() && 
-           today.getDate() === target.getDate()
+    return today.getFullYear() === target.getFullYear() &&
+      today.getMonth() === target.getMonth() &&
+      today.getDate() === target.getDate()
   }, [targetDate])
 
   // If not today, show midnight, otherwise show current time
@@ -65,9 +65,7 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
 
   const isDay = theme === 'day'
 
-  const themeClasses = isDay
-    ? 'from-yellow-100 via-sky-100 to-white text-gray-800'
-    : 'from-indigo-900 via-slate-900 to-black text-slate-100'
+
 
   const ringClasses = isDay ? 'border-yellow-300' : 'border-indigo-500/60'
   const tickClasses = isDay ? 'bg-yellow-400/80' : 'bg-indigo-300/70'
@@ -86,21 +84,19 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
           <div className="flex absolute top-0 right-0 left-0 justify-center pt-12 z-10 opacity-50">
             <button
               onClick={() => setMode('analog')}
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                mode === 'analog'
+              className={`px-2 py-1 text-xs rounded-md transition-colors ${mode === 'analog'
                   ? 'bg-gradient-to-r from-yellow-500 to-yellow-300 opacity-80'
                   : 'bg-secondary '
-              }`}
+                }`}
             >
               Analog
             </button>
             <button
               onClick={() => setMode('digital')}
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                mode === 'digital'
+              className={`px-2 py-1 text-xs rounded-md transition-colors ${mode === 'digital'
                   ? 'bg-gradient-to-r from-indigo-500 to-indigo-300 opacity-80'
                   : 'bg-secondary '
-              }`}
+                }`}
             >
               Digital
             </button>
@@ -109,22 +105,20 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
           {false && (<div className="flex gap-1">
             <button
               onClick={() => setTheme('day')}
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                theme === 'day'
+              className={`px-2 py-1 text-xs rounded-md transition-colors ${theme === 'day'
                   ? 'bg-amber-500 text-white'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-              }`}
+                }`}
               title="Day theme"
             >
               🌞 Day
             </button>
             <button
               onClick={() => setTheme('night')}
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                theme === 'night'
+              className={`px-2 py-1 text-xs rounded-md transition-colors ${theme === 'night'
                   ? 'bg-indigo-600 text-white'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-              }`}
+                }`}
               title="Night theme"
             >
               🌙 Night
@@ -187,9 +181,8 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center pt-12">
-            <div className={`rounded-2xl px-4 py-3 text-4xl font-semibold tracking-widest shadow-sm ${
-              isDay ? 'bg-white/70 text-gray-800' : 'bg-slate-800/60 text-slate-100'
-            }`}>
+            <div className={`rounded-2xl px-4 py-3 text-4xl font-semibold tracking-widest shadow-sm ${isDay ? 'bg-white/70 text-gray-800' : 'bg-slate-800/60 text-slate-100'
+              }`}>
               {pad(displayHours12)}:{pad(minutes)}:{pad(seconds)} <span className="text-base align-middle opacity-70">{ampm}</span>
             </div>
             <div className="mt-2 text-xs opacity-75">

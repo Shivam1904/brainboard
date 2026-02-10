@@ -2,12 +2,12 @@ import { DailyWidget } from '../services/api';
 
 interface RemoveWidgetParams {
     dailyWidgetId: string;
-    widgetType: string;
+    _widgetType: string;
     widgetTitle: string;
     date: string;
     removeWidgetFromToday: (id: string, date: string) => Promise<void>;
     onSuccess?: () => void;
-    onError?: (error: any) => void;
+    onError?: (error: unknown) => void;
     widgetsList?: DailyWidget[]; // Optional list to check for associated widgets (like websearch)
 }
 
@@ -17,7 +17,7 @@ interface RemoveWidgetParams {
  */
 export const handleRemoveWidgetUtil = async ({
     dailyWidgetId,
-    widgetType,
+    _widgetType,
     widgetTitle,
     date,
     removeWidgetFromToday,

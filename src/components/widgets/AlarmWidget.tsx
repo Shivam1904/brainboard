@@ -17,17 +17,17 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
   const [error, setError] = useState<string | null>(null);
   const [isAlerting, setIsAlerting] = useState(false);
   const [snoozeTimeLeft, setSnoozeTimeLeft] = useState<number | null>(null);
-  
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchAlarms = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get the widget_id from the widget_ids array (first one for alarm widgets)
       const widgetId = widget.widget_id || '111111';
-      
+
       // Call the real API
       const response = await apiService.getAlarmDetailsAndActivity(widgetId);
       setAlarmData(response);
@@ -41,9 +41,12 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
     }
   };
 
+  const fetchAlarmsRef = useRef(fetchAlarms);
+  fetchAlarmsRef.current = fetchAlarms;
+
   const snoozeAlarm = async () => {
     if (!alarmData?.activity?.id) return;
-    
+
     try {
       await apiService.snoozeAlarm(alarmData.activity.id, 10);
       setIsAlerting(false);
@@ -56,7 +59,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
 
   const stopAlarm = async () => {
     if (!alarmData?.activity?.id) return;
-    
+
     try {
       await apiService.stopAlarm(alarmData.activity.id);
       setIsAlerting(false);
@@ -71,17 +74,17 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
   useEffect(() => {
     const checkAlarms = () => {
       if (!alarmData) return;
-      
+
       const now = new Date();
       let shouldAlert = false;
-      
+
       // Check if alarm was already started today
       if (alarmData.activity?.started_at) {
         setIsAlerting(false);
         setSnoozeTimeLeft(null);
         return;
       }
-      
+
       // Check if currently snoozed
       if (alarmData.activity?.snooze_until) {
         const snoozeUntil = new Date(alarmData.activity.snooze_until);
@@ -98,7 +101,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
           shouldAlert = true;
         }
       }
-      
+
       // Check if now falls within any alarm's 1-hour alert window
       alarmData.alarm_details?.alarm_times.forEach((alarmTime) => {
         const [hours, minutes] = alarmTime.split(':').map(Number);
@@ -109,26 +112,26 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
           shouldAlert = true;
         }
       });
-      
+
       if (shouldAlert && !isAlerting) {
         setIsAlerting(true);
         setSnoozeTimeLeft(null);
         // Play alert sound
         try {
-          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
           const oscillator = audioContext.createOscillator();
           const gainNode = audioContext.createGain();
-          
+
           oscillator.connect(gainNode);
           gainNode.connect(audioContext.destination);
-          
+
           oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
           oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
           oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-          
+
           gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-          
+
           oscillator.start(audioContext.currentTime);
           oscillator.stop(audioContext.currentTime + 0.3);
         } catch (error) {
@@ -147,7 +150,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [alarmData]);
+  }, [alarmData, isAlerting]);
 
   // Update snooze countdown
   useEffect(() => {
@@ -166,7 +169,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
   }, [snoozeTimeLeft]);
 
   useEffect(() => {
-    fetchAlarms();
+    fetchAlarmsRef.current();
   }, [widget.daily_widget_id]);
 
   if (loading) {
@@ -230,25 +233,24 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
   };
 
   return (
-    <BaseWidget 
-      title={isAlerting ? "🚨 ALARM TRIGGERED! 🚨" : "Alarms"} 
-      icon={isAlerting ? "🔔" : "⏰"} 
+    <BaseWidget
+      title={isAlerting ? "🚨 ALARM TRIGGERED! 🚨" : "Alarms"}
+      icon={isAlerting ? "🔔" : "⏰"}
       onRemove={onRemove}
     >
       <div className="h-full flex flex-col">
         {/* Main Alarm Display - Always visible */}
-        <div className={`flex-1 p-4 rounded-lg transition-all duration-300 ${
-          isAlerting 
-            ? 'bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 animate-pulse shadow-lg' 
-            : 'bg-blue-50 border border-blue-200'
-        }`}>
+        <div className={`flex-1 p-4 rounded-lg transition-all duration-300 ${isAlerting
+          ? 'bg-gradient-to-r from-red-500 to-orange-500 border-2 border-red-400 animate-pulse shadow-lg'
+          : 'bg-blue-50 border border-blue-200'
+          }`}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex flex-col items-center gap-2">
               <div className="flex flex-row items-center gap-2">
-              <Clock className={`h-5 w-5 ${isAlerting ? 'text-white' : 'text-blue-600'}`} />
-              <span className={`text-sm font-medium ${isAlerting ? 'text-white' : 'text-blue-800'}`}>
-                Next Alarm at {getNextAlarmTime(alarmData.alarm_details?.alarm_times)}
-              </span>
+                <Clock className={`h-5 w-5 ${isAlerting ? 'text-white' : 'text-blue-600'}`} />
+                <span className={`text-sm font-medium ${isAlerting ? 'text-white' : 'text-blue-800'}`}>
+                  Next Alarm at {getNextAlarmTime(alarmData.alarm_details?.alarm_times)}
+                </span>
               </div>
               <span className={`text-sm font-medium ${isAlerting ? 'text-white' : 'text-blue-800'}`}>
                 All Alarms: {alarmData.alarm_details?.alarm_times.join(', ')}
@@ -260,7 +262,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
               </div>
             )}
           </div>
-          
+
           <div className={`text-lg font-bold mb-3 ${isAlerting ? 'text-white' : 'text-blue-900'}`}>
             {alarmData.alarm_details?.title}
           </div>
