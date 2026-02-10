@@ -60,24 +60,39 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/50">
+    <div className="rounded-lg border border-slate-200 bg-white/80">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b border-gray-200/50">
-        <div className="flex items-center space-x-3">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pillarColor }}></div>
-          <h3 className="text-lg font-bold text-gray-800">Frequency Settings</h3>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200/70">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-2.5 h-2.5 rounded-full"
+            style={{ backgroundColor: pillarColor }}
+          />
+          <h3 className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+            Frequency settings
+          </h3>
         </div>
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
-          className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+          className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
         >
-          {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          {expanded ? (
+            <span className="inline-flex items-center gap-1">
+              <ChevronUp size={14} />
+              Details
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <ChevronDown size={14} />
+              Details
+            </span>
+          )}
         </button>
       </div>
 
       {/* Slider */}
-      <div className="p-4">
+      <div className="px-3 pt-3 pb-2">
         <FrequencySlider
           value={frequency.frequencySetValue}
           onChange={handleSliderChange}
@@ -87,12 +102,12 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
 
       {/* Expanded Details */}
       {expanded && (
-        <div className="border-t border-gray-200/50">
+        <div className="border-t border-slate-200/70">
           {/* Calendar */}
-          <div className="p-4 border-b border-gray-200/50">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-              <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-              Calendar Preview
+          <div className="px-3 py-3 border-b border-slate-200/70">
+            <h4 className="text-xs font-semibold text-slate-600 mb-2 flex items-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2" />
+              Calendar preview
             </h4>
             <FrequencyCalendar
               frequency={frequency}
@@ -101,10 +116,10 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
           </div>
 
           {/* Detailed Controls */}
-          <div className="p-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-              <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-              Detailed Settings
+          <div className="px-3 py-3">
+            <h4 className="text-xs font-semibold text-slate-600 mb-2 flex items-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2" />
+              Detailed settings
             </h4>
             <FrequencyControls
               frequency={frequency}
@@ -117,9 +132,9 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
 
       {/* Collapsed Summary */}
       {!expanded && (
-        <div className="px-4 pb-4">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200/50">
-            <p className="text-sm font-medium text-gray-700 text-center">
+        <div className="px-3 pb-3">
+          <div className="bg-slate-50 border border-slate-200/80 px-3 py-2 rounded-md">
+            <p className="text-xs font-medium text-slate-700 text-center">
               {frequency.frequency} {frequency.frequencyUnit} {frequency.frequencyPeriod}
             </p>
           </div>

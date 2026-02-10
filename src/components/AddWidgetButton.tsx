@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Target, BarChart3 } from 'lucide-react'
 import { getAllWidgets, getImplementedWidgets, WidgetConfig } from '../config/widgets'
 import AddWidgetForm from './AddWidgetForm'
+import MissionForm from './MissionForm'
 import { DashboardWidget } from '../services/api'
 
 interface AddWidgetButtonProps {
@@ -109,13 +110,20 @@ const AddWidgetButton = ({ onAddWidget, refreshAllWidgets }: AddWidgetButtonProp
         </div>
       </div>
 
-      {/* Add Widget Form Modal */}
+      {/* Add Widget Form / Mission Form */}
       {selectedWidgetId && (
-        <AddWidgetForm
-          widgetId={selectedWidgetId}
-          onClose={handleFormClose}
-          onSuccess={handleFormSuccess}
-        />
+        selectedWidgetId === 'todo-task' ? (
+          <MissionForm
+            onClose={handleFormClose}
+            onSuccess={handleFormSuccess}
+          />
+        ) : (
+          <AddWidgetForm
+            widgetId={selectedWidgetId}
+            onClose={handleFormClose}
+            onSuccess={handleFormSuccess}
+          />
+        )
       )}
     </>
   )
