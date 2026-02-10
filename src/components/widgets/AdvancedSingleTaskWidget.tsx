@@ -5,15 +5,16 @@ import {
   Target,
   Plus,
   X,
-  Save,
   Clock,
   RotateCcw,
-  Check
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import { DailyWidget } from '../../services/api';
-import { useTodayWidgetsData } from '../../hooks/useDashboardData';
 import { useDashboardActions } from '../../stores/dashboardStore';
 import { categoryColors } from './CalendarWidget';
+
+import { checkAlarmTrigger, getAlarmStatus } from '../../utils/alarmUtils';
 
 interface AdvancedSingleTaskWidgetProps {
   onRemove: () => void;
@@ -23,8 +24,6 @@ interface AdvancedSingleTaskWidgetProps {
 }
 
 const snoozeTime = 10;
-
-// Removed: exact trigger helper is no longer needed due to window-based alerting
 
 const getValueTypeInput = (valueType: string) => {
   switch (valueType) {
@@ -38,29 +37,32 @@ const getValueTypeInput = (valueType: string) => {
   }
 };
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'completed': return 'text-green-600 bg-green-50';
-    case 'in_progress': return 'text-blue-600 bg-blue-50';
-    case 'pending': return 'text-yellow-600 bg-yellow-50';
-    case 'cancelled': return 'text-red-600 bg-red-50';
-    default: return 'text-gray-600 bg-gray-50';
+const getCategoryColor = (category: string) => {
+  const defaultColor = 'text-gray-600 bg-gray-50';
+  if (category && category in categoryColors) {
+    return categoryColors[category as keyof typeof categoryColors].color;
   }
+  return defaultColor;
 };
 
+
+
+
+
 const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate }: AdvancedSingleTaskWidgetProps) => {
-  const { todayWidgets, isLoading, error } = useTodayWidgetsData(targetDate);
   const { updateWidgetActivity } = useDashboardActions();
 
   const [updating, setUpdating] = useState(false);
 
-  // Use the passed widget prop directly - it already contains the widget data
-  // const widgetData = todayWidgets.find(w => w.id === widget.daily_widget_id);
-  const widgetData = widget; // Use the passed widget directly
-
-  // Alarm states
+  // States
   const [isAlerting, setIsAlerting] = useState(false);
   const [snoozeTimeLeft, setSnoozeTimeLeft] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+
+
+  // Helper imports
+  // Note: Imported functions are used below. Ensure they are imported at the top of the file
 
   // Tracker states
   const [showAddForm, setShowAddForm] = useState(false);
@@ -69,249 +71,82 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Update time for alarm checking
   useEffect(() => {
-    var height = 2;
-    if (widgetData?.activity_data?.activity_history) {
-      height += (widgetData.activity_data.activity_history.length * 0.75) + 1;
-    }
-    if (widgetData?.description) {
-      height += 1;
-    }
-    if (widgetData?.widget_config?.target_value) {
-      height += 1;
-    }
-    if (isAlerting || (snoozeTimeLeft !== null && snoozeTimeLeft > 0)) {
-      height += 1;
-    }
-    onHeightChange(widget.daily_widget_id, height);
-  }, [widgetData, isAlerting, snoozeTimeLeft]);
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
-  // Helper function to update activity data locally
-  const updateActivityData = (updates: Record<string, any>) => {
-    if (!widgetData) return;
 
-    // Since we're using the widget prop directly, we can't update it locally
-    // The store will handle updates and refresh the data
-  };
 
-  // Alarm functions
-  const snoozeAlarm = async () => {
-
+  const dismissUpcoming = async (alarmDateStr: string) => {
     setUpdating(true);
-    const now = new Date();
-    const newSnoozeCount = (widgetData?.activity_data?.snooze_count || 0) + 1;
+    const alarmTime = new Date(alarmDateStr);
+    const existingActivity = widget?.activity_data?.activity_history || [];
 
-    // Get existing activity history or create new
-    const existingActivity = widgetData?.activity_data?.activity_history || [];
-    const newActivity = {
-      type: 'snooze',
-      timestamp: now.toISOString(),
-      snooze_count: newSnoozeCount
-    };
-
-    // Update locally first for immediate UI feedback
-    updateActivityData({
-      ...widgetData?.activity_data,
-      snooze_count: newSnoozeCount,
-      activity_history: [...existingActivity, newActivity]
-    });
-
-    setIsAlerting(false);
-    setSnoozeTimeLeft(snoozeTime * 60); // snoozeTime minutes in seconds
-
-    // Then update on server
-    try {
-      await updateWidgetActivity(widget.daily_widget_id, {
-        snooze_count: newSnoozeCount,
-        activity_history: [...existingActivity, newActivity]
-      });
-    } catch (err) {
-      console.error('Error snoozing alarm:', err);
-      // Revert local changes on error
-      // await fetchWidgetData(); // This line is removed as per the new_code
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const stopAlarm = async () => {
-    if (!widgetData?.id || updating) return;
-
-    setUpdating(true);
-    const now = new Date();
-    const startedAt = now.toISOString();
-
-    // Get existing activity history or create new
-    const existingActivity = widgetData?.activity_data?.activity_history || [];
+    // Create a new activity record timestamped at the alarm time
+    // This effectively "handles" the alarm before it even starts ringing
     const newActivity = {
       type: 'stop',
-      timestamp: now.toISOString(),
-      total_snooze_count: widgetData?.activity_data?.snooze_count || 0
+      timestamp: alarmTime.toISOString(),
+      total_snooze_count: widget?.activity_data?.snooze_count || 0
     };
 
-    // Update locally first for immediate UI feedback
-    updateActivityData({
-      ...widgetData?.activity_data,
-      started_at: startedAt,
-      status: 'completed',
-      progress: 100,
-      activity_history: [...existingActivity, newActivity]
-    });
-
-    setIsAlerting(false);
-    setSnoozeTimeLeft(null);
-
-    // Then update on server
     try {
       await updateWidgetActivity(widget.daily_widget_id, {
-        started_at: startedAt,
         activity_history: [...existingActivity, newActivity]
-      });
-
-      // Also update the task status to completed
-      await updateWidgetActivity(widget.daily_widget_id, {
-        status: 'completed',
-        progress: 100
+        // Note: We do NOT set status='completed' here. 
+        // Dismising an upcoming alarm just skips that specific alarm instance.
+        // The user can manually complete the task if they want.
       });
     } catch (err) {
-      console.error('Error stopping alarm:', err);
-      // Revert local changes on error
-      // await fetchWidgetData(); // This line is removed as per the new_code
+      console.error('Error dismissing alarm:', err);
     } finally {
       setUpdating(false);
     }
   };
 
-  // Tracker functions
-  const updateTrackerValue = async () => {
-    if (!newValue.trim() || updating) return;
+  // Height adjustment
+  useEffect(() => {
+    if (!widget) return;
 
-    setUpdating(true);
-    const trackerUpdate = {
-      value: newValue,
-      time_added: new Date().toISOString(),
-      notes: notes || undefined
-    };
-
-    // Update locally first for immediate UI feedback
-    updateActivityData({
-      ...widgetData?.activity_data,
-      ...trackerUpdate
-    });
-
-    setNewValue('');
-    setNotes('');
-    setShowAddForm(false);
-
-    // Then update on server
-    try {
-      await updateWidgetActivity(widget.daily_widget_id, {
-        ...trackerUpdate
-      });
-    } catch (err) {
-      console.error('Failed to update tracker value:', err);
-      // Revert local changes on error
-      // await fetchWidgetData(); // This line is removed as per the new_code
-    } finally {
-      setUpdating(false);
+    var height = 2;
+    if (widget?.activity_data?.activity_history) {
+      height += (widget.activity_data.activity_history.length * 0.75) + 1;
     }
-  };
-
-  // Task status functions
-  const updateTaskStatus = async (status: 'pending' | 'in_progress' | 'completed' | 'cancelled') => {
-    if (updating) return;
-
-    setUpdating(true);
-    const progress = status === 'completed' ? 100 : status === 'in_progress' ? 50 : 0;
-
-    // Update locally first for immediate UI feedback
-    updateActivityData({
-      ...widgetData?.activity_data,
-      status,
-      progress
-    });
-
-    // Then update on server
-    try {
-      await updateWidgetActivity(widget.daily_widget_id, {
-        status,
-        progress
-      });
-    } catch (err) {
-      console.error('Error updating task status:', err);
-      // Revert local changes on error
-      // await fetchWidgetData(); // This line is removed as per the new_code
-    } finally {
-      setUpdating(false);
+    if (widget?.description) {
+      height += 1;
     }
-  };
-
-  const getCategoryColor = (category: string) => {
-    // Default to gray if category is missing or not found in map
-    const defaultColor = 'text-gray-600 bg-gray-50';
-    // Check if category exists in map
-    if (category && category in categoryColors) {
-      return categoryColors[category as keyof typeof categoryColors].color;
+    if (widget?.widget_config?.target_value) {
+      height += 1;
     }
-    return defaultColor;
-  };
-  // Check for triggered alarms
+    // Simplified height adjustment
+    if (widget?.widget_config?.alarm_times && widget.widget_config.alarm_times.length > 0) {
+      // Approximate height for list
+      height += widget.widget_config.alarm_times.length * 0.8;
+    }
+
+    onHeightChange(widget.daily_widget_id, height);
+  }, [widget, isAlerting]);
+
+  // Alarm Check Loop
   useEffect(() => {
     const checkAlarms = () => {
-      if (!widgetData?.widget_config?.alarm_times || widgetData?.date !== new Date().toISOString().split('T')[0]) return;
+      if (!widget?.widget_config?.alarm_times || !widget?.date) return;
+      if (widget.date !== new Date().toISOString().split('T')[0]) return;
 
-      const now = new Date();
-      let shouldAlert = false;
-
-      // Check if alarm was already started today
-      if (widgetData?.activity_data?.started_at) {
-        setIsAlerting(false);
-        setSnoozeTimeLeft(null);
-        return;
-      }
-
-      // Check if currently snoozed by calculating from activity history
-      const activityHistory = widgetData?.activity_data?.activity_history || [];
-      const lastSnoozeActivity = activityHistory
-        .filter((activity: any) => activity.type === 'snooze')
-        .pop();
-
-      if (lastSnoozeActivity) {
-        const lastSnoozeTime = new Date(lastSnoozeActivity.timestamp);
-        const snoozeUntil = new Date(lastSnoozeTime.getTime() + snoozeTime * 60 * 1000);
-        const snoozeWindowEnd = new Date(snoozeUntil.getTime() + 60 * 60 * 1000);
-
-        if (now < snoozeUntil) {
-          // Still snoozed, calculate time left
-          const timeLeft = Math.ceil((snoozeUntil.getTime() - now.getTime()) / 1000);
-          setSnoozeTimeLeft(timeLeft > 0 ? timeLeft : null);
-          setIsAlerting(false);
-          return;
-        } else if (now >= snoozeUntil && now < snoozeWindowEnd) {
-          // Snooze expired, ring within the 1-hour window after snooze
-          setSnoozeTimeLeft(null);
-          shouldAlert = true;
-        }
-      }
-
-      // Check if now falls within any alarm's 1-hour alert window
-      widgetData.widget_config.alarm_times.forEach((alarmTime: string) => {
-        const [hours, minutes] = alarmTime.split(':').map(Number);
-        const alarmStart = new Date();
-        alarmStart.setHours(hours, minutes, 0, 0);
-        const alarmEnd = new Date(alarmStart.getTime() + 60 * 60 * 1000);
-        if (now >= alarmStart && now < alarmEnd) {
-          shouldAlert = true;
-        }
-      });
-
-
+      const activityHistory = widget?.activity_data?.activity_history || [];
+      const { shouldAlert, activeSnoozeTimeLeft } = checkAlarmTrigger(
+        widget.widget_config.alarm_times,
+        activityHistory,
+        snoozeTime
+      );
 
       if (shouldAlert && !isAlerting) {
         setIsAlerting(true);
         setSnoozeTimeLeft(null);
 
-        // Play alert sound
+        // Play sound logic...
         try {
           const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
           const oscillator = audioContext.createOscillator();
@@ -330,10 +165,24 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
           oscillator.start(audioContext.currentTime);
           oscillator.stop(audioContext.currentTime + 0.3);
         } catch (error) {
+<<<<<<< HEAD
           // Audio not supported, but alarm is triggered
+=======
+          // Silent fail
+>>>>>>> 9638b4d (feat: add alarm utility functions and integrate them into the AdvancedSingleTaskWidget for comprehensive alarm management.)
         }
       } else if (!shouldAlert && isAlerting) {
         setIsAlerting(false);
+      }
+
+      // Sync local snooze countdown if logic says so
+      if (activeSnoozeTimeLeft !== null && !isAlerting) {
+        // Only update if widely different to avoid jitter, or if null
+        if (snoozeTimeLeft === null || Math.abs(snoozeTimeLeft - activeSnoozeTimeLeft) > 2) {
+          setSnoozeTimeLeft(activeSnoozeTimeLeft);
+        }
+      } else if (activeSnoozeTimeLeft === null && !shouldAlert) {
+        setSnoozeTimeLeft(null);
       }
     };
 
@@ -341,114 +190,141 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
     intervalRef.current = setInterval(checkAlarms, 1000);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [widgetData, isAlerting]);
+  }, [widget, isAlerting]); // Removed snoozeTimeLeft from dependency to avoid loop
 
-  // Update countdowns
+  // Snooze Countdown
   useEffect(() => {
     const countdowns: NodeJS.Timeout[] = [];
 
     if (snoozeTimeLeft !== null && snoozeTimeLeft > 0) {
       const snoozeCountdown = setInterval(() => {
         setSnoozeTimeLeft(prev => {
-          if (prev === null || prev <= 1) {
-            return null;
-          }
+          if (prev === null || prev <= 1) return null;
           return prev - 1;
         });
       }, 1000);
       countdowns.push(snoozeCountdown);
     }
 
-    return () => {
-      countdowns.forEach(clearInterval);
-    };
+    return () => countdowns.forEach(clearInterval);
   }, [snoozeTimeLeft]);
 
-  useEffect(() => {
-    // This useEffect is no longer needed as data fetching is handled by useTodayWidgetsData
-    // fetchWidgetData(); 
-  }, [widget.daily_widget_id]);
-
-  if (isLoading) {
-    return (
-      <BaseWidget title="Advanced Task" icon="🎯" onRemove={onRemove}>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-muted-foreground">Loading advanced task...</p>
-          </div>
-        </div>
-      </BaseWidget>
-    );
-  }
-
-  if (error && !widgetData) {
-    return (
-      <BaseWidget title="Advanced Task" icon="🎯" onRemove={onRemove}>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <p className="text-destructive mb-2">{error}</p>
-            <button
-              onClick={() => {
-                // Re-fetch data if there's an error
-                // This might need to be handled by the parent component or a global state
-                // For now, we'll just show the error message
-              }}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      </BaseWidget>
-    );
-  }
-
-  if (!widgetData) {
-    return (
-      <BaseWidget title="Advanced Task" icon="🎯" onRemove={onRemove}>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <p className="text-muted-foreground">No widget data available</p>
-          </div>
-        </div>
-      </BaseWidget>
-    );
-  }
-
-  const activityData = widgetData.activity_data || {};
-  const widgetConfig = widgetData.widget_config || {};
-
-  // Extract data for different features
-  const trackerActivity = activityData || {};
-  const todoActivity = activityData || {};
-  const isCompleted = widgetData.activity_data?.status === 'completed';
-
-  const formatSnoozeTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const getNextAlarmTime = (alarm_times: string[]): string => {
+  // Actions
+  const snoozeAlarm = async () => {
+    setUpdating(true);
     const now = new Date();
-    const nextAlarmTime = alarm_times?.find(time => {
-      const [hours, minutes] = time.split(':').map(Number);
-      const alarmDate = new Date();
-      alarmDate.setHours(hours, minutes, 0, 0);
-      return alarmDate > now;
-    });
-    return nextAlarmTime || '';
+    const newSnoozeCount = (widget?.activity_data?.snooze_count || 0) + 1;
+    const existingActivity = widget?.activity_data?.activity_history || [];
+    const newActivity = {
+      type: 'snooze',
+      timestamp: now.toISOString(),
+      snooze_count: newSnoozeCount
+    };
+
+    setIsAlerting(false);
+    setSnoozeTimeLeft(snoozeTime * 60);
+
+    try {
+      await updateWidgetActivity(widget.daily_widget_id, {
+        snooze_count: newSnoozeCount,
+        activity_history: [...existingActivity, newActivity]
+      });
+    } catch (err) {
+      console.error('Error snoozing alarm:', err);
+    } finally {
+      setUpdating(false);
+    }
   };
+
+  const stopAlarm = async () => {
+    if (!widget?.id || updating) return;
+
+    setUpdating(true);
+    const now = new Date();
+    const startedAt = now.toISOString();
+    const existingActivity = widget?.activity_data?.activity_history || [];
+    const newActivity = {
+      type: 'stop',
+      timestamp: now.toISOString(),
+      total_snooze_count: widget?.activity_data?.snooze_count || 0
+    };
+
+    setIsAlerting(false);
+    setSnoozeTimeLeft(null);
+
+    try {
+      await updateWidgetActivity(widget.daily_widget_id, {
+        started_at: startedAt,
+        activity_history: [...existingActivity, newActivity],
+        status: 'completed',
+        progress: 100
+      });
+    } catch (err) {
+      console.error('Error stopping alarm:', err);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const updateTrackerValue = async () => {
+    if (!newValue.trim() || updating) return;
+
+    setUpdating(true);
+    const trackerUpdate = {
+      value: newValue,
+      time_added: new Date().toISOString(),
+      notes: notes || undefined
+    };
+
+    setNewValue('');
+    setNotes('');
+    setShowAddForm(false);
+
+    try {
+      await updateWidgetActivity(widget.daily_widget_id, { ...trackerUpdate });
+    } catch (err) {
+      console.error('Failed to update tracker value:', err);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const updateTaskStatus = async (status: 'pending' | 'in_progress' | 'completed' | 'cancelled') => {
+    if (updating) return;
+
+    setUpdating(true);
+    const progress = status === 'completed' ? 100 : status === 'in_progress' ? 50 : 0;
+
+    try {
+      await updateWidgetActivity(widget.daily_widget_id, { status, progress });
+    } catch (err) {
+      console.error('Error updating task status:', err);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (!widget) {
+    return (
+      <BaseWidget title="Advanced Task" icon="🎯" onRemove={onRemove}>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-muted-foreground">No widget data available</p>
+        </div>
+      </BaseWidget>
+    );
+  }
+
+  const activityData = widget.activity_data || {};
+  const widgetConfig = widget.widget_config || {};
+  const trackerActivity = activityData || {};
+  const isCompleted = widget.activity_data?.status === 'completed';
 
   return (
     <BaseWidget
-      title={isAlerting ? `🚨 Time for ${widgetData.title}! 🚨` : widgetData.title}
-      icon={isAlerting ? "" : widgetData.activity_data?.status === 'completed' ? "✅" : "◻️"}
+      title={isAlerting ? `🚨 Time for ${widget.title}! 🚨` : widget.title}
+      icon={isAlerting ? "" : widget.activity_data?.status === 'completed' ? "✅" : "◻️"}
       onRemove={onRemove}
     >
       <div
@@ -457,116 +333,9 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
           : `border border-gray-200 rounded-lg`
           }`}
       >
-        {/* Error Indicator */}
-        {error && (
-          <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-            <p className="text-xs text-orange-700 text-center">{error}</p>
-          </div>
-        )}
-
-        <div
-          className={`flex flex-row items-start gap-3 transition-all `}
-        >
-          <button
-            onClick={() => updateTaskStatus(widgetData.activity_data?.status === 'completed' ? 'pending' : 'completed')}
-            className="mt-0.5 flex-shrink-0"
-          >
-            {widgetData.activity_data?.status === 'completed' ? (
-              '✅'
-            ) : (
-              '◻️'
-            )}
-          </button>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <h4 className={`font-medium text-sm ${widgetData.activity_data?.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'
-                }`}>
-                {widgetData.title}
-              </h4>
-              {widgetData.category && (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium text-${getCategoryColor(widgetData.category)}-800 bg-${getCategoryColor(widgetData.category)}-100 border border-${getCategoryColor(widgetData.category)}-200   `}>
-                  {widgetData.category}
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-col">
-
-              {widgetData.description && (
-                <p className={`text-xs mt-1 ${widgetData.activity_data?.status === 'completed' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                  {widgetData.description}
-                </p>
-              )}
-              {widgetConfig.value_type && widgetConfig.target_value && (
-                <div className={`  rounded-xl text-center flex flex-row items-center justify-end gap-2`}>
-                  <div className={`text-lg font-extrabold ${isAlerting ? 'text-white' : 'text-green-900'}`}>
-                    {trackerActivity.value || '0'}
-                    {widgetConfig.value_unit && (
-                      <span className={`ml-1 text-base ${isAlerting ? 'text-white/80' : 'text-green-600'}`}>{widgetConfig.value_unit}</span>
-                    )}
-                  </div>
-                  {!isCompleted && (<div className="">
-                    <button
-                      onClick={() => setShowAddForm(true)}
-                      disabled={updating || isCompleted}
-                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium ${updating || isCompleted
-                        ? `${isAlerting ? 'bg-white/30 text-white/70' : 'bg-green-300 text-white'} cursor-not-allowed`
-                        : `${isAlerting ? 'bg-white text-red-600 hover:bg-white/90' : 'bg-green-600 text-white hover:bg-green-700'}`
-                        }`}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add
-                    </button>
-                  </div>)}
-                </div>
-              )}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Snooze countdown */}
-        {snoozeTimeLeft !== null && snoozeTimeLeft > 0 && (
-          <div className={`mt-3 px-3 py-1 mb-1 rounded ${isAlerting ? 'bg-white/10 text-white' : 'bg-yellow-100 text-yellow-800 border border-yellow-300'}`}>
-            <span className="text-xs">⏰ Snoozed for {formatSnoozeTime(snoozeTimeLeft)}</span>
-          </div>
-        )}
-        {false && todoActivity.progress !== undefined && (
-          <div className="px-2 ">
-            <div className="w-full bg-blue-200 rounded-full h-1">
-              <div
-                className="bg-blue-600 h-1 rounded-full transition-all duration-300"
-                style={{ width: `${todoActivity.progress}%` }}
-              ></div>
-            </div>
-          </div>
-        )}
-
-        {/* Top bar: Next alarm + completed badge */}
-        <div className="flex items-center justify-between gap-2">
-
-          {widgetConfig.include_tracker_details && (<div className={`text-xs ${isAlerting ? 'text-white/80' : 'text-green-700'} 
-                           flex items-center justify-center gap-2`}>
-            <Target className="h-4 w-4" /> {widgetConfig.target_value}
-            {widgetConfig.value_unit}
-          </div>)}
-          {widgetConfig.include_alarm_details && (
-            <div className="flex items-center gap-2">
-              <Clock className={`h-4 w-4 ${isAlerting ? 'text-white' : 'text-yellow-600'}`} />
-              <span className={`text-xs ${isAlerting ? 'text-white' : 'text-yellow-800'}`}>
-                <span className="text-xs truncate max-w-[40px]">{getNextAlarmTime(widgetConfig.alarm_times)}</span>
-              </span>
-              <span className={`text-[10px] truncate max-w-[40px] ${isAlerting ? 'text-white/80' : 'text-yellow-700'}`}>
-                {widgetConfig.alarm_times.join(', ')}
-              </span>
-            </div>
-          )}
-        </div>
-        {/* Actions when ringing */}
+        {/* ACTIONS when ringing */}
         {isAlerting && (
-          <div className="flex gap-2 mt-3">
+          <div className="flex gap-2 mb-3">
             <button
               onClick={snoozeAlarm}
               disabled={updating}
@@ -588,53 +357,171 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
           </div>
         )}
 
-        {/* Minimal Activity History */}
-        {widgetData?.activity_data?.activity_history &&
-          widgetData?.activity_data?.activity_history.length > 0 && (
-            <div className={`mt-3 p-2 rounded ${isAlerting ? 'bg-white/10 text-white' : 'bg-gray-50 text-gray-700 border border-gray-200'}`}>
-              <div className={`text-xs mb-1 ${isAlerting ? 'text-white/80' : 'text-gray-600'}`}>Recent activity</div>
-              <div className="space-y-1">
-                {widgetData?.activity_data?.activity_history.map((activity: any, index: number) => (
-                  <div key={index} className="text-xs flex justify-between opacity-90">
-                    <span>{activity.type === 'snooze' ? '⏰ Snoozed' : '🛑 Stopped'}</span>
-                    <span>
-                      {new Date(activity.timestamp).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true,
-                      })}
+        {/* 1. HEADER: Checkbox | Title | Tracker Input */}
+        <div className="flex items-start gap-3">
+          <button
+            onClick={() => updateTaskStatus(widget.activity_data?.status === 'completed' ? 'pending' : 'completed')}
+            className="mt-1 flex-shrink-0"
+            title={widget.activity_data?.status === 'completed' ? "Mark as pending" : "Mark as completed"}
+          >
+            {widget.activity_data?.status === 'completed' ? '✅' : '◻️'}
+          </button>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h4 className={`font-medium text-base ${widget.activity_data?.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-900'} leading-snug`}>
+                {widget.title}
+              </h4>
+
+              {/* Tracker Value Display (Compact) */}
+              {widgetConfig.value_type && widgetConfig.target_value && (
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                    <span className={`font-bold ${isAlerting ? 'text-red-500' : 'text-gray-700'}`}>
+                      {trackerActivity.value || '0'}
+                      <span className="text-xs font-normal text-gray-500 ml-0.5">{widgetConfig.value_unit}</span>
                     </span>
+                    {!isCompleted && (
+                      <button
+                        onClick={() => setShowAddForm(true)}
+                        disabled={updating}
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50 rounded-full p-0.5"
+                        title="Add value"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
-                ))}
+                  <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5 opacity-80">
+                    <Target className="w-3 h-3" /> Target: {widgetConfig.target_value}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {widget.description && (
+              <p className={`text-xs mt-1 line-clamp-2 ${widget.activity_data?.status === 'completed' ? 'text-gray-300' : 'text-gray-500'}`}>
+                {widget.description}
+              </p>
+            )}
+
+
+          </div>
+        </div>
+
+        {/* 2. ALARMS LIST (Compact) */}
+        {widgetConfig.alarm_times && widgetConfig.alarm_times.length > 0 && (
+          <div className="mt-4 border-t border-gray-100 pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Schedule
               </div>
             </div>
-          )}
 
+            <div className="space-y-1.5">
+              {widgetConfig.alarm_times.map((time: string) => {
+                const statusData = getAlarmStatus(time, widget.activity_data?.activity_history || [], currentTime, isAlerting, snoozeTime);
+                const status = statusData.status;
+
+                // Status styles - Minimalist
+                let rowClass = "text-gray-400";
+                let statusText = null;
+                let StatusIcon = null;
+
+                if (status === 'active') { // Ringing
+                  rowClass = "bg-red-50 text-red-600 border border-red-200 font-bold animate-pulse";
+                  statusText = "Ringing";
+                  StatusIcon = AlertTriangle;
+                } else if (status === 'snoozed') {
+                  rowClass = "bg-yellow-50 text-yellow-700 border border-yellow-200";
+                  statusText = `Snoozed (${statusData.details})`;
+                  StatusIcon = RotateCcw;
+                } else if (status === 'done') {
+                  rowClass = "text-green-600 font-medium bg-green-50/50";
+                  statusText = "Done";
+                  StatusIcon = Check;
+                } else if (status === 'dismissed') {
+                  rowClass = "text-gray-400 italic bg-gray-50/30";
+                  statusText = "Dismissed";
+                  StatusIcon = X;
+                } else if (status === 'missed') {
+                  rowClass = "text-amber-600 font-medium bg-amber-50/50";
+                  statusText = "Missed";
+                  StatusIcon = AlertTriangle;
+                } else if (status === 'pending') {
+                  const [h, m] = time.split(':').map(Number);
+                  const d = new Date(); d.setHours(h, m, 0, 0);
+                  // Highlight if within next hour
+                  const now = currentTime.getTime();
+                  const diff = d.getTime() - now;
+                  if (diff > 0 && diff < 3600000) {
+                    rowClass = "text-blue-600 font-medium bg-blue-50/50";
+                    statusText = "Coming up";
+                  } else {
+                    rowClass = "text-gray-600";
+                  }
+                }
+
+                return (
+                  <div key={time} className={`flex items-center justify-between px-2 py-1.5 rounded text-xs transition-colors ${rowClass}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono">{new Date(new Date().setHours(parseInt(time.split(':')[0]), parseInt(time.split(':')[1]))).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                      {statusText && (
+                        <span className="text-[10px] opacity-90 uppercase tracking-wide flex items-center gap-1 font-semibold">
+                          {StatusIcon && <StatusIcon className="w-3 h-3" />} {statusText}
+                        </span>
+                      )}
+                    </div>
+
+                    {status === 'pending' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const [h, m] = time.split(':').map(Number);
+                          const d = new Date(); d.setHours(h, m, 0, 0);
+                          dismissUpcoming(d.toISOString());
+                        }}
+                        className={`${isAlerting ? 'text-white/70 hover:text-white' : 'text-gray-300 hover:text-red-500'} p-0.5 rounded transition-colors`}
+                        title="Skip this alarm"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+
+
+        {/* 4. FOOTER: Tags */}
+        <div className="mt-auto pt-3 flex justify-end">
+          {widget.category && (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium text-${getCategoryColor(widget.category)}-700 bg-${getCategoryColor(widget.category)}-50 border border-${getCategoryColor(widget.category)}-100 opacity-80`}>
+              {widget.category}
+            </span>
+          )}
+        </div>
 
         {/* Add Value Modal */}
         {showAddForm && createPortal(
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-              {/* Header */}
               <div className="bg-gradient-to-r from-green-500 to-blue-600 text-white p-4 rounded-t-xl">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-bold">Add New Value</h3>
                     <p className="text-green-100 text-sm">Track your progress</p>
                   </div>
-                  <button
-                    onClick={() => setShowAddForm(false)}
-                    className="text-white hover:text-green-100 p-1 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
-                  >
+                  <button onClick={() => setShowAddForm(false)} className="text-white hover:text-green-100 p-1 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
               </div>
-
-              {/* Form Content */}
               <div className="p-4">
                 <div className="space-y-3">
-                  {/* Value Input */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Value {widgetConfig.value_unit && `(${widgetConfig.value_unit})`}
@@ -648,44 +535,25 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
                       required
                     />
                   </div>
-
-                  {/* Notes Input */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notes (Optional)
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
                     <textarea
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Add any notes about this entry..."
-                      rows={2}
+                      rows={3}
                     />
                   </div>
                 </div>
-              </div>
-
-              {/* Footer */}
-              <div className="bg-gray-50 p-4 rounded-b-xl">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(false)}
-                    className="flex-1 px-3 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 hover:border-gray-400 transition-all"
-                  >
-                    Cancel
-                  </button>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button onClick={() => setShowAddForm(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
                   <button
                     onClick={updateTrackerValue}
-                    disabled={!newValue.trim() || updating}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center ${updating || !newValue.trim() ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-gradient-to-r from-green-600 to-blue-600 text-white hover:from-green-700 hover:to-blue-700'}`}
+                    disabled={updating}
+                    className={`px-4 py-2 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg shadow hover:shadow-lg transition-all transform hover:-translate-y-0.5 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    {updating ? (
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                    ) : (
-                      <Save className="h-3 w-3 mr-1" />
-                    )}
-                    {updating ? 'Saving...' : 'Save'}
+                    {updating ? 'Saving...' : 'Save Entry'}
                   </button>
                 </div>
               </div>
@@ -698,4 +566,4 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, targetDate
   );
 };
 
-export default AdvancedSingleTaskWidget; 
+export default AdvancedSingleTaskWidget;
