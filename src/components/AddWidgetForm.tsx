@@ -92,14 +92,14 @@ const AddWidgetForm = ({ widgetId, onClose, onSuccess, editMode = false, existin
         category: (existingWidget.category).toLowerCase() as ApiCategory,
         widgetConfig: {
           ...existingWidget.widget_config,
-          streak_type: existingWidget.widget_config?.streak_type || 'none',
-          streak_count: existingWidget.widget_config?.streak_count || 1,
-          milestones: existingWidget.widget_config?.milestones || [],
-          include_progress_details: existingWidget.widget_config?.include_progress_details ?? false,
-          selected_calendar: existingWidget.widget_config?.selected_calendar || '',
-          include_alarm_details: existingWidget.widget_config?.include_alarm_details ?? false,
-          include_tracker_details: existingWidget.widget_config?.include_tracker_details ?? false,
-          include_websearch_details: existingWidget.widget_config?.include_websearch_details ?? false
+          streak_type: (existingWidget.widget_config?.streak_type as string) || 'none',
+          streak_count: (existingWidget.widget_config?.streak_count as number) || 1,
+          milestones: (existingWidget.widget_config?.milestones as Array<{ text: string; due_date: string }>) || [],
+          include_progress_details: !!existingWidget.widget_config?.include_progress_details,
+          selected_calendar: (existingWidget.widget_config?.selected_calendar as string) || '',
+          include_alarm_details: !!existingWidget.widget_config?.include_alarm_details,
+          include_tracker_details: !!existingWidget.widget_config?.include_tracker_details,
+          include_websearch_details: !!existingWidget.widget_config?.include_websearch_details
         }
       };
     }

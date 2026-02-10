@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { DailyWidget } from '../../services/api';
 import { aiWebSocket } from '../../config/api';
+import { formatTime, getTodayDateString } from '../../utils/dateUtils';
 
 interface Message {
   id: string;
@@ -131,7 +132,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ onRemove }) => {
           websocket,
           inputValue.trim(),
           [], // user_tasks
-          new Date().toISOString().split('T')[0], // todays_date
+          getTodayDateString(), // todays_date
           [] // No conversation history needed - backend maintains state
         );
       } else {
@@ -226,7 +227,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ onRemove }) => {
               {getMessageTitle()}
             </span>
             <span className={`text-gray-500 ml-2 text-xs`}>
-              {message.timestamp.toLocaleTimeString([], {
+              {formatTime(message.timestamp, {
                 hour: '2-digit',
                 minute: '2-digit'
               })}
@@ -258,7 +259,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ onRemove }) => {
                   {getMessageTitle()}
                 </span>
                 <span className={`text-gray-500 text-xs`}>
-                  {message.timestamp.toLocaleTimeString([], {
+                  {formatTime(message.timestamp, {
                     hour: '2-digit',
                     minute: '2-digit'
                   })}
@@ -353,4 +354,4 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ onRemove }) => {
   );
 };
 
-export default AiChatWidget; 
+export default AiChatWidget;

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import PlanToday from './PlanToday';
 
 interface PlannerProps {

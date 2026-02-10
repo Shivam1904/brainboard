@@ -45,7 +45,7 @@ export interface DailyWidget {
   is_permanent?: boolean;
   priority?: string;
   reasoning?: string;
-  date?: string;
+
   is_active?: boolean;
   isVisible?: boolean;
   layout: Layout;

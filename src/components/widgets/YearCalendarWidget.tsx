@@ -3,6 +3,7 @@ import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, X, Pencil, Check } from 'lucide-react';
 import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
 import { categoryColors } from '../../constants/widgetConstants';
+import { formatDate, getTodayDateString, toLocalISOString } from '../../utils/dateUtils';
 
 
 
@@ -145,10 +146,10 @@ const generateSixMonthCalendarStructure = (centerDate: string): CalendarDay[] =>
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
 
-    const isToday = date.toISOString().split('T')[0] === centerDate;
+    const isToday = toLocalISOString(date) === centerDate;
 
     days.push({
-      date: date.toISOString().split('T')[0],
+      date: toLocalISOString(date),
       day: date.getDate(),
       isCurrentMonth: true,
       isToday,
@@ -193,7 +194,7 @@ const groupDaysByWeeks = (days: CalendarDay[]) => {
 
 const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
   const [yearlyCalendarData, setYearlyCalendarData] = useState<CalendarDay[]>([]);
-  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentDate, setCurrentDate] = useState(getTodayDateString());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -226,8 +227,8 @@ const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
       // Fetch widgets linked to this calendar by selected_yearly_calendar
       const items = await apiService.getWidgetActivityForCalendar({
         calendar_id: widget.widget_id,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
+        start_date: toLocalISOString(startDate),
+        end_date: toLocalISOString(endDate),
         calendar_type: 'yearly'
       }) as DailyWidget[];
 
@@ -245,7 +246,7 @@ const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
         id: item.daily_widget_id || item.id,
         title: item.title,
         category: item.category,
-        date: item.date || new Date().toISOString().split('T')[0],
+        date: item.date || getTodayDateString(),
         type: (item.widget_type === 'event' || item.widget_type === 'milestone-achieved' || item.widget_type === 'reminder' || item.widget_type === 'task' || item.widget_type === 'milestone-upcoming')
           ? item.widget_type as 'event' | 'milestone-achieved' | 'reminder' | 'task' | 'milestone-upcoming'
           : 'event',
@@ -287,7 +288,7 @@ const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
     const today = new Date(currentDate);
     const shiftMonths = direction === 'prev' ? -1 : 1;
     today.setMonth(today.getMonth() + shiftMonths);
-    const newTargetDate = today.toISOString().split('T')[0];
+    const newTargetDate = toLocalISOString(today);
     setCurrentDate(newTargetDate);
     // Update the targetDate prop would require parent component changes
     // For now, we'll just refetch with the current targetDate
@@ -394,8 +395,7 @@ const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
 
   const weeks = groupDaysByWeeks(yearlyCalendarData);
   const isTodayDate = (date: string): boolean => {
-    const today = new Date();
-    return date === today.toISOString().split('T')[0];
+    return date === getTodayDateString();
   };
 
   return (
@@ -586,7 +586,7 @@ const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
               <div className="flex items-center gap-2">
                 <Calendar size={16} className="text-gray-500" />
                 <span className="text-sm text-gray-700">
-                  {new Date(selectedEvent.date).toLocaleDateString('en-US', {
+                  {formatDate(new Date(selectedEvent.date), {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',

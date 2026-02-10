@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import BaseWidget from './BaseWidget'
 import { DailyWidget } from '../../services/api'
+import { formatDate } from '../../utils/dateUtils'
 
 interface SimpleClockWidgetProps {
   widget: DailyWidget
@@ -85,8 +86,8 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
             <button
               onClick={() => setMode('analog')}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${mode === 'analog'
-                  ? 'bg-gradient-to-r from-yellow-500 to-yellow-300 opacity-80'
-                  : 'bg-secondary '
+                ? 'bg-gradient-to-r from-yellow-500 to-yellow-300 opacity-80'
+                : 'bg-secondary '
                 }`}
             >
               Analog
@@ -94,8 +95,8 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
             <button
               onClick={() => setMode('digital')}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${mode === 'digital'
-                  ? 'bg-gradient-to-r from-indigo-500 to-indigo-300 opacity-80'
-                  : 'bg-secondary '
+                ? 'bg-gradient-to-r from-indigo-500 to-indigo-300 opacity-80'
+                : 'bg-secondary '
                 }`}
             >
               Digital
@@ -106,8 +107,8 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
             <button
               onClick={() => setTheme('day')}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${theme === 'day'
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                ? 'bg-amber-500 text-white'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                 }`}
               title="Day theme"
             >
@@ -116,8 +117,8 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
             <button
               onClick={() => setTheme('night')}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${theme === 'night'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                 }`}
               title="Night theme"
             >
@@ -186,7 +187,7 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
               {pad(displayHours12)}:{pad(minutes)}:{pad(seconds)} <span className="text-base align-middle opacity-70">{ampm}</span>
             </div>
             <div className="mt-2 text-xs opacity-75">
-              {now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {formatDate(now, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </div>
           </div>
         )}

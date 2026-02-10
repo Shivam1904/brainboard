@@ -13,6 +13,7 @@ import {
 import { DailyWidget } from '../../services/api';
 import { useDashboardActions } from '../../stores/dashboardStore';
 import { categoryColors } from '../../constants/widgetConstants';
+import { formatTime, getTodayDateString } from '../../utils/dateUtils';
 
 import { checkAlarmTrigger, getAlarmStatus, AlarmActivity } from '../../utils/alarmUtils';
 
@@ -134,7 +135,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
     const checkAlarms = () => {
       const alarmTimes = (widget?.widget_config?.alarm_times as string[]) || [];
       if (alarmTimes.length === 0 || !widget?.date) return;
-      if (widget.date !== new Date().toISOString().split('T')[0]) return;
+      if (widget.date !== getTodayDateString()) return;
 
       const activityHistory = (widget?.activity_data?.activity_history as AlarmActivity[]) || [];
       const { shouldAlert, activeSnoozeTimeLeft } = checkAlarmTrigger(
@@ -459,7 +460,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
                 return (
                   <div key={time} className={`flex items-center justify-between px-2 py-1.5 rounded text-xs transition-colors ${rowClass}`}>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono">{new Date(new Date().setHours(parseInt(time.split(':')[0]), parseInt(time.split(':')[1]))).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                      <span className="font-mono">{formatTime(new Date(new Date().setHours(parseInt(time.split(':')[0]), parseInt(time.split(':')[1]))), { hour: 'numeric', minute: '2-digit' })}</span>
                       {statusText && (
                         <span className="text-[10px] opacity-90 uppercase tracking-wide flex items-center gap-1 font-semibold">
                           {StatusIcon && <StatusIcon className="w-3 h-3" />} {statusText}

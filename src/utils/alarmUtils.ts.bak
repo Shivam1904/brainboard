@@ -1,5 +1,5 @@
 
-import { getCurrentTimeInZone, getZoneTime } from './dateUtils';
+import { getCurrentTimeInZone, getZoneTime, formatTime } from './dateUtils';
 
 export interface AlarmActivity {
     timestamp: string;

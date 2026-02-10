@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { DailyWidget, apiService } from '../../services/api';
+import { formatTime } from '../../utils/dateUtils';
 
 interface WeatherData {
   temperature: number;
@@ -200,7 +201,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove }) => {
               </div>
               <div className="text-right">
                 <div className="text-xs text-muted-foreground">
-                  {new Date(weatherData.data_timestamp).toLocaleTimeString([], {
+                  {formatTime(weatherData.data_timestamp, {
                     hour: '2-digit',
                     minute: '2-digit'
                   })}
@@ -261,4 +262,4 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove }) => {
   );
 };
 
-export default WeatherWidget; 
+export default WeatherWidget;

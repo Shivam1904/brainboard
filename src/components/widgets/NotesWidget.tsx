@@ -3,6 +3,7 @@ import BaseWidget from './BaseWidget';
 import { DailyWidget } from '../../services/api';
 import { dashboardService } from '../../services/dashboard';
 import { useDashboardActions } from '@/stores/dashboardStore';
+import { formatTime, getCurrentTimeInZone } from '../../utils/dateUtils';
 
 interface NotesWidgetProps {
   onRemove: () => void;
@@ -62,7 +63,7 @@ const NotesWidget = ({ onRemove, widget, targetDate }: NotesWidgetProps) => {
         notes: notes,
         saved_at: new Date().toISOString(),
       });
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(formatTime(getCurrentTimeInZone()));
     } catch (err) {
       console.error('Failed to save notes', err);
       alert('Failed to save notes.');

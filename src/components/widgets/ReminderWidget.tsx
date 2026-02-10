@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Check, Clock, Trash2 } from 'lucide-react'
 import BaseWidget from './BaseWidget'
+import { formatDate } from '../../utils/dateUtils'
 
 interface Reminder {
   id: string
@@ -176,7 +177,7 @@ const ReminderWidget = ({ onRemove }: ReminderWidgetProps) => {
                     <div className="flex items-center gap-1 mt-1">
                       <Clock size={12} className="text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
-                        Due {new Date(reminder.dueDate).toLocaleDateString()}
+                        Due {formatDate(new Date(reminder.dueDate))}
                       </span>
                     </div>
                   )}

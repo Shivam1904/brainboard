@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, Circle, Trophy, ThumbsUp, Flame, Pencil, Check } from 'lucide-react';
 import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
+import { formatDate, getTodayDateString, toLocalISOString } from '../../utils/dateUtils';
 
 
 import { categoryColors } from '../../constants/widgetConstants';
@@ -128,7 +129,7 @@ const CircularProgress = ({ todosCompleted, todosTotal, day, size = 20, strokeWi
           fill={isToday ? 'white' : 'none'}
         />)}
         {/* Per-task arcs */}
-        {(todosTotal as Record<string, unknown>[])
+        {(todosTotal as DailyWidget[])
           .sort((a, b) => (a.category as string) > (b.category as string) ? 1 : -1)
           .sort((a) => (a.activity_data as Record<string, unknown>)?.status === 'completed' ? -1 : 1)
           .map((todo, index) => {
@@ -179,7 +180,8 @@ const CircularProgressConcentric = ({ todosCompleted, todosTotal, size = 20, str
 
   //group todosTotal by category
   const todosByCategory = new Map<string, unknown[]>();
-  for (const todo of (todosTotal as Record<string, unknown>[])) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const todo of (todosTotal as any[])) {
     const category = todo.category as string;
     if (!todosByCategory.has(category)) {
       todosByCategory.set(category, []);
@@ -210,7 +212,8 @@ const CircularProgressConcentric = ({ todosCompleted, todosTotal, size = 20, str
               .sort((a, _) => (a.activity_data as Record<string, unknown>)?.status === 'completed' ? -1 : 1)
               .map((todo, index) => {
                 const isCompleted = (todo?.activity_data as Record<string, unknown>)?.status === 'completed'
-                  || todosCompleted.includes(todo);
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  || (todosCompleted as any[]).includes(todo);
                 const strokeColor = isCompleted ? getCategoryColor(todo?.category as string) : 'transparent';
                 const dashArray = `${segmentLength} ${circumference - segmentLength}`;
                 const dashOffset = circumference - index * share;
@@ -338,10 +341,10 @@ const generateCalendarStructure = (year: number, month: number, targetDate: stri
     date.setDate(startDate.getDate() + i);
 
     const isCurrentMonth = date.getMonth() === month - 1;
-    const isToday = date.toISOString().split('T')[0] === targetDate;
+    const isToday = toLocalISOString(date) === targetDate;
 
     days.push({
-      date: date.toISOString().split('T')[0],
+      date: toLocalISOString(date),
       day: date.getDate(),
       isCurrentMonth,
       isToday,
@@ -405,8 +408,8 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
       // Fetch widgets linked to this calendar by selected_calendar
       const items = await apiService.getWidgetActivityForCalendar({
         calendar_id: widget.widget_id,
-        start_date: startOfMonth.toISOString().split('T')[0],
-        end_date: endOfMonth.toISOString().split('T')[0],
+        start_date: toLocalISOString(startOfMonth),
+        end_date: toLocalISOString(endOfMonth),
         calendar_type: 'monthly'
       });
 
@@ -425,7 +428,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
         id: item.daily_widget_id || item.id,
         title: item.title,
         category: item.category,
-        date: item.date || new Date().toISOString().split('T')[0],
+        date: item.date || getTodayDateString(),
         type: (item.widget_type === 'event' || item.widget_type === 'milestone-achieved' || item.widget_type === 'reminder' || item.widget_type === 'task' || item.widget_type === 'milestone-upcoming')
           ? item.widget_type as 'event' | 'milestone-achieved' | 'reminder' | 'task' | 'milestone-upcoming'
           : 'event',
@@ -473,13 +476,15 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
         const dayItems = items.filter(item => item.date === day.date);
 
         for (const item of dayItems) {
-          const streakType = (item as Record<string, unknown>).widget_config?.streak_type;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const streakType = (item as any).widget_config?.streak_type;
           const hasStreak = streakType && streakType !== 'none';
 
           if (!hasStreak) continue;
 
           const category = item.category as string;
-          const todoActivity = (item as Record<string, unknown>).activity_data;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const todoActivity = (item as any).activity_data;
           const isCompleted = todoActivity?.status === 'completed' || (typeof todoActivity?.progress === 'number' && todoActivity.progress >= 100);
 
           if (isCompleted) {
@@ -518,15 +523,18 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
       const milestoneWidgetsByDateAchieved = new Map<string, Set<unknown>>();
 
       for (const item of items) {
-        const itemObj = item as Record<string, unknown>;
-        const milestones = Array.isArray(itemObj.widget_config?.milestones) ? itemObj.widget_config.milestones : [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const itemObj = item as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const milestones = Array.isArray(itemObj.widget_config?.milestones) ? (itemObj.widget_config?.milestones as any[]) : [];
         const widgetId = item.widget_id;
 
         for (const m of (milestones as Record<string, unknown>[])) {
-          if (!m?.due_date || (tempMilestones as Record<string, unknown>[]).find(milestone => milestone.due_date === m.due_date && milestone.widget_id === item.widget_id)) continue;
-          const due = new Date(m.due_date);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (!m?.due_date || (tempMilestones as any[]).find(milestone => milestone.due_date === m.due_date && milestone.widget_id === item.widget_id)) continue;
+          const due = new Date(m.due_date as string);
           if (due >= startOfMonth && due <= endOfMonth && (due >= new Date())) {
-            const dateKey = m.due_date;
+            const dateKey = m.due_date as string;
             const day = dayByKey.get(dateKey);
             if (day) {
               const milestoneEvent: CalendarEvent = {
@@ -555,10 +563,13 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
 
       //get achieved milestones from activity_data
       for (const item of items) {
-        const itemObj = item as Record<string, unknown>;
-        const milestones = Array.isArray(itemObj.activity_data?.milestones_achieved) ? itemObj.activity_data.milestones_achieved : [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const itemObj = item as any;
+        const activityData = itemObj.activity_data;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const milestones = Array.isArray(activityData?.milestones_achieved) ? (activityData?.milestones_achieved as any[]) : [];
         const widgetId = item.widget_id;
-        const dateKey = item.date || new Date().toISOString().split('T')[0];
+        const dateKey = item.date || getTodayDateString();
 
         for (const m of (milestones as Record<string, unknown>[])) {
           if (!m?.achieved_date) continue;
@@ -869,7 +880,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
                           <div>
                             {Array.from(day.milestonesAchieved).map((milestone) => (
                               <div key={milestone.id} className="">
-                                <Trophy size={12} color={getCategoryColor(milestone.category)}
+                                <Trophy size={12} color={getCategoryColor(milestone.category || 'gray')}
                                 />
                               </div>
                             ))}
@@ -882,7 +893,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
                             {Array.from(day.milestones).map((milestone) => (
                               <div key={milestone.id + milestone.date} className="">
                                 <Trophy size={12} fill='white'
-                                  stroke={getCategoryColor(milestone.category)} strokeWidth={2} />
+                                  stroke={getCategoryColor(milestone.category || 'gray')} strokeWidth={2} />
                               </div>
                             ))}
                           </div>
@@ -981,7 +992,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
               <div className="flex items-center gap-2">
                 <Calendar size={16} className="text-gray-500" />
                 <span className="text-sm text-gray-700">
-                  {new Date(selectedEvent.date).toLocaleDateString('en-US', {
+                  {formatDate(new Date(selectedEvent.date), {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',

@@ -161,7 +161,7 @@ export const DataDisplayComponent: React.FC<DataDisplayProps> = ({ title, data, 
     <div className="bg-muted/50 rounded-lg p-3 border">
       <h4 className="text-sm font-medium mb-2">{title}</h4>
       <div className="text-xs text-muted-foreground mb-2">
-        {typeof data === 'object' ? JSON.stringify(data, null, 2) : data}
+        {typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data)}
       </div>
       {onAction && (
         <button
@@ -279,7 +279,7 @@ export const AlarmFormComponent: React.FC<AlarmFormProps> = ({ filledParams, mis
               <div key={key} className="flex items-center gap-2 text-xs">
                 <span className="text-green-600">✓</span>
                 <span className="font-medium">{getParamLabel(key)}:</span>
-                <span className="text-muted-foreground">{value}</span>
+                <span className="text-muted-foreground">{String(value)}</span>
               </div>
             ))}
           </div>
@@ -297,7 +297,7 @@ export const AlarmFormComponent: React.FC<AlarmFormProps> = ({ filledParams, mis
               <label className="block text-xs font-medium mb-1">{label} *</label>
               {inputType === 'textarea' ? (
                 <textarea
-                  value={formData[param] || ''}
+                  value={String(formData[param] || '')}
                   onChange={(e) => handleInputChange(param, e.target.value)}
                   className="w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-primary resize-none"
                   rows={2}
@@ -306,7 +306,7 @@ export const AlarmFormComponent: React.FC<AlarmFormProps> = ({ filledParams, mis
               ) : (
                 <input
                   type={inputType}
-                  value={formData[param] || ''}
+                  value={String(formData[param] || '')}
                   onChange={(e) => handleInputChange(param, e.target.value)}
                   className="w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-primary"
                   required

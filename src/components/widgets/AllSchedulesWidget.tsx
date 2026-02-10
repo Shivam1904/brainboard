@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import BaseWidget from './BaseWidget';
 import { DailyWidget, DashboardWidget } from '../../services/api';
 import { categoryColors } from '../../constants/widgetConstants';
-import { useAllWidgetsData, useTodayWidgetsData } from '../../hooks/useDashboardData';
+import { useDashboardData } from '../../hooks/useDashboardData';
 
 import AddWidgetForm from '../AddWidgetForm';
 import { createPortal } from 'react-dom';
@@ -23,8 +23,7 @@ interface GroupedWidgets {
 }
 
 const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightChange, onRefresh, targetDate }: AllSchedulesWidgetProps) => {
-  const { allWidgets: widgets, isLoading, error } = useAllWidgetsData()
-  const { todayWidgets } = useTodayWidgetsData(targetDate)
+  const { allWidgets: widgets, todayWidgets, isLoading, error } = useDashboardData(targetDate);
   const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
   const [todayWidgetIds, setTodayWidgetIds] = useState<string[]>([]);
   const [addingToToday, setAddingToToday] = useState<string | null>(null);

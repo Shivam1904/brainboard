@@ -3,6 +3,7 @@ import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DailyWidget, apiService } from '../../services/api';
 import { categoryColors } from '../../constants/widgetConstants';
+import { getTodayDateString, toLocalISOString } from '../../utils/dateUtils';
 
 interface TaskData {
   id: string;
@@ -68,8 +69,8 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
       // Fetch all widgets for the month
       const items = await apiService.getWidgetActivityForCalendar({
         calendar_id: widget.widget_id,
-        start_date: startOfMonth.toISOString().split('T')[0],
-        end_date: endOfMonth.toISOString().split('T')[0],
+        start_date: toLocalISOString(startOfMonth),
+        end_date: toLocalISOString(endOfMonth),
         calendar_type: 'pillarsGraph'
       });
 
@@ -80,7 +81,7 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
           title: item.title,
           category: item.category,
           widget_id: item.widget_id,
-          date: item.date || new Date().toISOString().split('T')[0],
+          date: item.date || getTodayDateString(),
           activity_data: item.activity_data,
         }));
 

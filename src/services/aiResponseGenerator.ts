@@ -1,4 +1,5 @@
 import { RESPONSE_PATTERNS, DEFAULT_RESPONSE, AIResponse } from '../config/aiPatterns';
+import { formatDateTime, getCurrentTimeInZone } from '../utils/dateUtils';
 
 // Re-export AIResponse interface for compatibility
 export type { AIResponse };
@@ -52,7 +53,7 @@ export class AIResponseGenerator {
                     title: todoData.title,
                     description: todoData.description || 'No description',
                     status: 'Pending',
-                    created: new Date().toLocaleString()
+                    created: formatDateTime(getCurrentTimeInZone())
                   }
                 }
               }
@@ -175,4 +176,4 @@ export class AIResponseGenerator {
 
     return DEFAULT_RESPONSE;
   }
-} 
+}

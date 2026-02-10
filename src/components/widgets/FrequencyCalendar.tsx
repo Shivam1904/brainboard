@@ -1,5 +1,5 @@
-import React from 'react';
 import { FrequencySettings } from '../../types/frequency';
+import { formatDate } from '../../utils/dateUtils';
 
 interface FrequencyCalendarProps {
   frequency: FrequencySettings;
@@ -81,7 +81,7 @@ const FrequencyCalendar = ({ frequency }: FrequencyCalendarProps) => {
 
     if (checkDate < today) return false; // Past dates
 
-    const biasedFrequency = getBiasedFrequency(date);
+    const biasedFrequency = getBiasedFrequency();
 
     switch (frequency.frequencyPeriod) {
       case 'DAILY':
@@ -200,7 +200,7 @@ const FrequencyCalendar = ({ frequency }: FrequencyCalendarProps) => {
                       key={dayIndex}
                       className={`w-3 h-3 rounded-sm transition-all ${heatmapColor} ${isToday(day) ? 'ring-1 ring-blue-500' : ''
                         }`}
-                      title={`${day.toLocaleDateString()}: ${hasActivity ? 'Active' : 'No activity'}`}
+                      title={`${formatDate(day)}: ${hasActivity ? 'Active' : 'No activity'}`}
                     />
                   );
                 })}

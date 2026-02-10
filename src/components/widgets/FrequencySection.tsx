@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import FrequencySlider from './FrequencySlider';
 import FrequencyCalendar from './FrequencyCalendar';
@@ -15,11 +15,11 @@ interface FrequencySectionProps {
 
 const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: FrequencySectionProps) => {
   const [expanded, setExpanded] = useState(false);
-  
+
   const handleSliderChange = (value: number) => {
     const frequencySet = getFrequencySet(value) as FrequencySettings['frequencySet'];
     const newFrequency = { ...frequency, frequencySetValue: value, frequencySet };
-    
+
     // Auto-adjust detailed settings based on slider
     switch (frequencySet) {
       case 'OCCASIONAL':
@@ -43,22 +43,22 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
         newFrequency.isDailyHabit = true;
         break;
     }
-    
+
     onChange(newFrequency);
   };
-  
+
   const handleDetailedChange = (newFrequency: FrequencySettings) => {
     // Update slider value based on detailed settings
     const sliderValue = getReverseFrequencyValue(newFrequency);
     const frequencySet = getFrequencySet(sliderValue) as FrequencySettings['frequencySet'];
-    
+
     onChange({
       ...newFrequency,
       frequencySetValue: sliderValue,
       frequencySet
     });
   };
-  
+
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/50">
       {/* Header */}
@@ -75,7 +75,7 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
           {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
       </div>
-      
+
       {/* Slider */}
       <div className="p-4">
         <FrequencySlider
@@ -84,7 +84,7 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
           pillarColor={pillarColor}
         />
       </div>
-      
+
       {/* Expanded Details */}
       {expanded && (
         <div className="border-t border-gray-200/50">
@@ -99,7 +99,7 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
               pillarColor={pillarColor}
             />
           </div>
-          
+
           {/* Detailed Controls */}
           <div className="p-4">
             <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
@@ -114,7 +114,7 @@ const FrequencySection = ({ frequency, onChange, pillarColor = '#3B82F6' }: Freq
           </div>
         </div>
       )}
-      
+
       {/* Collapsed Summary */}
       {!expanded && (
         <div className="px-4 pb-4">

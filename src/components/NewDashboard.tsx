@@ -14,6 +14,7 @@ import { dashboardService } from '../services/dashboard'
 import Dashboard from './Dashboard'
 import Planner from './Planner'
 import { handleRemoveWidgetUtil } from '../utils/widgetUtils'
+import { getTodayDateString, addDays } from '../utils/dateUtils';
 
 const MainContent = ({ date, allWidgets, todayWidgets, refreshAllWidgets }: { date: string, allWidgets: DashboardWidget[], todayWidgets: DailyWidget[], refreshAllWidgets: () => void }) => {
     const [isPlanning, setIsPlanning] = useState(false)
@@ -97,7 +98,7 @@ const SidebarWidgetContainer = ({
 }
 
 const NewDashboard = () => {
-    const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0])
+    const [currentDate, setCurrentDate] = useState(getTodayDateString())
 
     const {
         allWidgets: allWidgetsData,
@@ -184,7 +185,7 @@ const NewDashboard = () => {
 
         await handleRemoveWidgetUtil({
             dailyWidgetId,
-            widgetType: widget?.widget_type || 'widget',
+            _widgetType: widget?.widget_type || 'widget',
             widgetTitle: widget?.title || '',
             date: currentDate,
             removeWidgetFromToday
@@ -209,7 +210,7 @@ const NewDashboard = () => {
             case 'notes':
                 return <NotesWidget targetDate={currentDate} widget={widget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} />;
             case 'weatherWidget':
-                return <WeatherWidget targetDate={currentDate} widget={widget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} />;
+                return <WeatherWidget widget={widget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} />;
             case 'simpleClock':
                 return <SimpleClockWidget targetDate={currentDate} widget={widget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} />;
             case 'aiChat':
@@ -292,13 +293,13 @@ const NewDashboard = () => {
                         </div>
                     )}
                     <div className="flex items-center gap-3 bg-muted/50 px-3 py-1 rounded-full border border-border/50">
-                        <button className="hover:text-primary transition-colors" onClick={() => setCurrentDate(new Date(new Date(currentDate).setDate(new Date(currentDate).getDate() - 1)).toISOString().split('T')[0])}>
+                        <button className="hover:text-primary transition-colors" onClick={() => setCurrentDate(addDays(currentDate, -1))}>
                             ‹
                         </button>
                         <span className="text-sm font-medium tabular-nums font-mono">
                             {currentDate}
                         </span>
-                        <button className="hover:text-primary transition-colors" onClick={() => setCurrentDate(new Date(new Date(currentDate).setDate(new Date(currentDate).getDate() + 1)).toISOString().split('T')[0])}>
+                        <button className="hover:text-primary transition-colors" onClick={() => setCurrentDate(addDays(currentDate, 1))}>
                             ›
                         </button>
                     </div>

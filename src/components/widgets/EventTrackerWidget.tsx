@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
+import { formatDate, getTodayDateString } from '../../utils/dateUtils';
 import { CheckCircle, Circle, X } from 'lucide-react';
 import FrequencySection from './FrequencySection';
 // import { TodoTodayResponse, TodoActivity } from '../../types';
@@ -74,7 +75,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
     description: '',
     priority: 'Medium',
     category: 'personal',
-    dueDate: new Date().toISOString().split('T')[0],
+    dueDate: getTodayDateString(),
     frequency: {
       frequencySet: 'BALANCED',
       frequencySetValue: 0.6,
@@ -165,7 +166,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         description: '',
         priority: 'Medium',
         category: 'personal',
-        dueDate: new Date().toISOString().split('T')[0],
+        dueDate: getTodayDateString(),
         frequency: {
           frequencySet: 'BALANCED',
           frequencySetValue: 0.6,
@@ -196,7 +197,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
         description: '',
         priority: 'Medium',
         category: 'personal',
-        dueDate: new Date().toISOString().split('T')[0],
+        dueDate: getTodayDateString(),
         frequency: {
           frequencySet: 'BALANCED',
           frequencySetValue: 0.6,
@@ -311,7 +312,7 @@ const EventTrackerWidget = ({ onRemove, widget }: TaskListWidgetProps) => {
                   )}
                   {task?.dueDate && (
                     <span className="text-xs text-gray-500">
-                      Due: {new Date(task?.dueDate).toLocaleDateString()}
+                      Due: {formatDate(new Date(task?.dueDate))}
                     </span>
                   )}
                 </div>

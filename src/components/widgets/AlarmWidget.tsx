@@ -30,7 +30,7 @@ const AlarmWidget = ({ onRemove, widget }: AlarmWidgetProps) => {
 
       // Call the real API
       const response = await apiService.getAlarmDetailsAndActivity(widgetId);
-      setAlarmData(response);
+      setAlarmData(response as AlarmDetailsAndActivityResponse);
     } catch (err) {
       console.error('Failed to fetch alarms:', err);
       setError('Failed to load alarms');

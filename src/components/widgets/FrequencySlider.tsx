@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { getFrequencySet } from '../../types/frequency';
 
 interface FrequencySliderProps {
@@ -9,25 +9,24 @@ interface FrequencySliderProps {
 
 const FrequencySlider = ({ value, onChange, pillarColor = '#3B82F6' }: FrequencySliderProps) => {
   const labels = ['OCCASIONAL', 'COMFORTABLE', 'BALANCED', 'RIGOROUS'];
-  
+
   return (
     <div className="w-full">
       {/* Labels */}
       <div className="flex justify-between mb-4">
         {labels.map((label, index) => (
-          <div 
-            key={index} 
-            className={`text-xs px-2 py-1 rounded-full transition-all ${
-              getFrequencySet(value) == label
+          <div
+            key={index}
+            className={`text-xs px-2 py-1 rounded-full transition-all ${getFrequencySet(value) == label
                 ? 'bg-blue-100 text-blue-800 font-bold shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             {labels[index]}
           </div>
         ))}
       </div>
-      
+
       {/* Slider */}
       <div className="relative">
         <input
@@ -42,7 +41,7 @@ const FrequencySlider = ({ value, onChange, pillarColor = '#3B82F6' }: Frequency
             background: `linear-gradient(to right, ${pillarColor} 0%, ${pillarColor} ${value * 100}%, #e5e7eb ${value * 100}%, #e5e7eb 100%)`
           }}
         />
-        
+
       </div>
     </div>
   );

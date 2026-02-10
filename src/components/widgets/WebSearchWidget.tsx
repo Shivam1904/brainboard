@@ -3,6 +3,7 @@ import BaseWidget from './BaseWidget';
 import { DailyWidget } from '../../services/api';
 import { useTodayWidgetsData } from '../../hooks/useDashboardData';
 import { useDashboardActions } from '../../stores/dashboardStore';
+import { formatDate } from '../../utils/dateUtils';
 
 interface WebSearchData {
   title?: string;
@@ -202,9 +203,9 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
             {/* AI Model Info */}
             <div className="text-xs text-muted-foreground pt-2 border-t">
               <div>AI Model: {String(data.ai_model_used || 'N/A')}</div>
-              <div>Generated: {new Date((data.created_at as string | number | Date) || Date.now()).toLocaleDateString()}</div>
+              <div>Generated: {formatDate((data.created_at as string | number | Date) || Date.now())}</div>
               {data.activity_data && (
-                <div>Last Activity: {new Date(((data.activity_data as Record<string, unknown>).updated_at as string | number | Date) || Date.now()).toLocaleDateString()}</div>
+                <div>Last Activity: {formatDate(((data.activity_data as Record<string, unknown>).updated_at as string | number | Date) || Date.now())}</div>
               )}
             </div>
           </div>
@@ -214,4 +215,4 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
   );
 };
 
-export default WebSearchWidget; 
+export default WebSearchWidget;

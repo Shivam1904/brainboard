@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import BaseWidget from './BaseWidget';
 import { ChevronLeft, ChevronRight, Check, Pencil } from 'lucide-react';
 import { DailyWidget, apiService, DashboardWidget } from '../../services/api';
+import { getTodayDateString, toLocalISOString } from '../../utils/dateUtils';
 import { useUpdateWidgetActivity } from '@/stores/dashboardStore';
 import { categoryColors } from '../../constants/widgetConstants';
 
@@ -76,10 +77,10 @@ const generateHabitStructure = (year: number, month: number, targetDate: string)
     date.setDate(startDate.getDate() + i);
 
     const isCurrentMonth = date.getMonth() === month - 1;
-    const isToday = date.toISOString().split('T')[0] === targetDate;
+    const isToday = toLocalISOString(date) === targetDate;
 
     days.push({
-      date: date.toISOString().split('T')[0],
+      date: toLocalISOString(date),
       day: date.getDate(),
       isCurrentMonth,
       isToday,
@@ -124,8 +125,8 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
       // Fetch widgets linked to this habit tracker by selected_habit_calendar
       const items = await apiService.getWidgetActivityForCalendar({
         calendar_id: widget.widget_id,
-        start_date: startOfMonth.toISOString().split('T')[0],
-        end_date: endOfMonth.toISOString().split('T')[0],
+        start_date: toLocalISOString(startOfMonth),
+        end_date: toLocalISOString(endOfMonth),
         calendar_type: 'habitTracker'
       });
 
@@ -138,7 +139,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
         title: item.title,
         category: item.category,
         widget_id: item.widget_id,
-        date: item.date || new Date().toISOString().split('T')[0],
+        date: item.date || getTodayDateString(),
         activity_data: item.activity_data,
       }));
 
@@ -147,7 +148,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
 
       for (const task of tasks) {
         // Use the task's date field to determine which day it belongs to
-        const key = task.date || new Date().toISOString().split('T')[0];
+        const key = task.date || getTodayDateString();
 
         const day = dayByKey.get(key);
         if (day) {
@@ -404,16 +405,16 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
                             key={`${taskIndex}-${dayIndex}`}
                             d={arcPath}
                             stroke={isCompleted ? getCategoryColorHex(dayTask?.category || 'personal')
-                              : dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'rgba(223, 209, 120, 0.39)'
-                                : day.date === currentDate.toISOString().split('T')[0] ? 'rgba(230, 227, 207, 0.39)'
+                              : dayTask && dayTask.date === toLocalISOString(currentDate) ? 'rgba(223, 209, 120, 0.39)'
+                                : day.date === toLocalISOString(currentDate) ? 'rgba(230, 227, 207, 0.39)'
                                   : dayTask ? 'rgba(143, 121, 121, 0.39)'
                                     : 'hsla(0, 0%, 81%, 0.39)'}
                             strokeWidth={WIDTH - 1}
                             fill="none"
-                            className={`${dayTask && dayTask.date === currentDate.toISOString().split('T')[0] ? 'cursor-pointer' : 'cursor-default'} hover:stroke-width-10 transition-all duration-200`}
+                            className={`${dayTask && dayTask.date === toLocalISOString(currentDate) ? 'cursor-pointer' : 'cursor-default'} hover:stroke-width-10 transition-all duration-200`}
                             onClick={async () => {
                               // Handle arc click - toggle completion
-                              if (dayTask?.id && dayTask.date === currentDate.toISOString().split('T')[0]) {
+                              if (dayTask?.id && dayTask.date === toLocalISOString(currentDate)) {
                                 try {
                                   // Update the API
                                   await updateWidgetActivity(dayTask.id, { status: isCompleted ? 'not_completed' : 'completed' });

@@ -26,7 +26,8 @@ export const renderAiChatComponent = (
     component: AiChatComponent,
     onAction: (componentId: string, action: string, data: unknown) => void
 ) => {
-    const ComponentType = AI_CHAT_COMPONENTS[component.type as keyof typeof AI_CHAT_COMPONENTS];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ComponentType = AI_CHAT_COMPONENTS[component.type as keyof typeof AI_CHAT_COMPONENTS] as React.ComponentType<any>;
 
     if (!ComponentType) {
         console.warn(`Unknown component type: ${component.type}`);

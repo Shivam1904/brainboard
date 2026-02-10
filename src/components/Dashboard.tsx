@@ -8,12 +8,13 @@ import BaseWidget from './widgets/BaseWidget'
 import CalendarWidget from './widgets/CalendarWidget'
 import AdvancedSingleTaskWidget from './widgets/AdvancedSingleTaskWidget'
 import PillarGraphsWidget from './widgets/PillarGraphsWidget'
-import { DailyWidget } from '../services/api';
+import { DailyWidget, DashboardWidget } from '../services/api';
 import type { Layout } from 'react-grid-layout';
 import { getWidgetConfig } from '../config/widgets'
 import { GRID_CONFIG, getGridCSSProperties } from '../config/grid'
 import { useDashboardActions } from '../stores/dashboardStore'
 import { handleRemoveWidgetUtil } from '../utils/widgetUtils'
+import { getTodayDateString } from '../utils/dateUtils'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -71,7 +72,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
       category: 'utilities',
       is_permanent: false,
       priority: 'LOW',
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayDateString(),
       created_at: new Date().toISOString(),
       layout: buildPlaceholderLayout(base.id || ''),
       ...base,
@@ -314,7 +315,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
 
     await handleRemoveWidgetUtil({
       dailyWidgetId,
-      widgetType,
+      _widgetType: widgetType,
       widgetTitle,
       date,
       removeWidgetFromToday
@@ -327,7 +328,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
       case 'websearch':
         return (
           <WebSearchWidget
-            targetDate={date}
+
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
@@ -341,7 +342,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
               widget={{
                 ...widget,
                 title: 'Task List',
-                description: `Combined task list with ${widget.widget_config.combined_tasks.length} tasks`
+                description: `Combined task list with ${(widget.widget_config?.combined_tasks as unknown[]).length} tasks`
               }}
               onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
             />
@@ -351,7 +352,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
       case 'advancedsingletask':
         return (
           <AdvancedSingleTaskWidget
-            targetDate={date}
+
             widget={{
               ...widget,
               title: widget.title.replace('Advanced: ', ''),
@@ -364,7 +365,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
       case 'yearCalendar':
         return (
           <YearCalendarWidget
-            targetDate={date}
+
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
@@ -373,6 +374,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
         return (
           <CalendarWidget
             targetDate={date}
+
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
           />
@@ -380,6 +382,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
       case 'habitTracker':
         return (
           <HabitTrackerWidget
+
             targetDate={date}
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
@@ -389,6 +392,7 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
       case 'pillarsGraph':
         return (
           <PillarGraphsWidget
+
             targetDate={date}
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}

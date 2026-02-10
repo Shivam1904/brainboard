@@ -17,7 +17,7 @@ interface RemoveWidgetParams {
  */
 export const handleRemoveWidgetUtil = async ({
     dailyWidgetId,
-    _widgetType,
+
     widgetTitle,
     date,
     removeWidgetFromToday,

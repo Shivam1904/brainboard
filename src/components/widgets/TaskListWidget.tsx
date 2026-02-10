@@ -5,6 +5,7 @@ import FrequencySection from './FrequencySection';
 import { useTodayWidgetsData } from '../../hooks/useDashboardData';
 import { DailyWidget } from '../../services/api';
 import { useUpdateWidgetActivity } from '@/stores/dashboardStore';
+import { formatDate, getTodayDateString } from '../../utils/dateUtils';
 
 interface Task {
   id: string;
@@ -69,7 +70,7 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange }: TaskListWidgetProp
     description: '',
     priority: 'Medium',
     category: 'personal',
-    dueDate: new Date().toISOString().split('T')[0],
+    dueDate: getTodayDateString(),
     frequency: {
       frequencySet: 'BALANCED',
       frequencySetValue: 0.6,
@@ -114,7 +115,7 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange }: TaskListWidgetProp
       description: '',
       priority: 'Medium',
       category: 'productivity',
-      dueDate: new Date().toISOString().split('T')[0],
+      dueDate: getTodayDateString(),
       frequency: {
         frequencySet: 'BALANCED',
         frequencySetValue: 0.6,
@@ -312,7 +313,7 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange }: TaskListWidgetProp
                     )}
                     {task.dueDate && (
                       <span className="text-xs text-gray-500">
-                        Due: {new Date(task.dueDate).toLocaleDateString()}
+                        Due: {formatDate(task.dueDate)}
                       </span>
                     )}
                   </div>
@@ -486,4 +487,4 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange }: TaskListWidgetProp
   );
 };
 
-export default TaskListWidget; 
+export default TaskListWidget;
