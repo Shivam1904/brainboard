@@ -69,8 +69,7 @@ API Documentation: `http://localhost:8989/docs`
 ### Frontend Setup
 
 ```bash
-# Return to root directory
-cd ..
+cd frontend
 
 # Install dependencies
 npm install
@@ -90,7 +89,10 @@ brainboard/
 │   ├── routes/        # API Endpoints
 │   ├── services/      # Business logic
 │   └── requirements.txt # Python dependencies
-├── src/               # React + Vite frontend
+├── frontend/          # React + Vite frontend
+│   ├── src/           # Frontend source code
+│   ├── package.json   # Node dependencies
+│   └── vite.config.ts # Vite configuration
 └── ideas/             # Project documentation
 ```
 
@@ -118,7 +120,7 @@ SERPER_API_KEY=your-key-here
 ```
 
 #### Frontend (`.env`)
-Create a `.env` file in the root directory:
+Create a `.env` file in the `frontend/` directory:
 ```env
 VITE_API_BASE_URL=http://localhost:8989
 ```
@@ -129,7 +131,7 @@ VITE_API_BASE_URL=http://localhost:8989
 
 ## 📋 Available Scripts
 
-### Root Level
+### Frontend (`frontend/`)
 - `npm run dev` - Start Vite frontend
 - `npm run build` - Build frontend for production
 - `npm run test` - Run tests

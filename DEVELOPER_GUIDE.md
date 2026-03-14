@@ -61,7 +61,7 @@ The backend isn't just CRUD; it has an AI layer.
 | `schemas/` | **Data Validation**. Pydantic models for request/response typing. |
 | `ai_engine/` | **AI Logic**. LLM integration, prompt templates, tool definitions. |
 
-### Frontend (`/src`)
+### Frontend (`frontend/src`)
 | Directory | Purpose |
 | :--- | :--- |
 | `components/` | Reusable UI elements (Buttons, Cards). |
