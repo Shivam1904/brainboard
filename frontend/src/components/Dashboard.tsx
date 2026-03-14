@@ -27,6 +27,16 @@ interface DashboardProps {
 const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidgetsData }: DashboardProps) => {
   // Centralized layout: track per-widget size overrides (e.g., dynamic height changes)
   const [sizeOverrides, setSizeOverrides] = useState<Record<string, { w?: number; h?: number }>>({})
+  
+  // Track collapsed state for each widget
+  const [collapsedWidgets, setCollapsedWidgets] = useState<Record<string, boolean>>({})
+
+  const toggleWidgetCollapse = useCallback((widgetId: string) => {
+    setCollapsedWidgets(prev => ({
+      ...prev,
+      [widgetId]: !prev[widgetId]
+    }))
+  }, [])
 
   // Track last height values to prevent unnecessary updates
   const lastHeightValues = useRef<Record<string, number>>({})
@@ -324,13 +334,17 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
   }, [processWidgetsForUI, removeWidgetFromToday, date])
 
   const renderWidget = (widget: DailyWidget) => {
+    const isExpanded = !collapsedWidgets[widget.id];
+    const toggleCollapse = () => toggleWidgetCollapse(widget.id);
+    
     switch (widget.widget_type) {
       case 'websearch':
         return (
           <WebSearchWidget
-
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+            isExpanded={isExpanded}
+            onToggleExpand={toggleCollapse}
           />
         );
       case 'todo-task':
@@ -345,6 +359,8 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
                 description: `Combined task list with ${(widget.widget_config?.combined_tasks as unknown[]).length} tasks`
               }}
               onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+              isExpanded={isExpanded}
+              onToggleExpand={toggleCollapse}
             />
           );
         }
@@ -352,7 +368,6 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
       case 'advancedsingletask':
         return (
           <AdvancedSingleTaskWidget
-
             widget={{
               ...widget,
               title: widget.title.replace('Advanced: ', ''),
@@ -360,51 +375,60 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
             }}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
             onHeightChange={onHeightChange}
+            isExpanded={isExpanded}
+            onToggleExpand={toggleCollapse}
           />
         );
       case 'yearCalendar':
         return (
           <YearCalendarWidget
-
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+            isExpanded={isExpanded}
+            onToggleExpand={toggleCollapse}
           />
         );
       case 'calendar':
         return (
           <CalendarWidget
             targetDate={date}
-
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+            isExpanded={isExpanded}
+            onToggleExpand={toggleCollapse}
           />
         );
       case 'habitTracker':
         return (
           <HabitTrackerWidget
-
             targetDate={date}
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+            isExpanded={isExpanded}
+            onToggleExpand={toggleCollapse}
           />
         );
-      case 'pillarGraphs': // Check if this is the correct type, mostly likely 'pillarGraphs' based on component map but previously was 'pillarsGraph' in old file
+      case 'pillarGraphs':
       case 'pillarsGraph':
         return (
           <PillarGraphsWidget
-
             targetDate={date}
             widget={widget}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+            isExpanded={isExpanded}
+            onToggleExpand={toggleCollapse}
           />
         );
       default: {
         const config = getWidgetConfig(widget.widget_type);
+        const isExpanded = !collapsedWidgets[widget.id];
         return (
           <BaseWidget
             title={config?.title || widget.widget_type}
             icon={config?.icon}
             onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
+            isExpanded={isExpanded}
+            onToggleExpand={() => toggleWidgetCollapse(widget.id)}
           >
             <div className="flex flex-col items-center justify-center h-full text-center p-4">
               <div className="text-4xl mb-2">{config?.icon || '🚧'}</div>
@@ -438,6 +462,8 @@ const Dashboard = ({ date, allWidgets: allWidgetsData, todayWidgets: todayWidget
           margin={GRID_CONFIG.margin}
           containerPadding={GRID_CONFIG.containerPadding}
           draggableHandle=".widget-drag-handle"
+          isResizable={true}
+          isDraggable={true}
           compactType="vertical"
           onLayoutChange={handleLayoutChange}
         >

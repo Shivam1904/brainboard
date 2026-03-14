@@ -1,6 +1,6 @@
 // API Configuration for Brainboard Backend
 export const API_CONFIG = {
-  baseUrl: 'http://localhost:8989', // Backend server URL
+  baseUrl: 'http://localhost:8989', // FastAPI backend server URL
 
   // Dashboard Widgets endpoints (/api/v1/dashboard-widgets/)
   dashboardWidgets: {

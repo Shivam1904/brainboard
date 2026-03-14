@@ -20,9 +20,10 @@ interface WeatherData {
 interface WeatherWidgetProps {
   widget: DailyWidget;
   onRemove: () => void;
+  hideTitle?: boolean;
 }
 
-const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove }) => {
+const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove, hideTitle }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -168,6 +169,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({ onRemove }) => {
       onRemove={onRemove}
       onRefresh={handleRefresh}
       loading={loading}
+      hideTitle={hideTitle}
     >
       <div className="flex flex-col h-full p-4">
         {error ? (

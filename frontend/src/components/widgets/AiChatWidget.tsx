@@ -15,12 +15,13 @@ interface Message {
 interface AiChatWidgetProps {
   widget: DailyWidget;
   onRemove: () => void;
+  hideTitle?: boolean;
 }
 
 // Track if we've already shown the welcome message this page load (avoids duplicate when React Strict Mode double-mounts)
 let hasShownWelcomeThisSession = false;
 
-const AiChatWidget: React.FC<AiChatWidgetProps> = ({ onRemove }) => {
+const AiChatWidget: React.FC<AiChatWidgetProps> = ({ onRemove, hideTitle }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -277,6 +278,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ onRemove }) => {
       title="AI Chat"
       icon="🤖"
       onRemove={onRemove}
+      hideTitle={hideTitle}
     >
       <div className="flex-1 flex flex-col min-h-[300px] h-full">
         {/* Header with connection status */}

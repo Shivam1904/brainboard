@@ -138,7 +138,8 @@ const NewDashboard = () => {
             const widgetConfig = allConfigs.find(w => w.apiWidgetType === widgetType);
 
             if (widgetConfig) {
-                const existingWidget = allWidgetsData.find(w => w.widget_type === widgetType);
+                const widgetList = Array.isArray(allWidgetsData) ? allWidgetsData : [];
+                const existingWidget = widgetList.find(w => w.widget_type === widgetType);
 
                 if (existingWidget) {
                     await dashboardService.updateWidget(existingWidget.id, {
@@ -172,8 +173,8 @@ const NewDashboard = () => {
     }, [])
 
     const handleRemoveWidget = useCallback(async (dailyWidgetId: string) => {
-        // Search in todayWidgetsData since handleRemoveWidget is called with daily_widget_id
-        const widget = todayWidgetsData.find(w => w.daily_widget_id === dailyWidgetId)
+        const widgetList = Array.isArray(todayWidgetsData) ? todayWidgetsData : [];
+        const widget = widgetList.find(w => w.daily_widget_id === dailyWidgetId)
 
         const viewWidgetTypes = ['allSchedules', 'aiChat', 'moodTracker', 'notes', 'weatherWidget', 'simpleClock']
 
@@ -193,35 +194,38 @@ const NewDashboard = () => {
     }, [todayWidgetsData, removeWidgetFromToday, currentDate])
 
     const renderWidgetContent = (type: string, widget: DailyWidget) => {
+        const sidebarWidget = { ...widget, title: '' };
         switch (type) {
             case 'allSchedules':
                 return (
                     <AllSchedulesWidget
                         targetDate={currentDate}
-                        widget={widget}
+                        widget={sidebarWidget}
                         onHeightChange={onHeightChange}
                         onWidgetAddedToToday={handleAddWidget}
                         onRemove={() => handleRemoveWidget(widget.daily_widget_id)}
                         onRefresh={refreshAllWidgets}
+                        hideTitle={true}
                     />
                 );
             case 'moodTracker':
-                return <MoodTrackerWidget targetDate={currentDate} widget={widget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} />;
+                return <MoodTrackerWidget targetDate={currentDate} widget={sidebarWidget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} hideTitle={true} />;
             case 'notes':
-                return <NotesWidget targetDate={currentDate} widget={widget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} />;
+                return <NotesWidget targetDate={currentDate} widget={sidebarWidget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} hideTitle={true} />;
             case 'weatherWidget':
-                return <WeatherWidget widget={widget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} />;
+                return <WeatherWidget widget={sidebarWidget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} hideTitle={true} />;
             case 'simpleClock':
-                return <SimpleClockWidget targetDate={currentDate} widget={widget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} />;
+                return <SimpleClockWidget targetDate={currentDate} widget={sidebarWidget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} hideTitle={true} />;
             case 'aiChat':
-                return <AiChatWidget widget={widget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} />;
+                return <AiChatWidget widget={sidebarWidget} onRemove={() => handleRemoveWidget(widget.daily_widget_id)} hideTitle={true} />;
             default:
                 return null;
         }
     }
 
     const getWidgetUIInfo = (type: string) => {
-        const w = allWidgetsData.find(x => x.widget_type === type);
+        const widgetList = Array.isArray(allWidgetsData) ? allWidgetsData : [];
+        const w = widgetList.find(x => x.widget_type === type);
         const isExpanded = w?.widget_config?.visibility === true;
         const config = getWidgetConfig(type);
 

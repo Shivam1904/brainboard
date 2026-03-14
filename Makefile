@@ -2,17 +2,29 @@
 
 # --- Development ---
 
-dev: ## Run both backend and frontend development servers
-	@echo "Killing existing processes on ports 8989 and 5173..."
-	@-lsof -t -i:8989 | xargs kill -9 2>/dev/null || true
-	@-lsof -t -i:5173 | xargs kill -9 2>/dev/null || true
-	@echo "Starting backend and frontend..."
-	@(make backend-dev & make frontend-dev & wait)
+dev: ## Run backend (Django + FastAPI) and frontend development servers
+	@echo "Killing existing processes on ports 8220, 8221, 5511..."
+	@-lsof -t -i:8220 | xargs kill -9 2>/dev/null || true
+	@-lsof -t -i:8221 | xargs kill -9 2>/dev/null || true
+	@-lsof -t -i:5511 | xargs kill -9 2>/dev/null || true
+	@echo "Starting Django, FastAPI AI service, and frontend..."
+	@(make django-backend & make fastapi-ai & make frontend-dev & wait)
 
 
-backend-dev: backend-setup ## Run FastAPI development server
-	@echo "Starting FastAPI server..."
-	@cd backend && .venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8989
+django-backend: ## Run Django backend server on port 8220
+	@echo "Starting Django server on port 8220..."
+	@cd backend/django_backend && python manage.py runserver 0.0.0.0:8220
+
+
+fastapi-ai: ## Run FastAPI AI service on port 8221
+	@echo "Starting FastAPI AI service on port 8221..."
+	@cd backend && \
+	if [ ! -d ".venv" ]; then \
+		echo "Creating venv and installing dependencies..."; \
+		python -m venv .venv; \
+		. .venv/bin/activate && pip install -r requirements.txt; \
+	fi
+	@. .venv/bin/activate && uvicorn main:app --reload --host 0.0.0.0 --port 8221
 
 
 frontend-dev: ## Run Vite development server

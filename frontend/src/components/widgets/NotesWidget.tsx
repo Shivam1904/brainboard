@@ -9,9 +9,10 @@ interface NotesWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
   targetDate: string;
+  hideTitle?: boolean;
 }
 
-const NotesWidget = ({ onRemove, widget, targetDate }: NotesWidgetProps) => {
+const NotesWidget = ({ onRemove, widget, targetDate, hideTitle }: NotesWidgetProps) => {
   const [notes, setNotes] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -88,7 +89,7 @@ const NotesWidget = ({ onRemove, widget, targetDate }: NotesWidgetProps) => {
   };
 
   return (
-    <BaseWidget title={widget.title || 'Notes'} icon="📝" onRemove={onRemove}>
+    <BaseWidget title={widget.title || 'Notes'} icon="📝" onRemove={onRemove} hideTitle={hideTitle}>
       <div className="h-full flex flex-col">
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">Loading…</div>

@@ -47,6 +47,8 @@ interface HabitTrackerWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
   targetDate: string;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const getCategoryColor = (category: string): string => {
@@ -101,7 +103,7 @@ const WIDTH = 30;
 /** Y-offset for the circle center (positive = down in SVG). Increase to move rings and labels lower. */
 const CENTER_Y = 15;
 
-const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidgetProps) => {
+const HabitTrackerWidget = ({ onRemove, widget, targetDate, isExpanded, onToggleExpand }: HabitTrackerWidgetProps) => {
   const [currentDate, setCurrentDate] = useState(new Date(targetDate));
   const [habitData, setHabitData] = useState<HabitData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -281,7 +283,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
 
   if (loading) {
     return (
-      <BaseWidget title="Habit Tracker" icon="🔄" onRemove={onRemove}>
+      <BaseWidget title="Habit Tracker" icon="🔄" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -291,7 +293,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
 
   if (error) {
     return (
-      <BaseWidget title="Habit Tracker" icon="🔄" onRemove={onRemove}>
+      <BaseWidget title="Habit Tracker" icon="🔄" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex flex-col items-center justify-center h-32 text-center">
           <p className="text-red-600 mb-2">{error}</p>
           <button
@@ -307,7 +309,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
 
   if (!habitData) {
     return (
-      <BaseWidget title="Habit Tracker" icon="🔄" onRemove={onRemove}>
+      <BaseWidget title="Habit Tracker" icon="🔄" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="text-center py-8 text-gray-500">
           <p>No habit data available</p>
         </div>
@@ -319,7 +321,7 @@ const HabitTrackerWidget = ({ onRemove, widget, targetDate }: HabitTrackerWidget
   const uniqueTasks = Array.from(new Set(habitData.tasks.map(task => task.title)));
 
   return (
-    <BaseWidget title={widget.title} icon="🔄" onRemove={onRemove}>
+    <BaseWidget title={widget.title} icon="🔄" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
       <div className=" flex-col px-4 pt-4">
         {/* Success Message */}
         {successMessage && (

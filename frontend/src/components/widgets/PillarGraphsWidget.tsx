@@ -40,9 +40,11 @@ interface PillarGraphsWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
   targetDate: string;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
-const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidgetProps) => {
+const PillarGraphsWidget = ({ onRemove, widget, targetDate, isExpanded, onToggleExpand }: PillarGraphsWidgetProps) => {
   const [currentDate, setCurrentDate] = useState(new Date(targetDate));
   const [graphData, setGraphData] = useState<PillarGraphsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,7 +159,7 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
 
   if (loading) {
     return (
-      <BaseWidget title="Pillar Graphs" icon="📊" onRemove={onRemove}>
+      <BaseWidget title="Pillar Graphs" icon="📊" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -167,7 +169,7 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
 
   if (error) {
     return (
-      <BaseWidget title="Pillar Graphs" icon="📊" onRemove={onRemove}>
+      <BaseWidget title="Pillar Graphs" icon="📊" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex flex-col items-center justify-center h-32 text-center">
           <p className="text-red-600 mb-2">{error}</p>
           <button
@@ -183,7 +185,7 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
 
   if (!graphData) {
     return (
-      <BaseWidget title="Pillar Graphs" icon="📊" onRemove={onRemove}>
+      <BaseWidget title="Pillar Graphs" icon="📊" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="text-center py-8 text-gray-500">
           <p>No graph data available</p>
         </div>
@@ -192,7 +194,7 @@ const PillarGraphsWidget = ({ onRemove, widget, targetDate }: PillarGraphsWidget
   }
 
   return (
-    <BaseWidget title={widget.title || "Pillar Graphs"} icon="📊" onRemove={onRemove}>
+    <BaseWidget title={widget.title || "Pillar Graphs"} icon="📊" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
       <div className="flex flex-col px-4 h-full">
         {/* Header */}
         <div className="flex items-center justify-between">

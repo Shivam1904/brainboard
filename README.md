@@ -14,6 +14,9 @@ An AI-powered modular productivity dashboard with smart widgets for managing tas
 - **All Schedules Widget** - Comprehensive schedule management for all widgets
 
 ### 🏗️ **Architecture**
+- **Dual Backend System**:
+  - **Django** (port 8220): Main REST API for CRUD operations, database management
+  - **FastAPI** (port 8221): AI orchestration, WebSocket streaming, AI tool execution
 - **Dashboard API** - Dynamic widget loading from server configuration
 - **Two-Tier API System** - Dashboard-level configuration + Widget-level data fetching
 - **TypeScript** - Full type safety with comprehensive interfaces
@@ -27,13 +30,14 @@ An AI-powered modular productivity dashboard with smart widgets for managing tas
 
 ## 🛠️ Tech Stack
 
+- **Django Backend**: Main API server (port 8220)
+- **FastAPI AI Service**: AI orchestration and WebSocket streaming (port 8221)
 - **Frontend**: React + TypeScript + Vite
 - **Styling**: Tailwind CSS
 - **Grid System**: React Grid Layout
 - **Icons**: Lucide React
 - **State Management**: React Hooks
-- **Backend**: FastAPI (Python)
-- **Database**: SQLite (via SQLAlchemy + aiosqlite)
+- **Database**: SQLite (via Django ORM)
 
 ## 📦 Installation
 
@@ -43,7 +47,40 @@ git clone <repository-url>
 cd brainboard
 ```
 
-### Backend Setup
+### Quick Start (Recommended)
+
+Use the Makefile to run everything with one command:
+
+```bash
+make dev
+```
+
+This starts:
+- Django backend on `http://localhost:8220`
+- FastAPI AI service on `http://localhost:8221`
+- Frontend on `http://localhost:5173`
+
+### Manual Setup
+
+If you prefer to run services individually:
+
+#### Django Backend Setup
+
+```bash
+cd backend/django_backend
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run migrations
+python manage.py migrate
+
+# Run the server
+python manage.py runserver 0.0.0.0:8220
+```
+The Django API will be at `http://localhost:8220`.
+
+#### FastAPI AI Service Setup
 
 ```bash
 cd backend
@@ -52,19 +89,16 @@ cd backend
 python -m venv .venv
 
 # Activate the virtual environment
-# On macOS/Linux:
 source .venv/bin/activate
-# On Windows:
-# .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Run the server
-python main.py
+uvicorn main:app --reload --host 0.0.0.0 --port 8221
 ```
-The backend will start at `http://localhost:8989`.
-API Documentation: `http://localhost:8989/docs`
+The FastAPI AI service will be at `http://localhost:8221`.
+API Documentation: `http://localhost:8221/docs`
 
 ### Frontend Setup
 
@@ -83,17 +117,22 @@ The frontend will start at `http://localhost:5173`.
 
 ```
 brainboard/
-├── backend/           # FastAPI backend
-│   ├── main.py        # Entry point
-│   ├── config.py      # Configuration settings
-│   ├── routes/        # API Endpoints
-│   ├── services/      # Business logic
-│   └── requirements.txt # Python dependencies
-├── frontend/          # React + Vite frontend
-│   ├── src/           # Frontend source code
-│   ├── package.json   # Node dependencies
-│   └── vite.config.ts # Vite configuration
-└── ideas/             # Project documentation
+├── backend/
+│   ├── main.py                    # FastAPI AI service entry point
+│   ├── config.py                  # FastAPI configuration
+│   ├── requirements.txt           # Python dependencies
+│   ├── services/                 # AI & business logic
+│   ├── routes/                    # FastAPI endpoints
+│   └── django_backend/            # Django main API server
+│       ├── manage.py              # Django entry point
+│       ├── core/                  # Django project settings
+│       └── api/                   # Django REST API
+├── frontend/                      # React + Vite frontend
+│   ├── src/                       # Frontend source code
+│   ├── package.json               # Node dependencies
+│   └── vite.config.ts             # Vite configuration
+├── Makefile                       # Development commands
+└── DEVELOPER_GUIDE.md             # Developer documentation
 ```
 
 ## 🛠️ Development
@@ -104,29 +143,63 @@ brainboard/
 - **Git**
 - **DB Browser for SQLite** (optional): `brew install --cask db-browser-for-sqlite` for visual database management
 
+### Using Make Commands
+
+The project uses a Makefile for common development tasks:
+
+| Command | Description |
+|---------|-------------|
+| `make dev` | Run all services (Django, FastAPI, Frontend) |
+| `make django-backend` | Run Django API server on port 8220 |
+| `make fastapi-ai` | Run FastAPI AI service on port 8221 |
+| `make frontend-dev` | Run Vite dev server |
+| `make setup` | Install all dependencies |
+| `make test` | Run tests |
+| `make lint` | Run linters |
+| `make help` | Show all available commands |
+
 ### Environment Setup
 
-#### Backend (`.env`)
-Create a `.env` file in the `backend/` directory:
+#### Django Backend (`.env`)
+Create a `.env` file in the `backend/django_backend/` directory:
 ```env
-# Backend Configuration
-HOST=0.0.0.0
-PORT=8989
-RELOAD=True
+# Django Configuration
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
 
 # External APIs
 OPENAI_API_KEY=your-key-here
 SERPER_API_KEY=your-key-here
 ```
 
+#### FastAPI AI Service (`.env`)
+Create a `.env` file in the `backend/` directory:
+```env
+# FastAPI Configuration
+HOST=0.0.0.0
+PORT=8221
+RELOAD=True
+
+# External APIs
+OPENAI_API_KEY=your-key-here
+SERPER_API_KEY=your-key-here
+
+# Django API URL
+DJANGO_API_URL=http://localhost:8220
+```
+
 #### Frontend (`.env`)
 Create a `.env` file in the `frontend/` directory:
 ```env
-VITE_API_BASE_URL=http://localhost:8989
+VITE_API_BASE_URL=http://localhost:8220
+VITE_WS_URL=ws://localhost:8221
 ```
 
 ### Important Notes
-- **Always activate your virtual environment** (`source .venv/bin/activate`) before running the backend.
+- **Django runs on port 8220** - Main API server
+- **FastAPI runs on port 8221** - AI/websocket service
+- **Frontend runs on port 5173** - Vite dev server
+- **Always activate your virtual environment** (`source .venv/bin/activate`) before running FastAPI.
 - **Keep environments isolated** to avoid dependency conflicts.
 
 ## 📋 Available Scripts
@@ -137,18 +210,30 @@ VITE_API_BASE_URL=http://localhost:8989
 - `npm run test` - Run tests
 - `npm run lint` - Lint code
 
-### Backend (`backend/`)
-- `python main.py` - Start FastAPI server
-- `python init_db.py` - Initialize database
-- `python generate_dummy_data.py` - Populate database with test data
+### Django Backend (`backend/django_backend/`)
+- `python manage.py runserver 0.0.0.0:8220` - Start Django server
+- `python manage.py migrate` - Run database migrations
+- `python manage.py createsuperuser` - Create admin user
+
+### FastAPI Backend (`backend/`)
+- `uvicorn main:app --reload --host 0.0.0.0 --port 8221` - Start FastAPI server
+
+### Using Makefile (Recommended)
+- `make dev` - Run all services
+- `make setup` - Install all dependencies
+- `make test` - Run tests
+- `make lint` - Run linters
 
 ## 🔧 Troubleshooting
 
 ### Common Issues
 
-**Backend Port Already in Use**:
+**Backend Ports Already in Use**:
 ```bash
-lsof -ti:8989 | xargs kill -9
+# Kill processes on specific ports
+lsof -ti:8220 | xargs kill -9  # Django
+lsof -ti:8221 | xargs kill -9  # FastAPI
+lsof -ti:5173 | xargs kill -9  # Frontend
 ```
 
 **PostCSS Error**: If you see "module is not defined in ES module scope"
@@ -157,7 +242,7 @@ lsof -ti:8989 | xargs kill -9
 **Database Management**:
 1. Install: `brew install --cask db-browser-for-sqlite`
 2. Open "DB Browser for SQLite" app
-3. Click "Open Database" → Navigate to `backend/brainboard.db`
+3. Click "Open Database" → Navigate to `backend/django_backend/db.sqlite3`
 4. Use "Browse Data" tab to view/edit your widgets and summaries
 
 ## 🤝 Contributing

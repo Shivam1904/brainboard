@@ -325,6 +325,8 @@ interface CalendarWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
   targetDate: string;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 // Helper function to generate calendar structure without dummy data
@@ -380,7 +382,7 @@ const generateCalendarStructure = (year: number, month: number, targetDate: stri
   };
 };
 
-const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) => {
+const CalendarWidget = ({ onRemove, widget, targetDate, isExpanded, onToggleExpand }: CalendarWidgetProps) => {
   const [currentDate, setCurrentDate] = useState(new Date(targetDate));
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -748,7 +750,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
 
   if (loading) {
     return (
-      <BaseWidget title="Calendar" icon="📅" onRemove={onRemove}>
+      <BaseWidget title="Calendar" icon="📅" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -758,7 +760,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
 
   if (error) {
     return (
-      <BaseWidget title="Calendar" icon="📅" onRemove={onRemove}>
+      <BaseWidget title="Calendar" icon="📅" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex flex-col items-center justify-center h-32 text-center">
           <p className="text-red-600 mb-2">{error}</p>
           <button
@@ -774,7 +776,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
 
   if (!calendarData) {
     return (
-      <BaseWidget title="Calendar" icon="📅" onRemove={onRemove}>
+      <BaseWidget title="Calendar" icon="📅" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="text-center py-8 text-gray-500">
           <p>No calendar data available</p>
         </div>
@@ -783,7 +785,7 @@ const CalendarWidget = ({ onRemove, widget, targetDate }: CalendarWidgetProps) =
   }
 
   return (
-    <BaseWidget title={widget.title} icon="📅" onRemove={onRemove}>
+    <BaseWidget title={widget.title} icon="📅" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
       <div className="px-4 pt-4">
         {/* Calendar Header */}
         <div className="flex items-center justify-between">

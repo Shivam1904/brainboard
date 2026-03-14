@@ -125,6 +125,8 @@ const CircularProgress = ({ todosCompleted, todosTotal, size = 12, strokeWidth =
 interface YearCalendarWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 // Helper function to generate 6-month calendar structure (5 months before + 1 month after today)
@@ -192,7 +194,7 @@ const groupDaysByWeeks = (days: CalendarDay[]) => {
   return weeks;
 };
 
-const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
+const YearCalendarWidget = ({ onRemove, widget, isExpanded, onToggleExpand }: YearCalendarWidgetProps) => {
   const [yearlyCalendarData, setYearlyCalendarData] = useState<CalendarDay[]>([]);
   const [currentDate, setCurrentDate] = useState(getTodayDateString());
   const [loading, setLoading] = useState(true);
@@ -376,7 +378,7 @@ const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
 
   if (loading) {
     return (
-      <BaseWidget title="6-Month Calendar" icon="📅" onRemove={onRemove}>
+      <BaseWidget title="6-Month Calendar" icon="📅" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -385,7 +387,7 @@ const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
   }
   if (!yearlyCalendarData || yearlyCalendarData.length === 0) {
     return (
-      <BaseWidget title="6-Month Calendar" icon="📅" onRemove={onRemove}>
+      <BaseWidget title="6-Month Calendar" icon="📅" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="text-center py-8 text-gray-500">
           <p>No 6-month calendar data available</p>
         </div>
@@ -399,7 +401,7 @@ const YearCalendarWidget = ({ onRemove, widget }: YearCalendarWidgetProps) => {
   };
 
   return (
-    <BaseWidget title={widget.title} icon="📅" onRemove={onRemove}>
+    <BaseWidget title={widget.title} icon="📅" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
       <div className="px-4 pt-4">
         {/* 6-Month Header */}
         <div className="mb-4">

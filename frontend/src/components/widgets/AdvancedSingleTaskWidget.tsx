@@ -21,6 +21,8 @@ interface AdvancedSingleTaskWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
   onHeightChange: (dailyWidgetId: string, height: number) => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const snoozeTime = 10;
@@ -49,7 +51,7 @@ const getCategoryColor = (category: string) => {
 
 
 
-const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: AdvancedSingleTaskWidgetProps) => {
+const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange, isExpanded, onToggleExpand }: AdvancedSingleTaskWidgetProps) => {
   const { updateWidgetActivity } = useDashboardActions();
 
   const [updating, setUpdating] = useState(false);
@@ -304,7 +306,7 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
 
   if (!widget) {
     return (
-      <BaseWidget title="Advanced Task" icon="🎯" onRemove={onRemove}>
+      <BaseWidget title="Advanced Task" icon="🎯" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex items-center justify-center h-full">
           <p className="text-muted-foreground">No widget data available</p>
         </div>
@@ -321,6 +323,8 @@ const AdvancedSingleTaskWidget = ({ onRemove, widget, onHeightChange }: Advanced
       title={isAlerting ? `🚨 Time for ${widget.title}! 🚨` : widget.title}
       icon={isAlerting ? "" : widget.activity_data?.status === 'completed' ? "✅" : "◻️"}
       onRemove={onRemove}
+      isExpanded={isExpanded}
+      onToggleExpand={onToggleExpand}
     >
       <div
         className={`flex flex-1 h-full p-2 flex-col overflow-y-auto rounded-lg transition-all ${isAlerting

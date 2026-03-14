@@ -16,13 +16,14 @@ interface AllSchedulesWidgetProps {
   onHeightChange: (dailyWidgetId: string, newHeight: number) => void;
   onRefresh?: () => void;
   targetDate: string;
+  hideTitle?: boolean;
 }
 
 interface GroupedWidgets {
   [key: string]: DashboardWidget[];
 }
 
-const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightChange, onRefresh, targetDate }: AllSchedulesWidgetProps) => {
+const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightChange, onRefresh, targetDate, hideTitle }: AllSchedulesWidgetProps) => {
   const { allWidgets: widgets, todayWidgets, isLoading, error } = useDashboardData(targetDate);
   const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
   const [todayWidgetIds, setTodayWidgetIds] = useState<string[]>([]);
@@ -158,7 +159,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
 
   if (isLoading) {
     return (
-      <BaseWidget title="Widget Library" icon="📚" onRemove={onRemove}>
+      <BaseWidget title="Widget Library" icon="📚" onRemove={onRemove} hideTitle={hideTitle}>
         <div className="flex flex-col items-center justify-center h-full p-8 space-y-4">
           <div className="relative">
             <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
@@ -172,7 +173,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
 
   if (error) {
     return (
-      <BaseWidget title="Widget Library" icon="📚" onRemove={onRemove}>
+      <BaseWidget title="Widget Library" icon="📚" onRemove={onRemove} hideTitle={hideTitle}>
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
           <div className="text-4xl mb-4">🩹</div>
           <p className="text-destructive font-medium mb-4">{error}</p>
@@ -188,7 +189,7 @@ const AllSchedulesWidget = ({ widget, onRemove, onWidgetAddedToToday, onHeightCh
   }
 
   return (
-    <BaseWidget title="Library" icon="📦" onRemove={onRemove}>
+    <BaseWidget title="Library" icon="📦" onRemove={onRemove} hideTitle={hideTitle}>
       <div className="h-full flex flex-col pt-2 ">
         {/* Widget groups */}
         <div className="flex-1 overflow-y-auto space-y-4 px-1 pb-4 custom-scrollbar">

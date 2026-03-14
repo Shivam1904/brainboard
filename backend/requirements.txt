@@ -16,3 +16,7 @@ black==23.11.0
 isort==5.12.0
 flake8==6.1.0
 sqladmin
+
+Django>=5.0
+djangorestframework>=3.14
+django-cors-headers>=4.3

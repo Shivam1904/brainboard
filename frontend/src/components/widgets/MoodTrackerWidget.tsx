@@ -8,6 +8,7 @@ interface MoodTrackerWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
   targetDate: string;
+  hideTitle?: boolean;
 }
 
 type MoodOption = {
@@ -31,7 +32,7 @@ const MOODS: MoodOption[] = [
   { id: 'motivated', label: 'Motivated', emoji: '💪' },
 ];
 
-const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetProps) => {
+const MoodTrackerWidget = ({ onRemove, widget, targetDate, hideTitle }: MoodTrackerWidgetProps) => {
   const [selectedMoodIds, setSelectedMoodIds] = useState<Set<string>>(new Set());
   const [dailyWidgetId, setDailyWidgetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,7 +101,7 @@ const MoodTrackerWidget = ({ onRemove, widget, targetDate }: MoodTrackerWidgetPr
   };
 
   return (
-    <BaseWidget title={widget.title || 'Mood Tracker'} icon="😊" onRemove={onRemove}>
+    <BaseWidget title={widget.title || 'Mood Tracker'} icon="😊" onRemove={onRemove} hideTitle={hideTitle}>
       <div className="h-full flex flex-col">
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">Loading…</div>

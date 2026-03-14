@@ -24,9 +24,11 @@ interface WebSearchData {
 interface WebSearchWidgetProps {
   onRemove: () => void;
   widget: DailyWidget;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
-const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
+const WebSearchWidget = ({ onRemove, widget, isExpanded, onToggleExpand }: WebSearchWidgetProps) => {
   const { isLoading, error } = useTodayWidgetsData();
   const { updateWidgetActivity } = useDashboardActions();
 
@@ -73,6 +75,8 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
         title="Web Search"
         icon="🔍"
         onRemove={onRemove}
+        isExpanded={isExpanded}
+        onToggleExpand={onToggleExpand}
       >
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
@@ -91,6 +95,8 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
         title="Web Search"
         icon="🔍"
         onRemove={onRemove}
+        isExpanded={isExpanded}
+        onToggleExpand={onToggleExpand}
       >
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
@@ -114,6 +120,8 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
         title="Web Search"
         icon="🔍"
         onRemove={onRemove}
+        isExpanded={isExpanded}
+        onToggleExpand={onToggleExpand}
       >
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
@@ -130,6 +138,8 @@ const WebSearchWidget = ({ onRemove, widget }: WebSearchWidgetProps) => {
       title={data.title || "Web Search"}
       icon="🔍"
       onRemove={onRemove}
+      isExpanded={isExpanded}
+      onToggleExpand={onToggleExpand}
     >
       <div className="space-y-4 h-full overflow-y-auto">
 

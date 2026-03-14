@@ -57,9 +57,11 @@ interface TaskListWidgetProps {
   widget: DailyWidget;
   onHeightChange: (dailyWidgetId: string, height: number) => void;
   targetDate: string;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
-const TaskListWidget = ({ onRemove, widget, onHeightChange }: TaskListWidgetProps) => {
+const TaskListWidget = ({ onRemove, widget, onHeightChange, isExpanded, onToggleExpand }: TaskListWidgetProps) => {
   const { todayWidgets, isLoading, error } = useTodayWidgetsData();
   const updateWidgetActivity = useUpdateWidgetActivity();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -224,7 +226,7 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange }: TaskListWidgetProp
 
   if (isLoading) {
     return (
-      <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
+      <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -234,7 +236,7 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange }: TaskListWidgetProp
 
   if (error && tasks.length === 0) {
     return (
-      <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
+      <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
         <div className="flex flex-col items-center justify-center h-32 text-center">
           <p className="text-orange-600 mb-2">{error}</p>
           <button
@@ -249,7 +251,7 @@ const TaskListWidget = ({ onRemove, widget, onHeightChange }: TaskListWidgetProp
   }
 
   return (
-    <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove}>
+    <BaseWidget title="Today's Tasks" icon="📋" onRemove={onRemove} isExpanded={isExpanded} onToggleExpand={onToggleExpand}>
       <div className={`p-4 h-full overflow-y-auto `}>
         {/* Offline Indicator */}
         {error && (

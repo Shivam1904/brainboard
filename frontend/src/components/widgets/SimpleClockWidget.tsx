@@ -7,6 +7,7 @@ interface SimpleClockWidgetProps {
   widget: DailyWidget
   onRemove: () => void
   targetDate: string
+  hideTitle?: boolean
 }
 
 type ClockMode = 'analog' | 'digital'
@@ -14,7 +15,7 @@ type ClockTheme = 'day' | 'night'
 
 const pad = (num: number) => num.toString().padStart(2, '0')
 
-const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetProps) => {
+const SimpleClockWidget = ({ widget, onRemove, targetDate, hideTitle }: SimpleClockWidgetProps) => {
   // Check if targetDate is today
   const isToday = useMemo(() => {
     const today = new Date()
@@ -79,7 +80,7 @@ const SimpleClockWidget = ({ widget, onRemove, targetDate }: SimpleClockWidgetPr
   const displayHours12 = hours % 12 === 0 ? 12 : hours % 12
 
   return (
-    <BaseWidget title={widget.title || 'Simple Clock'} icon={isDay ? '🌞' : '🌙'} onRemove={onRemove}>
+    <BaseWidget title={widget.title || 'Simple Clock'} icon={isDay ? '🌞' : '🌙'} onRemove={onRemove} hideTitle={hideTitle}>
       <div className={`h-full w-full p-3 `}>
         <div className="relative items-center justify-between">
           <div className="flex absolute top-0 right-0 left-0 justify-center pt-12 z-10 opacity-50">

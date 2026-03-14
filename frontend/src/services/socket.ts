@@ -278,10 +278,10 @@ class SocketService {
   private getWebSocketUrl(): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = process.env.NODE_ENV === 'development'
-      ? 'localhost:8989'
+      ? 'localhost:8221'
       : window.location.host;
 
-    return `${protocol}//${host}/api/v1/chat/ws/chat`;
+    return `${protocol}//${host}/ai/ws`;
   }
 
   // Get connection status
